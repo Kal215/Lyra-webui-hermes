@@ -1,0 +1,291 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-lyra-bg: var(--bg);
+  --color-lyra-surface: var(--surface);
+  --color-lyra-surface-raised: var(--surface-raised);
+  --color-lyra-surface-inset: var(--surface-inset);
+  
+  --color-lyra-text: var(--text-primary);
+  --color-lyra-text-secondary: var(--text-secondary);
+  --color-lyra-text-muted: var(--text-muted);
+  
+  --color-lyra-accent: var(--accent);
+  --color-lyra-accent-soft: var(--accent-soft);
+  --color-lyra-success: var(--success);
+  --color-lyra-warning: var(--warning);
+  --color-lyra-danger: var(--danger);
+  
+  --color-lyra-glass-bg: var(--glass-bg);
+  --color-lyra-glass-border: var(--glass-border);
+
+  --color-lyra-editor-bg: var(--editor-bg);
+  --color-lyra-editor-header: var(--editor-header);
+  --color-lyra-editor-border: var(--editor-border);
+  --color-lyra-editor-text: var(--editor-text);
+  --color-lyra-editor-terminal-text: var(--editor-terminal-text);
+  --color-lyra-editor-muted: var(--editor-muted);
+  --color-lyra-editor-accent: var(--editor-accent);
+  --color-lyra-editor-add-bg: var(--editor-add-bg);
+  --color-lyra-editor-add-text: var(--editor-add-text);
+
+
+  --shadow-neo: var(--shadow-raised);
+  --shadow-neo-inset: var(--shadow-inset);
+  --shadow-neo-active-inset: var(--shadow-active-inset);
+  --shadow-neo-shallow-inset: var(--shadow-shallow-inset);
+  --shadow-neo-low: var(--shadow-low-raised);
+  
+  --radius-lyra-sm: 0.5rem;
+  --radius-lyra-md: 0.75rem;
+  --radius-lyra-lg: 1rem;
+}
+
+@layer base {
+  :root {
+    /* Fallback variables (Light Stone) */
+    --bg: #D7D9DE;
+    --surface: #DDE0E5;
+    --surface-raised: #E2E4E8;
+    --surface-inset: #D3D5DA;
+    --text-primary: #292C32;
+    --text-secondary: #60656E;
+    --text-muted: #858A93;
+    --accent: #6569A8;
+    --accent-soft: rgba(101, 105, 168, 0.4);
+    --success: #4E9F76;
+    --warning: #C78B3F;
+    --danger: #C25656;
+    --glass-bg: rgba(221, 224, 229, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    
+    --shadow-dark: rgba(80, 85, 95, 0.18);
+    --shadow-light: rgba(255, 255, 255, 0.70);
+    
+    --shadow-raised: 4px 4px 10px var(--shadow-dark), -4px -4px 10px var(--shadow-light);
+    --shadow-inset: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+    --shadow-active-inset: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+    --shadow-shallow-inset: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+    --shadow-low-raised: 2px 2px 5px var(--shadow-dark), -2px -2px 5px var(--shadow-light);
+  }
+  
+  html[data-mode="light"][data-surface="stone"] {
+    --bg: #D7D9DE;
+    --surface: #DDE0E5;
+    --surface-raised: #E2E4E8;
+    --surface-inset: #D3D5DA;
+    --text-primary: #292C32;
+    --text-secondary: #60656E;
+    --text-muted: #858A93;
+    --accent: #6569A8;
+    --accent-soft: rgba(101, 105, 168, 0.4);
+    
+    --shadow-dark: rgba(80, 85, 95, 0.18);
+    --shadow-light: rgba(255, 255, 255, 0.70);
+    --glass-bg: rgba(221, 224, 229, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.3);
+  }
+  
+  html[data-mode="dark"][data-surface="stone"] {
+    --bg: #292C31;
+    --surface: #2E3137;
+    --surface-raised: #33363D;
+    --surface-inset: #272A2F;
+    --text-primary: #ECEDEF;
+    --text-secondary: #B4B7BE;
+    --text-muted: #838791;
+    --accent: #7D82CC;
+    --accent-soft: rgba(125, 130, 204, 0.4);
+    
+    --shadow-dark: rgba(0, 0, 0, 0.30);
+    --shadow-light: rgba(255, 255, 255, 0.025);
+    --glass-bg: rgba(46, 49, 55, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.05);
+  }
+  
+  html[data-mode="light"][data-surface="pearl"] {
+    --bg: #ECEDEF;
+    --surface: #F2F3F5;
+    --surface-raised: #F6F7F8;
+    --surface-inset: #E8E9EC;
+    --text-primary: #1A1A1A;
+    --text-secondary: #595959;
+    --text-muted: #8C8C8C;
+    --accent: #5C62A6;
+    --accent-soft: rgba(92, 98, 166, 0.4);
+    
+    --shadow-dark: rgba(140, 145, 155, 0.15);
+    --shadow-light: rgba(255, 255, 255, 0.90);
+    --glass-bg: rgba(242, 243, 245, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.5);
+  }
+  
+  html[data-mode="dark"][data-surface="pearl"] {
+    --bg: #202226;
+    --surface: #26282D;
+    --surface-raised: #2C2F35;
+    --surface-inset: #1C1E22;
+    --text-primary: #F0F2F5;
+    --text-secondary: #B0B4C0;
+    --text-muted: #7A7E8A;
+    --accent: #868CD6;
+    --accent-soft: rgba(134, 140, 214, 0.4);
+    
+    --shadow-dark: rgba(0, 0, 0, 0.35);
+    --shadow-light: rgba(255, 255, 255, 0.03);
+    --glass-bg: rgba(38, 40, 45, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.05);
+  }
+  
+  html[data-mode="light"][data-surface="sand"] {
+    --bg: #E4DDCE;
+    --surface: #EBE4D5;
+    --surface-raised: #F0E9DA;
+    --surface-inset: #DED6C7;
+    --text-primary: #373229;
+    --text-secondary: #6B6358;
+    --text-muted: #918777;
+    --accent: #A27D4D;
+    --accent-soft: rgba(162, 125, 77, 0.4);
+    
+    --shadow-dark: rgba(120, 110, 90, 0.20);
+    --shadow-light: rgba(255, 255, 255, 0.75);
+    --glass-bg: rgba(235, 228, 213, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.3);
+  }
+  
+  html[data-mode="dark"][data-surface="sand"] {
+    --bg: #302C27;
+    --surface: #36312C;
+    --surface-raised: #3B3630;
+    --surface-inset: #2B2824;
+    --text-primary: #EBE6DF;
+    --text-secondary: #B5AB9F;
+    --text-muted: #8C8174;
+    --accent: #C2955B;
+    --accent-soft: rgba(194, 149, 91, 0.4);
+    
+    --shadow-dark: rgba(0, 0, 0, 0.30);
+    --shadow-light: rgba(255, 255, 255, 0.02);
+    --glass-bg: rgba(54, 49, 44, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.05);
+  }
+  
+
+  /* WORKSPACE THEMES */
+  /* 1. match-system (Default) */
+  html[data-workspace="light"] {
+    --editor-bg: var(--surface-inset);
+    --editor-header: var(--surface);
+    --editor-border: var(--shadow-dark);
+    --editor-text: var(--text-primary);
+    --editor-terminal-text: var(--text-secondary);
+    --editor-muted: var(--text-muted);
+    --editor-accent: var(--accent);
+    --editor-add-bg: rgba(78, 159, 118, 0.15);
+    --editor-add-text: var(--success);
+    
+    --prism-keyword: #0000ff;
+    --prism-string: #a31515;
+    --prism-function: #795e26;
+    --prism-comment: #008000;
+    --prism-number: #098658;
+    --prism-class: #267f99;
+    --prism-prop: #001080;
+    --prism-tag: #800000;
+  }
+
+  html[data-workspace="dark"] {
+    --editor-bg: #1e1e1e;
+    --editor-header: #252526;
+    --editor-border: #333333;
+    --editor-text: #d4d4d4;
+    --editor-terminal-text: #cccccc;
+    --editor-muted: #858585;
+    --editor-accent: #007acc;
+    --editor-add-bg: rgba(78, 159, 118, 0.15);
+    --editor-add-text: #4E9F76;
+    
+    --prism-keyword: #569cd6;
+    --prism-string: #ce9178;
+    --prism-function: #dcdcaa;
+    --prism-comment: #6a9955;
+    --prism-number: #b5cea8;
+    --prism-class: #4ec9b0;
+    --prism-prop: #9cdcfe;
+    --prism-tag: #569cd6;
+  }
+
+  html[data-workspace="vscode"] {
+    --editor-bg: #1e1e1e;
+    --editor-header: #252526;
+    --editor-border: #3c3c3c;
+    --editor-text: #d4d4d4;
+    --editor-terminal-text: #cccccc;
+    --editor-muted: #858585;
+    --editor-accent: #007acc;
+    --editor-add-bg: rgba(73, 116, 86, 0.4);
+    --editor-add-text: #89d185;
+    
+    --prism-keyword: #569cd6;
+    --prism-string: #ce9178;
+    --prism-function: #dcdcaa;
+    --prism-comment: #6a9955;
+    --prism-number: #b5cea8;
+    --prism-class: #4ec9b0;
+    --prism-prop: #9cdcfe;
+    --prism-tag: #569cd6;
+  }
+  
+  html[data-workspace="paper"] {
+    --editor-bg: #f4f0e6;
+    --editor-header: #e8e2d2;
+    --editor-border: #d3cbb8;
+    --editor-text: #4a4539;
+    --editor-terminal-text: #5c5545;
+    --editor-muted: #8c826b;
+    --editor-accent: #b05c3c;
+    --editor-add-bg: rgba(100, 160, 120, 0.2);
+    --editor-add-text: #3c6e4e;
+    
+    --prism-keyword: #8c5c3c;
+    --prism-string: #6c8a5a;
+    --prism-function: #a58a5c;
+    --prism-comment: #8c826b;
+    --prism-number: #826e5e;
+    --prism-class: #3a6b5c;
+    --prism-prop: #5c4535;
+    --prism-tag: #8c5c3c;
+  }
+
+  
+  html {
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  body {
+    background-color: var(--bg);
+    color: var(--text-primary);
+  }
+}
+
+/* Prism Syntax Highlighting Mappings with bulletproof VS Code fallbacks */
+.token.keyword, .token.atrule, .token.boolean { color: var(--prism-keyword, #569cd6) !important; font-weight: 600; }
+.token.string, .token.char, .token.attr-value { color: var(--prism-string, #ce9178) !important; }
+.token.function { color: var(--prism-function, #dcdcaa) !important; }
+.token.comment, .token.prolog, .token.doctype, .token.cdata { color: var(--prism-comment, #6a9955) !important; font-style: italic; }
+.token.number { color: var(--prism-number, #b5cea8) !important; }
+.token.class-name, .token.builtin { color: var(--prism-class, #4ec9b0) !important; }
+.token.property, .token.attr-name, .token.variable, .token.constant { color: var(--prism-prop, #9cdcfe) !important; }
+.token.tag, .token.selector { color: var(--prism-tag, #569cd6) !important; }
+.token.punctuation, .token.operator { color: var(--editor-terminal-text, #d4d4d4) !important; }
+.token.entity, .token.url, .token.symbol { color: var(--prism-prop, #9cdcfe) !important; }
+
+/* Hide scrollbar for no-scrollbar class */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

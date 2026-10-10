@@ -1,0 +1,226 @@
+
+> nexus-command-center@0.1.0 benchmark:reasoning
+> node --import tsx src/lib/reasoning/benchmark/cli.ts --json
+
+{
+  "suiteVersion": "lyra-reasoning-benchmark-v1",
+  "totalCases": 25,
+  "passed": 25,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "criticalFailures": 0,
+  "passRate": 1,
+  "categoryBreakdown": {
+    "CLASSIFICATION": {
+      "passed": 3,
+      "total": 3
+    },
+    "DISPATCH": {
+      "passed": 3,
+      "total": 3
+    },
+    "SAFETY": {
+      "passed": 2,
+      "total": 2
+    },
+    "EVIDENCE": {
+      "passed": 2,
+      "total": 2
+    },
+    "COMPLETION_CONTRACT": {
+      "passed": 3,
+      "total": 3
+    },
+    "PROFILE_POLICY": {
+      "passed": 2,
+      "total": 2
+    },
+    "REVIEW_JUDGE": {
+      "passed": 4,
+      "total": 4
+    },
+    "PROJECT_MEMORY": {
+      "passed": 6,
+      "total": 6
+    }
+  },
+  "caseResults": [
+    {
+      "caseId": "CLASSIFICATION-SIMPLE-QUICK",
+      "category": "CLASSIFICATION",
+      "severity": "MEDIUM",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "CLASSIFICATION-COMPLEX-DEEP",
+      "category": "CLASSIFICATION",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "CLASSIFICATION-DESTRUCTIVE-CRITICAL",
+      "category": "CLASSIFICATION",
+      "severity": "CRITICAL",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "DISPATCH-CODER-RECEIVES-DIRECTIVE",
+      "category": "DISPATCH",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "DISPATCH-SPECIALIZED-RECEIVES-DIRECTIVE",
+      "category": "DISPATCH",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "DISPATCH-UNKNOWN-PROFILE-FAILSAFE",
+      "category": "DISPATCH",
+      "severity": "CRITICAL",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "SAFETY-CRITICAL-BLOCK-REQUIRED",
+      "category": "SAFETY",
+      "severity": "CRITICAL",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "SAFETY-LOW-CONFIDENCE-REJECTED",
+      "category": "SAFETY",
+      "severity": "CRITICAL",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "EVIDENCE-WORKER-CLAIM-DISTINGUISHED",
+      "category": "EVIDENCE",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "EVIDENCE-REQUIRED-ABSENT-INVALID",
+      "category": "EVIDENCE",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "COMPLETION_CONTRACT-VALID-ACCEPTED",
+      "category": "COMPLETION_CONTRACT",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "COMPLETION_CONTRACT-MISSING-VERIFICATION",
+      "category": "COMPLETION_CONTRACT",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "COMPLETION_CONTRACT-EXTRA-METADATA-ACCEPTED",
+      "category": "COMPLETION_CONTRACT",
+      "severity": "LOW",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "PROFILE_POLICY-QA-KANBAN",
+      "category": "PROFILE_POLICY",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "PROFILE_POLICY-SECURITY-KANBAN",
+      "category": "PROFILE_POLICY",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "REVIEW_JUDGE-ALL-VERIFIED-PASS",
+      "category": "REVIEW_JUDGE",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "REVIEW_JUDGE-BLOCKER-NO-PASS",
+      "category": "REVIEW_JUDGE",
+      "severity": "CRITICAL",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "REVIEW_JUDGE-MISSING-EVIDENCE-NO-PASS",
+      "category": "REVIEW_JUDGE",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "REVIEW_JUDGE-WORKER-CLAIM-ONLY-NO-PASS",
+      "category": "REVIEW_JUDGE",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "PROJECT_MEMORY-PROJECT-ISOLATION",
+      "category": "PROJECT_MEMORY",
+      "severity": "CRITICAL",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "PROJECT_MEMORY-SUPERSEDED-EXCLUDED",
+      "category": "PROJECT_MEMORY",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "PROJECT_MEMORY-RETRACTED-EXCLUDED",
+      "category": "PROJECT_MEMORY",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "PROJECT_MEMORY-LOW-CONF-PROMOTION-REJECTED",
+      "category": "PROJECT_MEMORY",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "PROJECT_MEMORY-R4-NON-PASS-PROMOTION-REJECTED",
+      "category": "PROJECT_MEMORY",
+      "severity": "HIGH",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    },
+    {
+      "caseId": "PROJECT_MEMORY-BOUNDED-MEMORY-PACKET",
+      "category": "PROJECT_MEMORY",
+      "severity": "MEDIUM",
+      "status": "PASS",
+      "summary": "Execution returned true"
+    }
+  ],
+  "referenceLabel": "local"
+}

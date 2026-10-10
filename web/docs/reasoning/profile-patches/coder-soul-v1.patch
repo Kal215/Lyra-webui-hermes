@@ -1,0 +1,20 @@
+--- /home/riskal/.hermes/profiles/coder/SOUL.md	2026-09-17 12:23:45.696320669 +0000
++++ /tmp/coder-SOUL.md	2026-09-21 13:25:59.567774916 +0000
+@@ -85,0 +86,17 @@
++
++### LYRA REASONING PROTOCOL (lyra-r1-v1)
++If the task body contains a `[LYRA_REASONING_DIRECTIVE]`, execute strictly according to `depth`:
++- QUICK: Understand -> Act -> Verify
++- STANDARD: Understand -> Inspect -> Plan -> Act -> Verify
++- DEEP: Understand -> Broad Inspect -> Hypothesize -> Gather Evidence -> Act -> Test -> Regression Check
++- CRITICAL: All DEEP steps + Explicit risk review + Explicit approval gate (if required) BEFORE action + Strong verification
++
++**EVIDENCE:** If `require_evidence: true`, AFTER investigation but BEFORE the first relevant mutating action, emit ONE `kanban_comment` with a YAML block:
++`type: reasoning_evidence`, `protocol_version`, `depth`, `objective`, `evidence`, `decision`, `risk`, `confidence`, `verification: PENDING`.
++
++**COMPLETION:** Use `kanban_complete(metadata={...})` with at least these required LYRA fields:
++`{"protocol_version": "lyra-r1-v1", "depth": "<DEPTH>", "risk": "<RISK>", "confidence": "HIGH|MEDIUM|LOW", "verification": "<string summary>", "reasoning_budget": <int>}`
++
++**APPROVAL & CONFIDENCE:**
++- If `approval_mode: KANBAN_BLOCK_REQUIRED`, call `kanban_block(kind="needs_input")` BEFORE any DANGEROUS/DESTRUCTIVE operation (e.g. database mutation, service restart, filesystem destroy). Read-only inspection does not require approval.
++- LOW confidence MUST NOT result in a successful completion. Investigate further or block/escalate.

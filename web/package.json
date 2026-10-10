@@ -1,0 +1,47 @@
+{
+  "name": "nexus-command-center",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "node server.js",
+    "lint": "eslint",
+    "test:reasoning": "node --import tsx --test tests/reasoning/*.test.ts",
+    "benchmark:reasoning": "node --import tsx src/lib/reasoning/benchmark/cli.ts"
+  },
+  "dependencies": {
+    "@types/prismjs": "^1.26.6",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/xterm": "^6.0.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^14.1.0",
+    "lucide-react": "^1.47.0",
+    "next": "16.3.5",
+    "prismjs": "^1.30.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4",
+    "tailwind-merge": "^3.7.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "playwright": "^1.63.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  },
+  "allowScripts": {
+    "puppeteer@25.11.0": true
+  }
+}

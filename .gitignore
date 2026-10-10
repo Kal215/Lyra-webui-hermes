@@ -1,0 +1,41 @@
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Local Memory / Vector DBs
+qdrant_shared/
+qdrant1/
+qdrant2/
+qdrant_db/
+qdrant_data/
+*.sqlite
+*.db
+metrics.json
+/data/
+
+# Private/Hermes Credentials & Backends
+.hermes-backend/
+.lyra/
+config.yaml
+*.pem
+*.key
+*.log
+
+# OS/Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Next.js Build
+.next/
+out/
+build/

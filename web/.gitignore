@@ -1,0 +1,92 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# LYRA local runtime / temporary artifacts
+/.runtime/
+/artifacts/
+/dev.log
+/next.log
+/err_log.txt
+/RESET_PENDING.md
+
+# LYRA temporary inspection / browser helpers
+/check-console.js
+/check_err.js
+/fetch-sse.js
+/fetch-sse2.js
+/fetch-sse3.js
+/fetch-sse4.js
+/fetch-sse5.js
+/fetch-sse-now.js
+/get_term_text.js
+/patch_useLiveSimulation.js
+/run_tests.mjs
+/screenshot.js
+/screenshot_clean.js
+
+# LYRA local runtime / temporary artifacts
+/.runtime/
+/artifacts/
+/dev.log
+/next.log
+/err_log.txt
+/RESET_PENDING.md
+
+# LYRA temporary inspection / browser helpers
+/check-console.js
+/check_err.js
+/fetch-sse.js
+/fetch-sse2.js
+/fetch-sse3.js
+/fetch-sse4.js
+/fetch-sse5.js
+/fetch-sse-now.js
+/get_term_text.js
+/patch_useLiveSimulation.js
+/run_tests.mjs
+/screenshot.js
+/screenshot_clean.js
+.hermes-backend
+.lyra
+state.db
+config.yaml
+AGENTS.md

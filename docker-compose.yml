@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  9router:
+    image: node:18-alpine
+    container_name: lyra-9router
+    working_dir: /app
+    volumes:
+      - ./9router:/app
+      - 9router_data:/var/lib/9router
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+      - PORT=20128
+      - NEXT_TELEMETRY_DISABLED=1
+      - DATA_DIR=/var/lib/9router
+    command: >
+      sh -c "npm install && node node_modules/9router/app/custom-server.js"
+    ports:
+      - "20128:20128"
+    restart: unless-stopped
+
+  memory-core:
+    build: 
+      context: ./memory-core-v2
+    container_name: lyra-memory-core
+    environment:
+      - MEM0_STORAGE_PATH=/data/mem0
+      - QDRANT_PATH=/data/qdrant
+    volumes:
+      - memory_data:/data
+    ports:
+      - "20129:20129"
+    restart: unless-stopped
+
+volumes:
+  9router_data:
+  memory_data:
+
+  web-ui:
+    build: 
+      context: ./web
+    container_name: lyra-studio-ui
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app
+      - ~/.hermes:/root/.hermes  # Mount Hermes config for UI to manage it
+    restart: unless-stopped

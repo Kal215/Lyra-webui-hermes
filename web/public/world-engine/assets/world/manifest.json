@@ -1,0 +1,68 @@
+{
+  "provenance": "Original project-local pixel artwork; see docs/ASSET_PROVENANCE.md",
+  "renderer": "src/world/assets/characters.ts",
+  "atlas": "agents-atlas.png",
+  "cell": {
+    "width": 32,
+    "height": 40
+  },
+  "rows": [
+    "aster",
+    "patch",
+    "cipher",
+    "atlas",
+    "forge",
+    "iris",
+    "sentinel",
+    "nova",
+    "echo",
+    "scout"
+  ],
+  "columns": [
+    {
+      "animation": "IDLE_DOWN",
+      "start": 0,
+      "frames": 2
+    },
+    {
+      "animation": "IDLE_UP",
+      "start": 2,
+      "frames": 2
+    },
+    {
+      "animation": "IDLE_LEFT",
+      "start": 4,
+      "frames": 2
+    },
+    {
+      "animation": "IDLE_RIGHT",
+      "start": 6,
+      "frames": 2
+    },
+    {
+      "animation": "WALK_DOWN",
+      "start": 8,
+      "frames": 4
+    },
+    {
+      "animation": "WALK_UP",
+      "start": 12,
+      "frames": 4
+    },
+    {
+      "animation": "WALK_LEFT",
+      "start": 16,
+      "frames": 4
+    },
+    {
+      "animation": "WALK_RIGHT",
+      "start": 20,
+      "frames": 4
+    },
+    {
+      "animation": "WORK",
+      "start": 24,
+      "frames": 2
+    }
+  ]
+}
