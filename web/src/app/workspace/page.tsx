@@ -193,8 +193,9 @@ export default function WorkspacePage() {
             return prev;
           }
           const newFile = { path, name, content: data.content, isDirty: false };
-          setActiveFileIndex(prev.length);
-          return [...prev, newFile];
+          const updated = [...prev, newFile];
+          setActiveFileIndex(updated.length - 1);
+          return updated;
         });
       }
     } catch (e) {
@@ -294,7 +295,7 @@ export default function WorkspacePage() {
           ) : (
             files.map((file, idx) => (
               <div 
-                key={`${file.path}-${idx}`}
+                key={`workspace-file-${file.path}-${idx}`}
                 onClick={() => file.isDirectory ? fetchFiles(file.path) : loadFile(file.path, file.name)}
                 className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors
                   ${activeFile?.path === file.path ? 'bg-lyra-accent/20 text-lyra-accent font-medium' : 'text-lyra-editor-text/80 hover:bg-lyra-editor-header hover:text-lyra-editor-text'}
@@ -321,7 +322,7 @@ export default function WorkspacePage() {
           <div className="flex items-end h-10 border-b border-lyra-editor-border bg-lyra-editor-header overflow-x-auto no-scrollbar shrink-0">
             {openFiles.map((f, i) => (
               <div 
-                key={`${f.path}-${i}`}
+                key={`workspace-tab-${f.path}-${i}`}
                 onClick={() => setActiveFileIndex(i)}
                 className={`h-full flex items-center gap-2 px-4 text-xs cursor-pointer border-r border-lyra-editor-border transition-colors min-w-[120px] max-w-[200px]
                   ${activeFileIndex === i ? 'bg-lyra-editor-bg text-lyra-editor-text border-t-2 border-t-lyra-accent' : 'text-lyra-editor-muted hover:bg-lyra-editor-bg/50 hover:text-lyra-editor-text'}
