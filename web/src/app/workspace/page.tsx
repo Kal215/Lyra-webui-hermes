@@ -176,7 +176,7 @@ export default function WorkspacePage() {
 
   const loadFile = async (path: string, name: string) => {
     // Check if already open
-    const existingIndex = openFiles.findIndex(f => f.path === path);
+    const existingIndex = openFiles.findIndex(f => f.path.toLowerCase() === path.toLowerCase());
     if (existingIndex !== -1) {
       setActiveFileIndex(existingIndex);
       return;
@@ -186,9 +186,16 @@ export default function WorkspacePage() {
       const res = await fetch(`/api/workspace/file?path=${encodeURIComponent(path)}`);
       const data = await res.json();
       if (data.content !== undefined) {
-        const newFile = { path, name, content: data.content, isDirty: false };
-        setOpenFiles(prev => [...prev, newFile]);
-        setActiveFileIndex(openFiles.length);
+        setOpenFiles(prev => {
+          const idx = prev.findIndex(f => f.path.toLowerCase() === path.toLowerCase());
+          if (idx !== -1) {
+            setActiveFileIndex(idx);
+            return prev;
+          }
+          const newFile = { path, name, content: data.content, isDirty: false };
+          setActiveFileIndex(prev.length);
+          return [...prev, newFile];
+        });
       }
     } catch (e) {
       console.error(e);
@@ -285,9 +292,9 @@ export default function WorkspacePage() {
           {loading ? (
             <div className="text-xs text-lyra-editor-muted p-2">Loading contents...</div>
           ) : (
-            files.map((file) => (
-              <div
-                key={file.path}
+            files.map((file, idx) => (
+              <div 
+                key={`${file.path}-${idx}`}
                 onClick={() => file.isDirectory ? fetchFiles(file.path) : loadFile(file.path, file.name)}
                 className={`flex items-center gap-2 p-1.5 rounded cursor-pointer text-sm transition-colors
                   ${activeFile?.path === file.path ? 'bg-lyra-accent/20 text-lyra-accent font-medium' : 'text-lyra-editor-text/80 hover:bg-lyra-editor-header hover:text-lyra-editor-text'}
@@ -313,8 +320,8 @@ export default function WorkspacePage() {
         {openFiles.length > 0 && (
           <div className="flex items-end h-10 border-b border-lyra-editor-border bg-lyra-editor-header overflow-x-auto no-scrollbar shrink-0">
             {openFiles.map((f, i) => (
-              <div
-                key={f.path}
+              <div 
+                key={`${f.path}-${i}`}
                 onClick={() => setActiveFileIndex(i)}
                 className={`h-full flex items-center gap-2 px-4 text-xs cursor-pointer border-r border-lyra-editor-border transition-colors min-w-[120px] max-w-[200px]
                   ${activeFileIndex === i ? 'bg-lyra-editor-bg text-lyra-editor-text border-t-2 border-t-lyra-accent' : 'text-lyra-editor-muted hover:bg-lyra-editor-bg/50 hover:text-lyra-editor-text'}
