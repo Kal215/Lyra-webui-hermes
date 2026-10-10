@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation, useI18nStore } from '@/i18n';
-import { MessageSquare, Plus, Send, Menu, Terminal, Globe, FileText, Wrench, ChevronDown, ChevronRight, CheckCircle2, CircleDashed, BrainCircuit, MoreVertical, Edit2, Trash2, Check, X, Pin, DownloadCloud, PinOff, Paperclip, Folder, File, ImageIcon, XCircle, Columns, Monitor, Settings, Zap, Database, FolderTree, Clipboard, PenTool, Link, Search, ImagePlus, GitBranch, Library, Command } from 'lucide-react';
+import { MessageSquare, Plus, Send, Menu, Terminal, Globe, FileText, Wrench, ChevronDown, ChevronRight, CheckCircle2, CircleDashed, BrainCircuit, MoreVertical, Edit2, Trash2, Check, X, Pin, DownloadCloud, PinOff, Paperclip, Folder, File, ImageIcon, XCircle, Columns, Monitor, Settings, Zap, Database, FolderTree, Clipboard, PenTool, Link, Search, ImagePlus, GitBranch, Library, Command, Sparkles, Code, FileEdit, Lightbulb, Coffee, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -283,6 +283,88 @@ export default function NativeChatPage() {
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(true);
   const [isReasoningEnabled, setIsReasoningEnabled] = useState(true);
   const [isDeepResearchEnabled, setIsDeepResearchEnabled] = useState(false);
+
+  // Model & Reasoning Effort states (Matching Image 3 & Image 4)
+  const DEFAULT_MODELS = [
+    { id: 'hermes-agent', name: 'Hermes Agent', badge: 'Med' },
+    { id: 'kat-coder-pro', name: 'Kat Coder Pro V2.5:Free', badge: 'Med' },
+    { id: 'frontier', name: 'Frontier', badge: 'Med' },
+    { id: 'balanced', name: 'Balanced', badge: 'Med' },
+    { id: 'minimax-m2.7', name: 'Minimax M2.7', badge: 'Med' },
+    { id: 'minimax-m3', name: 'Minimax M3', badge: 'Med' },
+    { id: 'glm-5.2', name: 'Glm 5.2', badge: 'Med' },
+    { id: 'deepseek-v4-pro', name: 'Deepseek V4 Pro', badge: 'Med' },
+    { id: 'deepseek-v4-flash', name: 'Deepseek V4 Flash', badge: 'Med' },
+    { id: 'kimi-k2.6', name: 'Kimi K2.6', badge: 'Med' },
+    { id: 'nemotron-3-ultra', name: 'Nemotron 3 Ultra 550b A55b', badge: 'Med' },
+  ];
+  const [modelsList, setModelsList] = useState(DEFAULT_MODELS);
+  const [selectedModel, setSelectedModel] = useState('Hermes Agent');
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [isEffortMenuOpen, setIsEffortMenuOpen] = useState(false);
+  const [modelSearchQuery, setModelSearchQuery] = useState('');
+  const [thinkingEffort, setThinkingEffort] = useState<'Minimal' | 'Low' | 'Medium' | 'High' | 'Extra High' | 'Max' | 'Ultra'>('Medium');
+  const [isRefreshingModels, setIsRefreshingModels] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const getEffortBadge = (effort: string) => {
+    switch (effort) {
+      case 'Minimal': return 'Min';
+      case 'Low': return 'Low';
+      case 'Medium': return 'Med';
+      case 'High': return 'High';
+      case 'Extra High': return 'XHigh';
+      case 'Max': return 'Max';
+      case 'Ultra': return 'Ultra';
+      default: return 'Med';
+    }
+  };
+
+  const daysId = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const daysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const [currentDayName, setCurrentDayName] = useState('Minggu');
+
+  useEffect(() => {
+    const d = new Date();
+    setCurrentDayName(language === 'id' ? daysId[d.getDay()] : daysEn[d.getDay()]);
+  }, [language]);
+
+  const handleStarterPrompt = (type: string) => {
+    if (type === 'kode') {
+      setInputMessage(language === 'id' ? 'Bantu saya menulis kode untuk ' : 'Help me write code for ');
+    } else if (type === 'web') {
+      setIsWebSearchEnabled(true);
+      setInputMessage(language === 'id' ? 'Cari informasi terbaru tentang ' : 'Search latest info on ');
+    } else if (type === 'tulis') {
+      setInputMessage(language === 'id' ? 'Bantu saya menulis draf untuk ' : 'Help me draft ');
+    } else if (type === 'analisis') {
+      setInputMessage(language === 'id' ? 'Analisis arsitektur sistem berikut: ' : 'Analyze the following system architecture: ');
+    } else if (type === 'rencana') {
+      setInputMessage(language === 'id' ? 'Buat rencana terstruktur untuk ' : 'Create a structured plan for ');
+    }
+    inputRef.current?.focus();
+  };
+
+  const handleRefreshModels = async () => {
+    setIsRefreshingModels(true);
+    try {
+      const res = await fetch('/api/settings/ai');
+      const data = await res.json();
+      if (data.model) {
+        setModelsList(prev => {
+          if (!prev.some(m => m.name.toLowerCase() === data.model.toLowerCase())) {
+            return [{ id: data.model, name: data.model, badge: 'Med' }, ...prev];
+          }
+          return prev;
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTimeout(() => setIsRefreshingModels(false), 500);
+    }
+  };
+
   const [activeModal, setActiveModal] = useState<'none' | 'sketch' | 'snippets' | 'github' | 'notion' | 'folderPicker' | 'projectPicker' | 'urlConnector'>('none');
   const [githubToken, setGithubToken] = useState('');
   const [notionToken, setNotionToken] = useState('');
@@ -624,7 +706,7 @@ export default function NativeChatPage() {
       updateUrlWithSession(activeSessionId);
     } else {
       updateUrlWithSession(null);
-      setMessages([{ role: 'assistant', content: language === 'id' ? 'Halo! Saya Hermes. Apa yang bisa saya bantu hari ini?' : 'Hello! I am Hermes. How can I help you today?', tools: [], reasoning: null }]);
+      setMessages([]);
     }
   }, [activeSessionId, language]);
 
@@ -717,7 +799,12 @@ export default function NativeChatPage() {
       session_id: activeSessionId,
       workspace: currentWorkspace || undefined,
       attachments: attachments.length > 0 ? attachments : undefined,
-      systemPrompt: activeProject?.systemPrompt || undefined
+      systemPrompt: activeProject?.systemPrompt || undefined,
+      model: selectedModel,
+      thinking: isReasoningEnabled,
+      effort: thinkingEffort,
+      webSearch: isWebSearchEnabled,
+      deepResearch: isDeepResearchEnabled
     };
     
     // Clear attachments after sending
@@ -905,8 +992,12 @@ export default function NativeChatPage() {
             />
           </div>
           <button 
-            onClick={() => setActiveSessionId(null)}
-            className="w-full bg-lyra-accent/10 hover:bg-lyra-accent/20 text-lyra-accent py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium"
+            onClick={() => {
+              setActiveSessionId(null);
+              setMessages([]);
+              updateUrlWithSession(null);
+            }}
+            className="w-full bg-lyra-accent/10 hover:bg-lyra-accent/20 text-lyra-accent py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium cursor-pointer"
           >
             <Plus size={16} />
             {language === 'id' ? 'Chat Baru' : 'New Chat'}
@@ -964,6 +1055,76 @@ export default function NativeChatPage() {
               <p className="text-sm max-w-md mx-auto">{activeProject.description}</p>
             </div>
           )}
+
+          {!activeProject && messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto px-4 text-center select-none py-12">
+              {/* Claude Style Starburst Icon */}
+              <div className="mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-[#D97757]/15 border border-[#D97757]/30 flex items-center justify-center text-[#D97757] shadow-lg shadow-[#D97757]/10">
+                  <Sparkles size={24} className="animate-pulse" />
+                </div>
+              </div>
+
+              {/* Claude Style Greeting */}
+              <h1 className="text-3xl md:text-4xl font-serif font-normal text-lyra-text tracking-tight mb-2">
+                {language === 'id' ? `Sesi hari ${currentDayName}, riskal?` : `${currentDayName} session, riskal?`}
+              </h1>
+
+              {/* ChatGPT Style Subtitle */}
+              <p className="text-sm text-lyra-text-secondary opacity-75 mb-8">
+                {language === 'id' ? 'Mulai dari mana hari ini?' : 'Where should we start today?'}
+              </p>
+
+              {/* Claude & ChatGPT Action Pills */}
+              <div className="flex flex-wrap items-center justify-center gap-2.5 max-w-xl">
+                <button
+                  type="button"
+                  onClick={() => handleStarterPrompt('kode')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-lyra-accent/20 bg-lyra-surface hover:bg-lyra-accent/15 hover:border-lyra-accent text-xs font-medium text-lyra-text transition-all duration-150 hover:scale-[1.02] shadow-sm cursor-pointer"
+                >
+                  <Code size={14} className="text-amber-500" />
+                  <span>{language === 'id' ? 'Kode' : 'Code'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleStarterPrompt('web')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-lyra-accent/20 bg-lyra-surface hover:bg-lyra-accent/15 hover:border-lyra-accent text-xs font-medium text-lyra-text transition-all duration-150 hover:scale-[1.02] shadow-sm cursor-pointer"
+                >
+                  <Globe size={14} className="text-blue-400" />
+                  <span>{language === 'id' ? 'Cari di Web' : 'Web Search'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleStarterPrompt('tulis')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-lyra-accent/20 bg-lyra-surface hover:bg-lyra-accent/15 hover:border-lyra-accent text-xs font-medium text-lyra-text transition-all duration-150 hover:scale-[1.02] shadow-sm cursor-pointer"
+                >
+                  <FileEdit size={14} className="text-emerald-500" />
+                  <span>{language === 'id' ? 'Tulis' : 'Write'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleStarterPrompt('analisis')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-lyra-accent/20 bg-lyra-surface hover:bg-lyra-accent/15 hover:border-lyra-accent text-xs font-medium text-lyra-text transition-all duration-150 hover:scale-[1.02] shadow-sm cursor-pointer"
+                >
+                  <Lightbulb size={14} className="text-purple-400" />
+                  <span>{language === 'id' ? 'Analisis' : 'Analysis'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleStarterPrompt('rencana')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-lyra-accent/20 bg-lyra-surface hover:bg-lyra-accent/15 hover:border-lyra-accent text-xs font-medium text-lyra-text transition-all duration-150 hover:scale-[1.02] shadow-sm cursor-pointer"
+                >
+                  <Coffee size={14} className="text-rose-400" />
+                  <span>{language === 'id' ? 'Urusan Hidup' : 'Life & Plans'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] rounded-3xl p-5 ${
@@ -1018,177 +1179,72 @@ export default function NativeChatPage() {
         {/* Input Area */}
         <div className="p-4 bg-lyra-bg border-t border-white/5">
           <div className="max-w-4xl mx-auto relative flex flex-col gap-2">
-            
-            {/* Attachment Preview */}
-            {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 px-2">
-                {attachments.map((att, i) => (
-                  <div key={i} className="flex items-center gap-2 bg-lyra-surface border border-lyra-accent/20 px-3 py-1.5 rounded-lg text-xs">
-                    {att.isWorkspaceRef ? (att.isDirectory ? <Folder size={14} className="text-lyra-accent" /> : <File size={14} className="text-lyra-accent" />) : att.isUrl ? <Link size={14} className="text-purple-400" /> : att.type?.startsWith('image/') ? <ImageIcon size={14} className="text-emerald-500"/> : <File size={14} className="text-blue-500"/>}
-                    <span className="truncate max-w-[150px]">{att.isWorkspaceRef ? `@${att.isDirectory ? 'folder' : 'file'}:${att.name}` : att.name}</span>
-                    <button onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} className="text-red-400 hover:text-red-300 ml-1">
-                      <XCircle size={14}/>
-                    </button>
-                  </div>
-                ))}
-              </div>
+
+            {/* Backdrop for open popovers */}
+            {(isAttachMenuOpen || isModelMenuOpen || isEffortMenuOpen) && (
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => {
+                  setIsAttachMenuOpen(false);
+                  setIsModelMenuOpen(false);
+                  setIsEffortMenuOpen(false);
+                }}
+              />
             )}
-            
+
+            <input type="file" id="fileUpload" multiple className="hidden" onChange={(e) => { handleFileUpload(e); setIsAttachMenuOpen(false); }} />
+
+            {/* Composer Card */}
             <div 
-              className={`relative flex items-end transition-colors rounded-2xl ${isDraggingOver ? 'bg-lyra-accent/20 ring-2 ring-lyra-accent ring-inset' : ''}`}
+              className={`relative bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-xl overflow-visible focus-within:border-lyra-accent transition-colors ${isDraggingOver ? 'ring-2 ring-lyra-accent ring-inset bg-lyra-accent/10' : ''}`}
               onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
               onDragLeave={() => setIsDraggingOver(false)}
               onDrop={handleDropOnComposer}
             >
               {isDraggingOver && (
-                <div className="absolute inset-0 z-30 flex items-center justify-center bg-lyra-surface/80 backdrop-blur-sm rounded-2xl pointer-events-none border-2 border-dashed border-lyra-accent">
+                <div className="absolute inset-0 z-30 flex items-center justify-center bg-lyra-surface/90 backdrop-blur-sm rounded-2xl pointer-events-none border-2 border-dashed border-lyra-accent">
                   <div className="text-lyra-accent font-bold flex items-center gap-2">
                     <Plus size={20} /> Lepaskan file di sini
                   </div>
                 </div>
               )}
-              <input type="file" id="fileUpload" multiple className="hidden" onChange={(e) => { handleFileUpload(e); setIsAttachMenuOpen(false); }} />
-              
-              <div className="absolute left-3 bottom-3 z-20">
-                <button 
-                  onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
-                  className={`p-2 rounded-xl transition-colors ${isAttachMenuOpen ? 'bg-lyra-accent text-white' : 'text-lyra-text-secondary hover:text-lyra-accent hover:bg-lyra-accent/10'}`}
-                  title="Lampirkan"
-                >
-                  <Plus size={18} className={`transition-transform duration-200 ${isAttachMenuOpen ? 'rotate-45' : ''}`} />
-                </button>
 
-                <AnimatePresence>
-                  {isAttachMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setIsAttachMenuOpen(false)}></div>
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute left-0 bottom-[calc(100%+8px)] w-64 bg-lyra-surface border border-lyra-accent/20 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col py-2"
-                      >
-                        <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">File & Media</div>
-                        
-                        <button onClick={() => document.getElementById('fileUpload')?.click()} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <FileText size={16} className="text-lyra-text" />
-                          <div>
-                            <div className="font-medium text-lyra-text">Unggah file atau gambar</div>
-                          </div>
-                        </button>
-                        
-                        <button onClick={() => { setActiveModal('folderPicker'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <Folder size={16} className="text-lyra-text" />
-                          <div>
-                            <div className="font-medium text-lyra-text">Unggah folder lokal...</div>
-                          </div>
-                        </button>
-
-                        <button onClick={() => { setIsAttachMenuOpen(false); captureScreenshot(); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <Monitor size={16} className="text-lyra-text" />
-                          <div>
-                            <div className="font-medium text-lyra-text">Ambil tangkapan layar</div>
-                          </div>
-                        </button>
-
-                        <button onClick={handleClipboardPaste} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <Clipboard size={16} className="text-lyra-text" />
-                          <div>
-                            <div className="font-medium text-lyra-text">Tempel dari clipboard</div>
-                          </div>
-                        </button>
-                        
-                        <button onClick={() => { setActiveModal('sketch'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <PenTool size={16} className="text-lyra-text" />
-                          <div>
-                            <div className="font-medium text-lyra-text">Sketsa manual</div>
-                          </div>
-                        </button>
-
-                        <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
-                        <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Konteks & Proyek</div>
-
-                        <button onClick={() => { setActiveModal('projectPicker'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full group">
-                          <Database size={16} className="text-lyra-text" />
-                          <div className="flex-1">
-                            <div className="font-medium text-lyra-text">Ganti / Tautkan Proyek</div>
-                          </div>
-                          <ChevronRight size={14} className="opacity-50 group-hover:translate-x-1 transition-transform" />
-                        </button>
-
-                        <button onClick={() => { setActiveModal('urlConnector'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <Link size={16} className="text-lyra-text" />
-                          <div className="flex-1">
-                            <div className="font-medium text-lyra-text">Tautkan URL / Konektor</div>
-                          </div>
-                        </button>
-
-                        <button onClick={() => { setActiveModal('snippets'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <MessageSquare size={16} className="text-lyra-text" />
-                          <div className="flex-1">
-                            <div className="font-medium text-lyra-text">Prompt Snippets & Skills</div>
-                          </div>
-                        </button>
-
-                        <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
-                        <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Mode AI</div>
-
-                        <button onClick={() => setIsReasoningEnabled(!isReasoningEnabled)} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <BrainCircuit size={16} className="text-purple-400" />
-                          <div className="flex-1">
-                            <div className="font-medium text-lyra-text">Pikirkan (Reasoning)</div>
-                          </div>
-                          {isReasoningEnabled && <Check size={16} className="text-purple-400" />}
-                        </button>
-
-                        <button onClick={() => setIsWebSearchEnabled(!isWebSearchEnabled)} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <Globe size={16} className="text-blue-400" />
-                          <div className="flex-1">
-                            <div className="font-medium text-lyra-text">Pencarian web</div>
-                          </div>
-                          {isWebSearchEnabled && <Check size={16} className="text-blue-400" />}
-                        </button>
-
-                        <button onClick={() => setIsDeepResearchEnabled(!isDeepResearchEnabled)} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <Search size={16} className="text-emerald-500" />
-                          <div className="flex-1">
-                            <div className="font-medium text-lyra-text">Riset mendalam</div>
-                          </div>
-                          {isDeepResearchEnabled && <Check size={16} className="text-emerald-500" />}
-                        </button>
-
-                        <button onClick={() => alert('Mode Generator Gambar segera hadir!')} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <ImagePlus size={16} className="text-amber-500" />
-                          <div className="flex-1">
-                            <div className="font-medium text-lyra-text">Buat gambar</div>
-                          </div>
-                        </button>
-
-                        <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
-                        <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Integrasi</div>
-                        
-                        <button onClick={() => { setActiveModal('github'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <GitBranch size={16} className={`text-lyra-text ${githubToken ? 'text-green-400' : ''}`} />
-                          <div className="flex-1">
-                            <div className="font-medium text-lyra-text">{githubToken ? 'GitHub Terhubung' : 'Hubungkan GitHub'}</div>
-                          </div>
-                        </button>
-                        
-                        <button onClick={() => { setActiveModal('notion'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full">
-                          <Library size={16} className={`text-lyra-text ${notionToken ? 'text-green-400' : ''}`} />
-                          <div className="flex-1">
-                            <div className="font-medium text-lyra-text">{notionToken ? 'Notion Terhubung' : 'Hubungkan Notion'}</div>
-                          </div>
-                        </button>
-
-                      </motion.div>
-                    </>
+              {/* Active Mode / Attachment Chips */}
+              {(attachments.length > 0 || isWebSearchEnabled || isDeepResearchEnabled) && (
+                <div className="flex flex-wrap gap-1.5 px-3 pt-2.5 pb-1 items-center border-b border-lyra-accent/5">
+                  {isWebSearchEnabled && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-xs">
+                      <Globe size={12} />
+                      {language === 'id' ? 'Pencarian Web' : 'Web Search'}
+                      <button type="button" onClick={() => setIsWebSearchEnabled(false)} className="hover:text-white ml-0.5 cursor-pointer">
+                        <X size={12} />
+                      </button>
+                    </span>
                   )}
-                </AnimatePresence>
-              </div>
+                  {isDeepResearchEnabled && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-xs">
+                      <Search size={12} />
+                      {language === 'id' ? 'Riset Mendalam' : 'Deep Research'}
+                      <button type="button" onClick={() => setIsDeepResearchEnabled(false)} className="hover:text-white ml-0.5 cursor-pointer">
+                        <X size={12} />
+                      </button>
+                    </span>
+                  )}
+                  {attachments.map((att, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 bg-lyra-accent/10 border border-lyra-accent/20 px-2.5 py-1 rounded-full text-xs">
+                      {att.isWorkspaceRef ? (att.isDirectory ? <Folder size={12} className="text-lyra-accent" /> : <File size={12} className="text-lyra-accent" />) : att.isUrl ? <Link size={12} className="text-purple-400" /> : att.type?.startsWith('image/') ? <ImageIcon size={12} className="text-emerald-500"/> : <File size={12} className="text-blue-500"/>}
+                      <span className="truncate max-w-[140px] text-[11px]">{att.name || att.path}</span>
+                      <button type="button" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))} className="hover:text-red-400 cursor-pointer">
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
+              {/* Textarea */}
               <textarea
+                ref={inputRef}
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyDown={(e) => {
@@ -1198,16 +1254,375 @@ export default function NativeChatPage() {
                   }
                 }}
                 placeholder={language === 'id' ? 'Ketik pesan Anda di sini...' : 'Type your message here...'}
-                className="w-full bg-lyra-surface border border-lyra-accent/20 rounded-2xl py-4 pl-12 pr-14 text-lyra-text focus:outline-none focus:border-lyra-accent resize-none min-h-[60px] max-h-48 overflow-y-auto shadow-xl"
+                className="w-full bg-transparent px-4 py-3 text-lyra-text placeholder:text-lyra-text-secondary focus:outline-none resize-none min-h-[56px] max-h-48 overflow-y-auto text-sm"
                 rows={1}
               />
-              <button
-                onClick={handleSendMessage}
-                disabled={isLoading || !inputMessage.trim()}
-                className="absolute right-3 bottom-3 p-2 bg-lyra-accent hover:bg-lyra-accent/80 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <Send size={18} />
-              </button>
+
+              {/* Bottom Toolbar Row (Matching Image 3 & Image 4) */}
+              <div className="flex items-center justify-between px-3 pb-2.5 pt-1 border-t border-lyra-accent/5">
+                {/* Left Controls: Plus Button, Model Selector, Effort Selector */}
+                <div className="flex items-center gap-1.5 relative">
+
+                  {/* Plus Attach & Options Button */}
+                  <div className="relative">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setIsAttachMenuOpen(!isAttachMenuOpen);
+                        setIsModelMenuOpen(false);
+                        setIsEffortMenuOpen(false);
+                      }}
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isAttachMenuOpen ? 'bg-lyra-accent text-white' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'}`}
+                      title="Lampirkan & Opsi Mode AI"
+                    >
+                      <Plus size={18} className={`transition-transform duration-200 ${isAttachMenuOpen ? 'rotate-45' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {isAttachMenuOpen && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute left-0 bottom-[calc(100%+8px)] w-64 bg-lyra-surface border border-lyra-accent/20 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col py-2 backdrop-blur-md"
+                        >
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">File & Media</div>
+                          
+                          <button type="button" onClick={() => { document.getElementById('fileUpload')?.click(); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
+                            <FileText size={16} className="text-lyra-text" />
+                            <div>
+                              <div className="font-medium text-lyra-text">Unggah file atau gambar</div>
+                            </div>
+                          </button>
+                          
+                          <button type="button" onClick={() => { setActiveModal('folderPicker'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
+                            <Folder size={16} className="text-lyra-text" />
+                            <div>
+                              <div className="font-medium text-lyra-text">Unggah folder lokal...</div>
+                            </div>
+                          </button>
+
+                          <button type="button" onClick={() => { setIsAttachMenuOpen(false); captureScreenshot(); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
+                            <Monitor size={16} className="text-lyra-text" />
+                            <div>
+                              <div className="font-medium text-lyra-text">Ambil tangkapan layar</div>
+                            </div>
+                          </button>
+
+                          <button type="button" onClick={handleClipboardPaste} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
+                            <Clipboard size={16} className="text-lyra-text" />
+                            <div>
+                              <div className="font-medium text-lyra-text">Tempel dari clipboard</div>
+                            </div>
+                          </button>
+                          
+                          <button type="button" onClick={() => { setActiveModal('sketch'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
+                            <PenTool size={16} className="text-lyra-text" />
+                            <div>
+                              <div className="font-medium text-lyra-text">Sketsa manual</div>
+                            </div>
+                          </button>
+
+                          <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Konteks & Proyek</div>
+
+                          <button type="button" onClick={() => { setActiveModal('projectPicker'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full group cursor-pointer">
+                            <Database size={16} className="text-lyra-text" />
+                            <div className="flex-1">
+                              <div className="font-medium text-lyra-text">Ganti / Tautkan Proyek</div>
+                            </div>
+                            <ChevronRight size={14} className="opacity-50 group-hover:translate-x-1 transition-transform" />
+                          </button>
+
+                          <button type="button" onClick={() => { setActiveModal('urlConnector'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
+                            <Link size={16} className="text-lyra-text" />
+                            <div className="flex-1">
+                              <div className="font-medium text-lyra-text">Tautkan URL / Konektor</div>
+                            </div>
+                          </button>
+
+                          <button type="button" onClick={() => { setActiveModal('snippets'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
+                            <MessageSquare size={16} className="text-lyra-text" />
+                            <div className="flex-1">
+                              <div className="font-medium text-lyra-text">Prompt Snippets & Skills</div>
+                            </div>
+                          </button>
+
+                          {/* Mode AI (Requirement 2) */}
+                          <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Mode AI</div>
+
+                          <button 
+                            type="button" 
+                            onClick={() => setIsReasoningEnabled(!isReasoningEnabled)} 
+                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              <BrainCircuit size={16} className={isReasoningEnabled ? "text-purple-400" : "text-lyra-text-secondary"} />
+                              <div>
+                                <div className="font-medium text-lyra-text">Pikirkan (Reasoning)</div>
+                                <div className="text-[10px] text-lyra-text-secondary">{isReasoningEnabled ? `Aktif: ${thinkingEffort}` : 'Nonaktif'}</div>
+                              </div>
+                            </div>
+                            <div className={`w-8 h-4 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center ${isReasoningEnabled ? 'bg-purple-500' : 'bg-zinc-600'}`}>
+                              <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 ease-in-out ${isReasoningEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </div>
+                          </button>
+
+                          <button 
+                            type="button" 
+                            onClick={() => setIsWebSearchEnabled(!isWebSearchEnabled)} 
+                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Globe size={16} className={isWebSearchEnabled ? "text-blue-400" : "text-lyra-text-secondary"} />
+                              <div>
+                                <div className="font-medium text-lyra-text">Pencarian Web</div>
+                                <div className="text-[10px] text-lyra-text-secondary">{isWebSearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
+                              </div>
+                            </div>
+                            <div className={`w-8 h-4 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center ${isWebSearchEnabled ? 'bg-blue-500' : 'bg-zinc-600'}`}>
+                              <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 ease-in-out ${isWebSearchEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </div>
+                          </button>
+
+                          <button 
+                            type="button" 
+                            onClick={() => setIsDeepResearchEnabled(!isDeepResearchEnabled)} 
+                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Search size={16} className={isDeepResearchEnabled ? "text-emerald-500" : "text-lyra-text-secondary"} />
+                              <div>
+                                <div className="font-medium text-lyra-text">Riset Mendalam</div>
+                                <div className="text-[10px] text-lyra-text-secondary">{isDeepResearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
+                              </div>
+                            </div>
+                            <div className={`w-8 h-4 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center ${isDeepResearchEnabled ? 'bg-emerald-500' : 'bg-zinc-600'}`}>
+                              <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 ease-in-out ${isDeepResearchEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </div>
+                          </button>
+
+                          <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Integrasi</div>
+                          
+                          <button type="button" onClick={() => { setActiveModal('github'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
+                            <GitBranch size={16} className={`text-lyra-text ${githubToken ? 'text-green-400' : ''}`} />
+                            <div className="flex-1">
+                              <div className="font-medium text-lyra-text">{githubToken ? 'GitHub Terhubung' : 'Hubungkan GitHub'}</div>
+                            </div>
+                          </button>
+                          
+                          <button type="button" onClick={() => { setActiveModal('notion'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
+                            <Library size={16} className={`text-lyra-text ${notionToken ? 'text-green-400' : ''}`} />
+                            <div className="flex-1">
+                              <div className="font-medium text-lyra-text">{notionToken ? 'Notion Terhubung' : 'Hubungkan Notion'}</div>
+                            </div>
+                          </button>
+
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Model Selector Button (Matching Image 3 & Image 4) */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsModelMenuOpen(!isModelMenuOpen);
+                        setIsEffortMenuOpen(false);
+                        setIsAttachMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
+                        isModelMenuOpen 
+                          ? 'bg-lyra-accent/20 border-lyra-accent text-lyra-text' 
+                          : 'bg-lyra-accent/5 border-lyra-accent/15 text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'
+                      }`}
+                    >
+                      <span className="truncate max-w-[130px]">{selectedModel}</span>
+                      <ChevronDown size={13} className={`opacity-60 transition-transform ${isModelMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Model Popover (Matching Image 3) */}
+                    <AnimatePresence>
+                      {isModelMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute left-0 bottom-[calc(100%+8px)] w-72 bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-2xl z-50 p-2.5 backdrop-blur-md flex flex-col"
+                        >
+                          {/* Search Input */}
+                          <div className="relative mb-2">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-lyra-text-secondary opacity-60" />
+                            <input
+                              type="text"
+                              value={modelSearchQuery}
+                              onChange={(e) => setModelSearchQuery(e.target.value)}
+                              placeholder="Search models"
+                              className="w-full bg-lyra-bg border border-lyra-accent/20 rounded-xl py-1.5 pl-8 pr-3 text-xs text-lyra-text placeholder:text-lyra-text-secondary focus:outline-none focus:border-lyra-accent"
+                              autoFocus
+                            />
+                          </div>
+
+                          <div className="h-px bg-lyra-accent/10 mx-1 mb-1.5" />
+
+                          {/* Model Items */}
+                          <div className="overflow-y-auto space-y-0.5 max-h-52 pr-1 custom-scrollbar">
+                            {modelsList
+                              .filter(m => m.name.toLowerCase().includes(modelSearchQuery.toLowerCase()))
+                              .map((m) => (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedModel(m.name);
+                                    setIsModelMenuOpen(false);
+                                  }}
+                                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors text-left cursor-pointer ${
+                                    selectedModel === m.name
+                                      ? 'bg-lyra-accent/20 text-lyra-text font-semibold'
+                                      : 'text-lyra-text hover:bg-lyra-accent/10'
+                                  }`}
+                                >
+                                  <span className="truncate pr-2">{m.name}</span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-white/5 font-mono">
+                                    {isReasoningEnabled ? getEffortBadge(thinkingEffort) : 'Off'}
+                                  </span>
+                                </button>
+                              ))}
+                          </div>
+
+                          <div className="h-px bg-lyra-accent/10 my-1.5 mx-1" />
+
+                          {/* Actions */}
+                          <div className="space-y-0.5">
+                            <button
+                              type="button"
+                              onClick={handleRefreshModels}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors text-left cursor-pointer"
+                            >
+                              <RefreshCw size={13} className={isRefreshingModels ? 'animate-spin' : ''} />
+                              <span>Refresh models</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsModelMenuOpen(false);
+                                router.push('/settings');
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors text-left cursor-pointer"
+                            >
+                              <Settings size={13} />
+                              <span>Edit models...</span>
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Effort Selector Button (Matching Image 4) */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEffortMenuOpen(!isEffortMenuOpen);
+                        setIsModelMenuOpen(false);
+                        setIsAttachMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border cursor-pointer ${
+                        isEffortMenuOpen
+                          ? 'bg-lyra-accent/20 border-lyra-accent text-lyra-text'
+                          : 'bg-lyra-accent/5 border-lyra-accent/15 text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'
+                      }`}
+                    >
+                      <span>{isReasoningEnabled ? getEffortBadge(thinkingEffort) : 'Off'}</span>
+                      <ChevronDown size={13} className={`opacity-60 transition-transform ${isEffortMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Effort Popover (Matching Image 4) */}
+                    <AnimatePresence>
+                      {isEffortMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute left-0 bottom-[calc(100%+8px)] w-56 bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-2xl z-50 p-2.5 backdrop-blur-md select-none"
+                        >
+                          {/* OPTIONS Header */}
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-2.5 py-1 uppercase tracking-wider">
+                            OPTIONS
+                          </div>
+
+                          {/* Thinking Toggle Row */}
+                          <button
+                            type="button"
+                            onClick={() => setIsReasoningEnabled(!isReasoningEnabled)}
+                            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-lyra-accent/10 transition-colors cursor-pointer"
+                          >
+                            <span className="text-sm font-medium text-lyra-text">Thinking</span>
+                            <div className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center ${
+                              isReasoningEnabled ? 'bg-[#D97757]' : 'bg-zinc-600'
+                            }`}>
+                              <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ease-in-out ${
+                                isReasoningEnabled ? 'translate-x-4' : 'translate-x-0'
+                              }`} />
+                            </div>
+                          </button>
+
+                          <div className="h-px bg-lyra-accent/10 my-2 mx-1" />
+
+                          {/* EFFORT Header */}
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-2.5 py-1 uppercase tracking-wider">
+                            EFFORT
+                          </div>
+
+                          {/* Effort Levels */}
+                          <div className="space-y-0.5">
+                            {(['Minimal', 'Low', 'Medium', 'High', 'Extra High', 'Max', 'Ultra'] as const).map((lvl) => (
+                              <button
+                                key={lvl}
+                                type="button"
+                                onClick={() => {
+                                  setThinkingEffort(lvl);
+                                  setIsReasoningEnabled(true);
+                                  setIsEffortMenuOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm transition-colors text-left cursor-pointer ${
+                                  thinkingEffort === lvl && isReasoningEnabled
+                                    ? 'bg-lyra-accent/15 text-lyra-text font-medium'
+                                    : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'
+                                }`}
+                              >
+                                <span>{lvl}</span>
+                                {thinkingEffort === lvl && isReasoningEnabled && (
+                                  <Check size={15} className="text-lyra-accent stroke-[2.5]" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                </div>
+
+                {/* Right Send Button */}
+                <button
+                  type="button"
+                  onClick={handleSendMessage}
+                  disabled={isLoading || !inputMessage.trim()}
+                  className="p-2 bg-lyra-accent hover:bg-lyra-accent/80 text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 shadow-md shadow-lyra-accent/20 cursor-pointer"
+                >
+                  <Send size={16} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -6,13 +6,20 @@ import { getHermesEnv } from '@/lib/hermesEnv';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  let { message, session_id, workspace, attachments, systemPrompt } = await req.json();
+  let { message, session_id, workspace, attachments, systemPrompt, model, thinking, effort, webSearch, deepResearch } = await req.json();
 
   if (!message) {
     return new Response(JSON.stringify({ error: 'Message is required' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+
+  // Prepend deep research or web search directive if enabled
+  if (deepResearch) {
+    message = `[DIRECTIVE: MODE RISET MENDALAM (DEEP RESEARCH) DIAKTIFKAN. Lakukan investigasi komprehensif, telaah berbagai sudut pandang/sumber, dan berikan laporan analitis terstruktur dengan fakta dan penalaran mendalam.]\n\n${message}`;
+  } else if (webSearch) {
+    message = `[DIRECTIVE: PENCARIAN WEB DIAKTIFKAN. Gunakan kapabilitas pencarian web untuk mendapatkan informasi faktual dan data terbaru secara akurat.]\n\n${message}`;
   }
 
   // Inject system prompt to the message if present
@@ -46,6 +53,31 @@ export async function POST(req: NextRequest) {
 
   if (workspace) {
     args.push('--in', workspace);
+  }
+
+  // Model selection
+  if (model && model !== 'default' && model !== 'Hermes Agent') {
+    args.push('-m', model);
+  }
+
+  // Reasoning / Thinking level
+  if (thinking === false) {
+    args.push('--reasoning', 'none');
+  } else if (effort) {
+    const effortStr = String(effort).toLowerCase();
+    const effortMap: Record<string, string> = {
+      minimal: 'minimal',
+      low: 'low',
+      med: 'medium',
+      medium: 'medium',
+      high: 'high',
+      'extra high': 'xhigh',
+      xhigh: 'xhigh',
+      max: 'max',
+      ultra: 'ultra'
+    };
+    const level = effortMap[effortStr] || 'medium';
+    args.push('--reasoning', level);
   }
 
   if (attachments && Array.isArray(attachments)) {
