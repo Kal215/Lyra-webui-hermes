@@ -1,122 +1,93 @@
-# 🌌 Lyra Studio (Autonomous AI Orchestrator)
+# Lyra Studio
 
-<p align="center">
-  <strong>An enterprise-grade, autonomous multi-agent orchestration workspace and studio interface.</strong>
-</p>
+A modern web interface and multi-agent workspace for autonomous AI development.
 
-<p align="center">
-  <a href="#-key-features">Features</a> •
-  <a href="#-architecture">Architecture</a> •
-  <a href="#-quick-start">Quick Start</a> •
-  <a href="#-agent-squad">Agent Squad</a> •
-  <a href="README.id.md">Bahasa Indonesia</a>
-</p>
+[Features](#features) • [Quick Start](#quick-start) • [Agent Architecture](#agent-architecture) • [Configuration](#configuration) • [Bahasa Indonesia](README.id.md)
 
 ---
 
-## 🌟 Overview
+## Overview
 
-**Lyra Studio** is an enterprise-grade AI orchestration platform designed to serve as the visual command center for multi-agent autonomous engineering. It combines an ultra-refined web interface with a high-performance streaming architecture, giving you direct access to LLM reasoning, code workspace manipulation, and coordinated autonomous agent swarms.
+Lyra Studio is an open-source developer workspace designed for interacting with LLMs and orchestrating multi-agent systems. Built with Next.js and Tailwind CSS, it offers two complementary interaction modes:
 
-Whether you run local open models via Ollama, cloud inference engines (OpenRouter, DeepSeek, Anthropic, OpenAI, Groq), or connect into native autonomous runtimes like Hermes Agent, Lyra Studio provides zero-latency execution in an isolated, secure environment.
-
----
-
-## ✨ Key Features
-
-- **⚡ Dual-Engine Interaction**:
-  - **Direct API Mode (`/chat`)**: Zero-setup, instant direct HTTP SSE streaming to any OpenAI-compatible provider. No local CLI or external dependencies required.
-  - **Autonomous Agent Studio (`/work`)**: Real-time terminal orchestration, autonomous multi-file edits, and dynamic todo task planning powered by agent runtime integration.
-- **🤖 Out-of-the-Box Specialist Squad**: Auto-provisions 9 specialized agent personas (Software Engineering, System Architecture, Deep Research, QA, Security Auditing, Verification, Synthesis) with self-contained SOUL directives.
-- **🌐 Universal Model & Provider Support**: First-class support for OpenRouter, OpenAI, Anthropic, DeepSeek, Google Gemini, Groq, Mistral, Ollama, and custom private endpoints.
-- **📁 Integrated Workspace Explorer**: Interactive file tree with live typing simulation, syntax-highlighted code editor, and file-context tagging.
-- **🌓 Bilingual Enterprise UI (ID / EN)**: Fully localized, distraction-free interface built with Next.js, Tailwind CSS, and GitHub-Flavored Markdown rendering.
-- **🔒 Zero-Leak Privacy Design**: Local environment keys, sandboxed configuration paths, and automatic secret sanitization.
+1. **Direct Chat (`/chat`)**: Direct HTTP Server-Sent Events (SSE) streaming to any OpenAI-compatible endpoint (OpenRouter, DeepSeek, Anthropic, OpenAI, Groq, Ollama). Requires no local runtime or CLI dependencies.
+2. **Autonomous Studio (`/work`)**: Agent-driven workspace supporting real-time file tree modifications, tool execution tracking, reasoning visibility, and task coordination.
 
 ---
 
-## 🏗️ Architecture
+## Features
 
-```mermaid
-graph TD
-    User([Developer / Operator]) -->|Browser Interface| WebUI[Lyra Studio Web UI - Next.js]
-    
-    subgraph "Inference & AI Providers"
-        WebUI -->|Direct HTTP SSE| Providers[OpenRouter / DeepSeek / Anthropic / OpenAI / Ollama]
-    end
-
-    subgraph "Autonomous Engineering Studio"
-        WebUI -->|Orchestrates| Swarm[Autonomous Agent Squad]
-        Swarm -->|Specialist Roles| Forge[Forge - Coder]
-        Swarm -->|Specialist Roles| Atlas[Atlas - Architect]
-        Swarm -->|Specialist Roles| Scout[Scout - Research]
-        Swarm -->|Specialist Roles| Sentinel[Sentinel - Security]
-        Swarm -->|Workspace Tools| Tools[File Write / Terminal / Patch / Workspace]
-    end
-```
+- **Direct & Zero-Config Chat**: Stream responses with real-time thinking/reasoning inspection (`<think>` tags) and formatted Markdown output.
+- **Pre-Configured Specialist Squad**: Includes 9 pre-defined agent roles with scoped system prompts (Engineer, Architect, Researcher, QA, Security, Verifier, Synthesizer).
+- **Multi-Provider Support**: Switch seamlessly between cloud providers (OpenRouter, OpenAI, Anthropic, DeepSeek, Groq) and local inference servers (Ollama, vLLM).
+- **Interactive Workspace**: Built-in file explorer, syntax-highlighted code viewer, and contextual file tagging.
+- **Bilingual Interface**: Native support for English and Indonesian across all views.
+- **Privacy First**: API keys and environment configurations are stored locally on your machine and excluded from version control.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### 1. Prerequisites
-- **Node.js**: `v20.x` or later
-- **npm** or **pnpm**
+### Prerequisites
+- Node.js 20.x or higher
+- npm or pnpm
 
-### 2. Installation
-
-Clone the repository and install dependencies:
+### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/Kal215/lyrav2.git
 cd lyrav2/web
-
-# Install dependencies
 npm install
-
-# Run the development server
 npm run dev
 ```
 
-Open your browser at **`http://localhost:3000`**.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 3. Configure Your AI Provider
+### Setup API Keys
+
 1. Navigate to **Settings** (`/settings`).
-2. Select your provider of choice (*OpenRouter, OpenAI, DeepSeek, Groq, Ollama, etc.*).
-3. Paste your API Key and select your default model.
-4. Click **Simpan Konfigurasi / Save Configuration**.
-5. Start chatting immediately in `/chat` or launch multi-agent projects in `/work`!
-
-*(Optional: If you already run a local Hermes Agent environment, Lyra Studio will seamlessly pair with your existing configuration).*
+2. Select your provider (OpenRouter, OpenAI, DeepSeek, Groq, or Custom).
+3. Enter your API Key and choose your default model.
+4. Click **Save Configuration**.
 
 ---
 
-## 👥 Pre-Configured Agent Squad
+## Agent Architecture
 
-Lyra Studio automatically initializes a coordinated squad of specialized agents on first launch:
+Lyra Studio includes built-in specialist personas for structured development workflows:
 
-| Agent | Name | Role | Primary Objective |
-| :--- | :--- | :--- | :--- |
-| **Coder** | `@Forge` | Senior Engineer | Implements clean code, refactors, and runs automated tests. |
-| **Planner** | `@Atlas` | System Architect | Decomposes complex briefs into sequenced, actionable milestones. |
-| **Researcher** | `@Scout` | Intelligence | Performs deep web research, verifies facts, and retrieves documentation. |
-| **QA** | `@Iris` | QA Engineer | Scrutinizes code, designs edge-case tests, and ensures stability. |
-| **Security** | `@Sentinel` | Security Officer | Audits attack surfaces, safeguards environment secrets, and checks dependencies. |
-| **Verifier** | `@Nova` | Verification | Validates deliverables against original acceptance criteria before sign-off. |
-| **Synthesizer** | `@Echo` | Integration Lead | Unifies findings into cohesive, production-ready deliverables. |
-
----
-
-## 📄 Documentation in Indonesian
-
-Dokumentasi lengkap dalam Bahasa Indonesia tersedia di: **[README.id.md](README.id.md)**.
+| Role | Identifier | Focus Area |
+| :--- | :--- | :--- |
+| Senior Engineer | `Forge` (`coder`) | Implementation, code refactoring, test execution |
+| System Architect | `Atlas` (`planner`) | Architectural design, task decomposition, roadmaps |
+| Research Specialist | `Scout` (`researcher`) | Documentation review, web research, factual verification |
+| QA Engineer | `Iris` (`qa`) | Edge-case analysis, regression checks, validation |
+| Security Officer | `Sentinel` (`security`) | Permission review, vulnerability scanning, secret isolation |
+| Verifier | `Nova` (`verifier`) | Acceptance criteria review, diff verification |
+| Integration Lead | `Echo` (`synthesizer`) | Cross-agent synthesis, documentation, final reporting |
 
 ---
 
-## 🛡️ License
+## Project Structure
 
-MIT License. Free for personal, academic, and commercial open-source usage.
+```
+web/
+├── src/
+│   ├── app/                 # Next.js App Router (chat, work, settings, memory, etc.)
+│   │   ├── api/             # Backend API routes (chat-stream, settings, workspace)
+│   │   ├── chat/            # Chat interface with streaming & thinking accordion
+│   │   ├── work/            # Autonomous studio with dynamic todos & tool feed
+│   │   └── settings/        # Model selection & API credentials manager
+│   ├── components/          # Reusable UI components (workspace, shell, sidebar)
+│   ├── lib/                 # Core utilities, reasoning extractor, profile bootstrap
+│   └── store/               # Zustand state stores
+```
 
 ---
-*Created by [M. Riskal Fadhilla] - Cloud DevOps & AI Integration Engineer.*
+
+## License
+
+MIT License. Free for open-source, educational, and commercial use.
+
+---
+*Created by [M. Riskal Fadhilla] — Cloud DevOps & AI Integration Engineer.*
