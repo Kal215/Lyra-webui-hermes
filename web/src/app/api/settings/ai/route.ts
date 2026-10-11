@@ -50,14 +50,15 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { baseUrl, model, apiKey } = data;
+    const { baseUrl, model, apiKey, providerId, keyEnv } = data;
     
     const env = getHermesEnv();
     const targetProvider = 'lyra-web';
+    const activeKeyEnv = keyEnv || 'LYRA_WEB_KEY';
     
     if (baseUrl) {
       await execFileAsync('hermes', ['config', 'set', `providers.${targetProvider}.base_url`, baseUrl], { env });
-      await execFileAsync('hermes', ['config', 'set', `providers.${targetProvider}.name`, 'Lyra Web Provider'], { env });
+      await execFileAsync('hermes', ['config', 'set', `providers.${targetProvider}.name`, `Lyra Web (${providerId || 'Custom'})`], { env });
       await execFileAsync('hermes', ['config', 'set', 'model.provider', targetProvider], { env });
     }
     if (model) {
@@ -72,13 +73,16 @@ export async function POST(req: Request) {
       if (fs.existsSync(envPath)) {
         envContent = fs.readFileSync(envPath, 'utf8');
       }
-      const lines = envContent.split('\n').filter((l: string) => !l.startsWith('LYRA_WEB_KEY='));
+      const lines = envContent.split('\n').filter((l: string) => !l.startsWith('LYRA_WEB_KEY=') && !l.startsWith(`${activeKeyEnv}=`));
       if (apiKey.trim()) {
         lines.push(`LYRA_WEB_KEY=${apiKey}`);
+        if (activeKeyEnv !== 'LYRA_WEB_KEY') {
+          lines.push(`${activeKeyEnv}=${apiKey}`);
+        }
       }
       fs.writeFileSync(envPath, lines.join('\n'));
       
-      await execFileAsync('hermes', ['config', 'set', `providers.${targetProvider}.key_env`, 'LYRA_WEB_KEY'], { env });
+      await execFileAsync('hermes', ['config', 'set', `providers.${targetProvider}.key_env`, activeKeyEnv], { env });
     }
     
     return NextResponse.json({ success: true });

@@ -12,6 +12,155 @@ import { useSoundStore, useTactileSound } from '@/hooks/use-tactile-sound';
 import { Check, ChevronDown, ChevronRight, Server, Link, Cpu, ShieldAlert, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+export type ProviderType = 'openai' | 'anthropic' | 'openrouter' | 'deepseek' | 'google' | 'groq' | 'mistral' | 'ollama' | 'custom';
+
+interface ProviderPreset {
+  id: ProviderType;
+  label: string;
+  baseUrl: string;
+  defaultModel: string;
+  keyEnv: string;
+  keyPlaceholder: string;
+  keyHelp: string;
+  models: { id: string; name: string }[];
+}
+
+const PROVIDER_PRESETS: ProviderPreset[] = [
+  {
+    id: 'openrouter',
+    label: 'OpenRouter (All Models)',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    defaultModel: 'anthropic/claude-3.5-sonnet',
+    keyEnv: 'OPENROUTER_API_KEY',
+    keyPlaceholder: 'sk-or-v1-...',
+    keyHelp: 'openrouter.ai/keys (Akses ratusan model LLM sekaligus)',
+    models: [
+      { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
+      { id: 'openai/gpt-4o', name: 'GPT-4o' },
+      { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3' },
+      { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (Reasoning)' },
+      { id: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+      { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
+      { id: 'qwen/qwen-2.5-coder-32b-instruct', name: 'Qwen 2.5 Coder 32B' },
+      { id: 'minimax/minimax-01', name: 'MiniMax-01' }
+    ]
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI (Official)',
+    baseUrl: 'https://api.openai.com/v1',
+    defaultModel: 'gpt-4o',
+    keyEnv: 'OPENAI_API_KEY',
+    keyPlaceholder: 'sk-proj-...',
+    keyHelp: 'platform.openai.com/api-keys',
+    models: [
+      { id: 'gpt-4o', name: 'GPT-4o (Omni)' },
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+      { id: 'o1', name: 'o1 (Reasoning)' },
+      { id: 'o1-mini', name: 'o1 Mini' },
+      { id: 'o3-mini', name: 'o3 Mini' }
+    ]
+  },
+  {
+    id: 'deepseek',
+    label: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+    keyEnv: 'DEEPSEEK_API_KEY',
+    keyPlaceholder: 'sk-...',
+    keyHelp: 'platform.deepseek.com/api_keys',
+    models: [
+      { id: 'deepseek-chat', name: 'DeepSeek V3 (Chat)' },
+      { id: 'deepseek-reasoner', name: 'DeepSeek R1 (Reasoner)' }
+    ]
+  },
+  {
+    id: 'anthropic',
+    label: 'Anthropic (Claude)',
+    baseUrl: 'https://api.anthropic.com/v1',
+    defaultModel: 'claude-3-5-sonnet-latest',
+    keyEnv: 'ANTHROPIC_API_KEY',
+    keyPlaceholder: 'sk-ant-api03-...',
+    keyHelp: 'console.anthropic.com/settings/keys',
+    models: [
+      { id: 'claude-3-5-sonnet-latest', name: 'Claude 3.5 Sonnet' },
+      { id: 'claude-3-5-haiku-latest', name: 'Claude 3.5 Haiku' },
+      { id: 'claude-3-opus-latest', name: 'Claude 3 Opus' }
+    ]
+  },
+  {
+    id: 'google',
+    label: 'Google Gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    defaultModel: 'gemini-2.0-flash',
+    keyEnv: 'GEMINI_API_KEY',
+    keyPlaceholder: 'AIzaSy...',
+    keyHelp: 'aistudio.google.com/apikey',
+    models: [
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+      { id: 'gemini-2.0-pro-exp-02-05', name: 'Gemini 2.0 Pro' },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' }
+    ]
+  },
+  {
+    id: 'groq',
+    label: 'Groq (Ultra-Fast)',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    defaultModel: 'llama-3.3-70b-versatile',
+    keyEnv: 'GROQ_API_KEY',
+    keyPlaceholder: 'gsk_...',
+    keyHelp: 'console.groq.com/keys',
+    models: [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B' },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B' },
+      { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 70B' }
+    ]
+  },
+  {
+    id: 'mistral',
+    label: 'Mistral AI',
+    baseUrl: 'https://api.mistral.ai/v1',
+    defaultModel: 'mistral-large-latest',
+    keyEnv: 'MISTRAL_API_KEY',
+    keyPlaceholder: '...',
+    keyHelp: 'console.mistral.ai/api-keys',
+    models: [
+      { id: 'mistral-large-latest', name: 'Mistral Large' },
+      { id: 'codestral-latest', name: 'Codestral (Coding)' },
+      { id: 'mistral-small-latest', name: 'Mistral Small' }
+    ]
+  },
+  {
+    id: 'ollama',
+    label: 'Ollama (Local)',
+    baseUrl: 'http://127.0.0.1:11434/v1',
+    defaultModel: 'llama3.1',
+    keyEnv: '',
+    keyPlaceholder: 'Tidak memerlukan API Key',
+    keyHelp: 'Berjalan di localhost mesin lokal Anda',
+    models: [
+      { id: 'llama3.1', name: 'Llama 3.1' },
+      { id: 'qwen2.5-coder:7b', name: 'Qwen 2.5 Coder 7B' },
+      { id: 'deepseek-r1:8b', name: 'DeepSeek R1 8B' },
+      { id: 'mistral', name: 'Mistral 7B' }
+    ]
+  },
+  {
+    id: 'custom',
+    label: 'Custom / VPS / Self-Hosted',
+    baseUrl: 'http://100.127.180.57:20128/v1',
+    defaultModel: 'hermes-agent',
+    keyEnv: 'LYRA_WEB_KEY',
+    keyPlaceholder: 'sk-...',
+    keyHelp: 'Endpoint kompatibel OpenAI v1 (vLLM, LiteLLM, TGI, Hermes)',
+    models: [
+      { id: 'hermes-agent', name: 'Hermes Agent' },
+      { id: 'kat-coder-pro', name: 'Kat Coder Pro' },
+      { id: 'custom-model', name: 'Custom Model' }
+    ]
+  }
+];
+
 export default function SettingsPage() {
   const t = useTranslation();
   const { language, setLanguage } = useI18nStore();
@@ -22,7 +171,7 @@ export default function SettingsPage() {
   const [aiBaseUrl, setAiBaseUrl] = useState('');
   const [aiModel, setAiModel] = useState('');
   const [aiApiKey, setAiApiKey] = useState('');
-  const [providerType, setProviderType] = useState<'openai' | 'anthropic' | 'ollama' | 'custom'>('custom');
+  const [providerType, setProviderType] = useState<ProviderType>('custom');
   const [aiStatus, setAiStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
 
@@ -36,25 +185,25 @@ export default function SettingsPage() {
           setAiModel(data.model || '');
           setAiApiKey(data.apiKey || '');
           
-          if (fetchedUrl.includes('api.openai.com')) setProviderType('openai');
+          if (fetchedUrl.includes('openrouter.ai')) setProviderType('openrouter');
+          else if (fetchedUrl.includes('api.openai.com')) setProviderType('openai');
+          else if (fetchedUrl.includes('deepseek.com')) setProviderType('deepseek');
           else if (fetchedUrl.includes('api.anthropic.com')) setProviderType('anthropic');
+          else if (fetchedUrl.includes('googleapis.com')) setProviderType('google');
+          else if (fetchedUrl.includes('groq.com')) setProviderType('groq');
+          else if (fetchedUrl.includes('mistral.ai')) setProviderType('mistral');
           else if (fetchedUrl.includes('11434')) setProviderType('ollama');
           else setProviderType('custom');
         }
       });
   }, []);
 
-  const handleProviderTypeChange = (type: 'openai' | 'anthropic' | 'ollama' | 'custom') => {
+  const handleProviderTypeChange = (type: ProviderType) => {
     setProviderType(type);
-    if (type === 'openai') {
-      setAiBaseUrl('https://api.openai.com/v1');
-      if (!aiModel || aiModel === 'hermes-agent') setAiModel('gpt-4o-mini');
-    } else if (type === 'anthropic') {
-      setAiBaseUrl('https://api.anthropic.com/v1'); // Assuming Hermes handles Anthropic translation, or rely on custom liteLLM
-      if (!aiModel || aiModel === 'hermes-agent') setAiModel('claude-3-5-sonnet-latest');
-    } else if (type === 'ollama') {
-      setAiBaseUrl('http://127.0.0.1:11434/v1');
-      if (!aiModel || aiModel.startsWith('gpt-') || aiModel.startsWith('claude-')) setAiModel('llama3.1');
+    const preset = PROVIDER_PRESETS.find(p => p.id === type);
+    if (preset) {
+      setAiBaseUrl(preset.baseUrl);
+      setAiModel(preset.defaultModel);
     }
   };
 
@@ -62,10 +211,17 @@ export default function SettingsPage() {
     setAiStatus('saving');
     playClick();
     try {
+      const currentPreset = PROVIDER_PRESETS.find(p => p.id === providerType);
       const res = await fetch('/api/settings/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ baseUrl: aiBaseUrl, model: aiModel, apiKey: aiApiKey })
+        body: JSON.stringify({ 
+          baseUrl: aiBaseUrl, 
+          model: aiModel, 
+          apiKey: aiApiKey,
+          providerId: providerType,
+          keyEnv: currentPreset?.keyEnv || 'LYRA_WEB_KEY'
+        })
       });
       if (res.ok) {
         setAiStatus('saved');
@@ -150,92 +306,140 @@ export default function SettingsPage() {
                   
                   {/* Provider Tabs */}
                   <div className="flex flex-wrap gap-2 pb-2">
-                    {[
-                      { id: 'openai', label: 'OpenAI (ChatGPT)' },
-                      { id: 'anthropic', label: 'Anthropic (Claude)' },
-                      { id: 'ollama', label: 'Ollama (Local)' },
-                      { id: 'custom', label: 'Custom / VPS' }
-                    ].map(p => (
+                    {PROVIDER_PRESETS.map(p => (
                       <button
                         key={p.id}
-                        onClick={() => handleProviderTypeChange(p.id as any)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${providerType === p.id ? 'bg-lyra-accent text-white shadow-md' : 'bg-lyra-surface-inset text-lyra-text hover:bg-lyra-border'}`}
+                        onClick={() => handleProviderTypeChange(p.id)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                          providerType === p.id 
+                            ? 'bg-lyra-accent text-white shadow-md' 
+                            : 'bg-lyra-surface-inset text-lyra-text hover:bg-lyra-border'
+                        }`}
                       >
                         {p.label}
                       </button>
                     ))}
                   </div>
 
+                  {/* Preset Active Info Bar */}
+                  {(() => {
+                    const preset = PROVIDER_PRESETS.find(p => p.id === providerType);
+                    return (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-lyra-accent/5 border border-lyra-accent/15 text-xs">
+                        <span className="font-semibold text-lyra-accent">
+                          Preset: {preset?.label}
+                        </span>
+                        <span className="text-lyra-text-secondary opacity-75 font-mono text-[11px]">
+                          ENV: {preset?.keyEnv || 'None'}
+                        </span>
+                      </div>
+                    );
+                  })()}
+
                   <div className="grid md:grid-cols-2 gap-8">
                     {/* Left Col */}
                     <div className="space-y-6">
                       
-                      {providerType === 'custom' && (
-                        <div className="space-y-2">
-                          <label className="text-sm font-bold uppercase tracking-wider text-lyra-text-secondary flex items-center gap-2">
-                            <Link size={16} /> Base URL Provider
-                          </label>
-                          <p className="text-xs text-lyra-text-muted mb-2">
-                            {language === 'id' 
-                              ? 'Alamat API endpoint yang kompatibel dengan OpenAI (v1).' 
-                              : 'OpenAI-compatible (v1) API endpoint address.'}
-                          </p>
-                          <input 
-                            type="text" 
-                            className="w-full bg-lyra-bg border border-lyra-border rounded-lyra-md px-4 py-3 text-sm text-lyra-text focus:outline-none focus:border-lyra-accent focus:shadow-[0_0_0_2px_rgba(var(--color-lyra-accent),0.2)] transition-all shadow-neo-inset"
-                            value={aiBaseUrl}
-                            onChange={e => setAiBaseUrl(e.target.value)}
-                            placeholder="http://100.127.180.57:20128/v1"
-                          />
-                        </div>
-                      )}
-
                       <div className="space-y-2">
                         <label className="text-sm font-bold uppercase tracking-wider text-lyra-text-secondary flex items-center gap-2">
-                          <Server size={16} /> 
-                          {language === 'id' ? 'Nama Model Default' : 'Default Model Name'}
+                          <Link size={16} /> Base URL Provider
                         </label>
                         <p className="text-xs text-lyra-text-muted mb-2">
-                          {providerType === 'openai' 
-                            ? (language === 'id' ? 'Contoh: gpt-4o, gpt-4o-mini' : 'e.g. gpt-4o, gpt-4o-mini') 
-                            : providerType === 'anthropic' 
-                            ? (language === 'id' ? 'Contoh: claude-3-5-sonnet-latest' : 'e.g. claude-3-5-sonnet-latest') 
-                            : providerType === 'ollama' 
-                            ? (language === 'id' ? 'Contoh: llama3.1, mistral' : 'e.g. llama3.1, mistral') 
-                            : (language === 'id' ? 'Nama spesifik model yang akan dipanggil saat chat.' : 'Specific model name called during chat.')}
+                          {language === 'id' 
+                            ? 'Alamat API endpoint yang kompatibel dengan OpenAI (v1).' 
+                            : 'OpenAI-compatible (v1) API endpoint address.'}
                         </p>
+                        <input 
+                          type="text" 
+                          className="w-full bg-lyra-bg border border-lyra-border rounded-lyra-md px-4 py-3 text-sm text-lyra-text focus:outline-none focus:border-lyra-accent focus:shadow-[0_0_0_2px_rgba(var(--color-lyra-accent),0.2)] transition-all shadow-neo-inset"
+                          value={aiBaseUrl}
+                          onChange={e => setAiBaseUrl(e.target.value)}
+                          placeholder="https://api.openai.com/v1"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-bold uppercase tracking-wider text-lyra-text-secondary flex items-center gap-2">
+                            <Server size={16} /> 
+                            {language === 'id' ? 'Nama Model Default' : 'Default Model Name'}
+                          </label>
+                        </div>
+                        <p className="text-xs text-lyra-text-muted mb-2">
+                          {language === 'id' 
+                            ? 'Pilih dari rekomendasi preset atau ketik nama model kustom.' 
+                            : 'Select from preset recommendations or type custom model name.'}
+                        </p>
+                        
+                        {/* Quick Model Selector Pills */}
+                        {(() => {
+                          const preset = PROVIDER_PRESETS.find(p => p.id === providerType);
+                          if (!preset || preset.models.length === 0) return null;
+                          return (
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {preset.models.map(m => (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  onClick={() => setAiModel(m.id)}
+                                  className={`text-[11px] px-2.5 py-1 rounded-lg border font-mono transition-all ${
+                                    aiModel === m.id
+                                      ? 'bg-lyra-accent text-white border-lyra-accent shadow-sm'
+                                      : 'bg-lyra-bg/70 border-lyra-border text-lyra-text-secondary hover:text-lyra-text hover:border-lyra-accent/40'
+                                  }`}
+                                >
+                                  {m.name}
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        })()}
+
                         <input 
                           type="text" 
                           className="w-full bg-lyra-bg border border-lyra-border rounded-lyra-md px-4 py-3 text-sm text-lyra-text focus:outline-none focus:border-lyra-accent focus:shadow-[0_0_0_2px_rgba(var(--color-lyra-accent),0.2)] transition-all shadow-neo-inset"
                           value={aiModel}
                           onChange={e => setAiModel(e.target.value)}
-                          placeholder="hermes-agent"
+                          placeholder="gpt-4o"
                         />
                       </div>
                     </div>
 
                     {/* Right Col */}
                     <div className="space-y-6">
-                      {providerType !== 'ollama' && (
+                      {providerType !== 'ollama' ? (
                         <div className="space-y-2">
                           <label className="text-sm font-bold uppercase tracking-wider text-lyra-text-secondary flex items-center gap-2">
                             <KeyRound size={16} /> 
                             {language === 'id' ? 'API Key Rahasia' : 'Secret API Key'}
                           </label>
                           <p className="text-xs text-lyra-text-muted mb-2">
-                            {providerType === 'openai' 
-                              ? (language === 'id' ? 'Token akses dari platform.openai.com' : 'Access token from platform.openai.com') 
-                              : providerType === 'anthropic' 
-                              ? (language === 'id' ? 'Token akses dari console.anthropic.com' : 'Access token from console.anthropic.com') 
-                              : (language === 'id' ? 'Token akses (akan dienkripsi di config backend).' : 'Access token (encrypted in backend config).')}
+                            {(() => {
+                              const preset = PROVIDER_PRESETS.find(p => p.id === providerType);
+                              return preset?.keyHelp || 'Kunci akses rahasia (akan dienkripsi di backend Hermes).';
+                            })()}
                           </p>
                           <input 
                             type="password" 
                             className="w-full bg-lyra-bg border border-lyra-border rounded-lyra-md px-4 py-3 text-sm text-lyra-text focus:outline-none focus:border-lyra-accent focus:shadow-[0_0_0_2px_rgba(var(--color-lyra-accent),0.2)] transition-all shadow-neo-inset"
                             value={aiApiKey}
                             onChange={e => setAiApiKey(e.target.value)}
-                            placeholder="sk-..."
+                            placeholder={(() => {
+                              const preset = PROVIDER_PRESETS.find(p => p.id === providerType);
+                              return preset?.keyPlaceholder || 'sk-...';
+                            })()}
                           />
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-xl bg-lyra-bg/40 border border-lyra-border text-xs text-lyra-text-muted space-y-2">
+                          <div className="font-semibold text-lyra-text flex items-center gap-2">
+                            <Server size={14} className="text-emerald-400" /> Server Lokal Ollama
+                          </div>
+                          <p>
+                            {language === 'id' 
+                              ? 'Ollama berjalan secara mandiri di komputer Anda tanpa memerlukan kuota API Key eksternal.' 
+                              : 'Ollama runs entirely on your local machine without needing external API keys.'}
+                          </p>
                         </div>
                       )}
                     </div>

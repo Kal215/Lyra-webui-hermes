@@ -89,16 +89,16 @@ export default function WorkPage() {
   // Model & Reasoning Effort States (Matching Chat Prompt Toolbar)
   const DEFAULT_MODELS = [
     { id: 'hermes-agent', name: 'Hermes Agent', badge: 'Med' },
+    { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', badge: 'High' },
+    { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', badge: 'Ultra' },
+    { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3', badge: 'Med' },
+    { id: 'openai/gpt-4o', name: 'GPT-4o', badge: 'High' },
+    { id: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash', badge: 'Low' },
+    { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', badge: 'Med' },
+    { id: 'qwen/qwen-2.5-coder-32b-instruct', name: 'Qwen 2.5 Coder', badge: 'Med' },
     { id: 'kat-coder-pro', name: 'Kat Coder Pro V2.5:Free', badge: 'Med' },
-    { id: 'frontier', name: 'Frontier', badge: 'Med' },
-    { id: 'balanced', name: 'Balanced', badge: 'Med' },
     { id: 'minimax-m2.7', name: 'Minimax M2.7', badge: 'Med' },
-    { id: 'minimax-m3', name: 'Minimax M3', badge: 'Med' },
     { id: 'glm-5.2', name: 'Glm 5.2', badge: 'Med' },
-    { id: 'deepseek-v4-pro', name: 'Deepseek V4 Pro', badge: 'Med' },
-    { id: 'deepseek-v4-flash', name: 'Deepseek V4 Flash', badge: 'Med' },
-    { id: 'kimi-k2.6', name: 'Kimi K2.6', badge: 'Med' },
-    { id: 'nemotron-3-ultra', name: 'Nemotron 3 Ultra 550b A55b', badge: 'Med' },
   ];
   const [modelsList, setModelsList] = useState(DEFAULT_MODELS);
   const [selectedModel, setSelectedModel] = useState('Hermes Agent');
