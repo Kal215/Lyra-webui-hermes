@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Folder, File, ChevronLeft, Save, RefreshCw, FolderTree, Code, X } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Folder, File, ChevronLeft, Save, RefreshCw, FolderTree, Code, X, Bot, Sparkles, Terminal } from 'lucide-react';
 import { NeoPanel } from '@/components/NeoPanel';
 import { NeoButton } from '@/components/NeoButton';
 import { useWorkspaceStore } from '@/store/workspace';
@@ -130,6 +131,8 @@ function SyntaxCodeEditor({
 }
 
 export default function WorkspacePage() {
+  const searchParams = useSearchParams();
+  const activeAgentParam = searchParams ? searchParams.get('activeAgent') : null;
   const { currentWorkspace, setCurrentWorkspace, activeFilePath } = useWorkspaceStore();
 
   const [files, setFiles] = useState<FileNode[]>([]);
@@ -138,6 +141,26 @@ export default function WorkspacePage() {
   const [activeFileIndex, setActiveFileIndex] = useState<number>(-1);
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [simulatingTyping, setSimulatingTyping] = useState(false);
+
+  const getAgentBadge = (id: string | null) => {
+    if (!id) return null;
+    const map: Record<string, { name: string; role: string; color: string }> = {
+      default: { name: 'Aster', role: 'Coordinator', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' },
+      coder: { name: 'Forge', role: 'Software Engineer', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+      planner: { name: 'Atlas', role: 'System Architect', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+      researcher: { name: 'Scout', role: 'Researcher', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+      qa: { name: 'Iris', role: 'QA & Test', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+      'qa-kanban': { name: 'Patch', role: 'QA Lead', color: 'bg-violet-500/20 text-violet-400 border-violet-500/30' },
+      verifier: { name: 'Nova', role: 'Verifier', color: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
+      synthesizer: { name: 'Echo', role: 'Synthesizer', color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
+      security: { name: 'Sentinel', role: 'Security', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
+      'security-kanban': { name: 'Cipher', role: 'Security Lead', color: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
+    };
+    return map[id] || { name: id, role: 'Specialist', color: 'bg-lyra-accent/20 text-lyra-accent border-lyra-accent/30' };
+  };
+
+  const currentAgent = getAgentBadge(activeAgentParam);
 
   // Cross-tab auto-sync workspace theme
   useEffect(() => {
@@ -252,8 +275,14 @@ export default function WorkspacePage() {
     if (activeFilePath) {
       const name = activeFilePath.split(/[\/\\]/).pop() || 'file';
       loadFile(activeFilePath, name);
+    } else if (activeAgentParam && files.length > 0) {
+      // Auto-open first project file when arrived from agent deep link
+      const firstFile = files.find(f => !f.isDirectory);
+      if (firstFile) {
+        loadFile(firstFile.path, firstFile.name);
+      }
     }
-  }, [activeFilePath]);
+  }, [activeFilePath, activeAgentParam, files]);
 
   const handleNavigateUp = () => {
     if (currentDir === '/') return;
@@ -341,9 +370,15 @@ export default function WorkspacePage() {
 
         {activeFile ? (
           <div className="flex-1 flex flex-col min-h-0">
-            {/* Top Bar - Path indicator */}
-            <div className="h-9 border-b border-lyra-editor-border bg-lyra-editor-header/40 flex items-center px-4 shrink-0 text-xs text-lyra-editor-muted truncate">
-              {activeFile.path}
+            {/* Top Bar - Path indicator & Agent Presence Badge */}
+            <div className="h-9 border-b border-lyra-editor-border bg-lyra-editor-header/40 flex items-center justify-between px-4 shrink-0 text-xs text-lyra-editor-muted">
+              <span className="truncate">{activeFile.path}</span>
+              {currentAgent && (
+                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-mono ${currentAgent.color} shadow-sm shrink-0`}>
+                  <Bot size={13} className="animate-pulse" />
+                  <span>@{currentAgent.name} is inspecting this file</span>
+                </div>
+              )}
             </div>
 
             {/* Core Syntax Highlighted Editor */}

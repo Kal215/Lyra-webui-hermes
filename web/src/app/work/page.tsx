@@ -297,12 +297,12 @@ export default function WorkPage() {
                     {/* Direct Deep Links per Specialist */}
                     <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-lyra-accent/10">
                       <Link
-                        href={`/agents/${agId}?liveSource=hermes-live`}
+                        href={`/workspace?activeAgent=${agId}`}
                         className="flex-1 py-1 px-1.5 rounded-lg bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/10 hover:border-lyra-accent/30 flex items-center justify-center gap-1 text-[10px] font-mono text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer"
-                        title={`Lihat Live Terminal ${info.name}`}
+                        title={`Buka Editor Workspace Agen ${info.name}`}
                       >
-                        <Terminal size={11} className="text-emerald-400" />
-                        <span>Terminal</span>
+                        <FileCode2 size={11} className="text-emerald-400" />
+                        <span>Workspace</span>
                       </Link>
 
                       <Link

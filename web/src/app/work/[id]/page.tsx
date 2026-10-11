@@ -128,9 +128,9 @@ export default function WorkDetailPage() {
             <p className="text-sm text-lyra-muted mb-3">{task.id}</p>
           </div>
           <div className="flex gap-2">
-            <NeoButton onClick={() => window.open('/agents/default?liveSource=hermes-live', '_blank')} className="px-4 py-2">
-              <ExternalLink className="w-4 h-4 mr-2" />
-              {language === 'en' ? 'View Agent Live' : 'Lihat Agen Live'}
+            <NeoButton onClick={() => router.push(`/workspace?activeAgent=${encodeURIComponent(task.assignee || 'default')}`)} className="px-4 py-2">
+              <ExternalLink className="w-4 h-4 mr-2 text-emerald-400" />
+              {language === 'en' ? 'Open in Workspace' : 'Buka di Workspace'}
             </NeoButton>
           </div>
         </div>
