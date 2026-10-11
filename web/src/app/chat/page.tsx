@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation, useI18nStore } from '@/i18n';
-import { MessageSquare, Plus, Send, Menu, Terminal, Globe, FileText, Wrench, ChevronDown, ChevronRight, CheckCircle2, CircleDashed, BrainCircuit, MoreVertical, Edit2, Trash2, Check, X, Pin, DownloadCloud, PinOff, Paperclip, Folder, File, ImageIcon, XCircle, Columns, Monitor, Settings, Zap, Database, FolderTree, Clipboard, PenTool, Link, Search, ImagePlus, GitBranch, Library, Command, Sparkles, Code, FileEdit, Lightbulb, Coffee, RefreshCw } from 'lucide-react';
+import { MessageSquare, Plus, Send, Menu, Terminal, Globe, FileText, Wrench, ChevronDown, ChevronRight, CheckCircle2, CircleDashed, BrainCircuit, MoreVertical, Edit2, Trash2, Check, X, Pin, DownloadCloud, PinOff, Paperclip, Folder, File, ImageIcon, XCircle, Columns, Monitor, Settings, Zap, Database, FolderTree, Clipboard, PenTool, Link, Search, ImagePlus, GitBranch, Library, Command, Sparkles, Code, FileEdit, Lightbulb, Coffee, RefreshCw, Square, ArrowUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -411,6 +411,27 @@ export default function NativeChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isStreamingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+    isStreamingRef.current = false;
+    setMessages(prev => {
+      const newMsgs = [...prev];
+      if (newMsgs.length > 0 && newMsgs[newMsgs.length - 1].role === 'assistant') {
+        const lastMsg = { ...newMsgs[newMsgs.length - 1] };
+        if (lastMsg.reasoning && !lastMsg.reasoning.endTime) {
+          lastMsg.reasoning = { ...lastMsg.reasoning, endTime: Date.now() };
+        }
+        newMsgs[newMsgs.length - 1] = lastMsg;
+      }
+      return newMsgs;
+    });
+  };
   
   // Sketch Canvas Refs
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -810,11 +831,15 @@ export default function NativeChatPage() {
     // Clear attachments after sending
     setAttachments([]);
 
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       const res = await fetch('/api/chat-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: abortController.signal
       });
 
       if (!res.body) throw new Error('No readable stream');
@@ -933,17 +958,22 @@ export default function NativeChatPage() {
       }
       
       fetchSessions();
-    } catch (e) {
-      console.error(e);
-      setMessages(prev => {
-        const newMsgs = [...prev];
-        const lastMsg = newMsgs[newMsgs.length - 1];
-        lastMsg.content += '\n\n**[Error: Koneksi terputus]**';
-        return newMsgs;
-      });
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+        console.log('Stream stopped by user');
+      } else {
+        console.error(e);
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          const lastMsg = newMsgs[newMsgs.length - 1];
+          if (lastMsg) lastMsg.content += '\n\n**[Error: Koneksi terputus]**';
+          return newMsgs;
+        });
+      }
     } finally {
       setIsLoading(false);
       isStreamingRef.current = false;
+      abortControllerRef.current = null;
     }
   };
 
@@ -1183,7 +1213,7 @@ export default function NativeChatPage() {
             {/* Backdrop for open popovers */}
             {(isAttachMenuOpen || isModelMenuOpen || isEffortMenuOpen) && (
               <div 
-                className="fixed inset-0 z-40" 
+                className="fixed inset-0 z-30" 
                 onClick={() => {
                   setIsAttachMenuOpen(false);
                   setIsModelMenuOpen(false);
@@ -1196,7 +1226,7 @@ export default function NativeChatPage() {
 
             {/* Composer Card */}
             <div 
-              className={`relative bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-xl overflow-visible focus-within:border-lyra-accent transition-colors ${isDraggingOver ? 'ring-2 ring-lyra-accent ring-inset bg-lyra-accent/10' : ''}`}
+              className={`relative z-40 bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-xl overflow-visible focus-within:border-lyra-accent transition-colors ${isDraggingOver ? 'ring-2 ring-lyra-accent ring-inset bg-lyra-accent/10' : ''}`}
               onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
               onDragLeave={() => setIsDraggingOver(false)}
               onDrop={handleDropOnComposer}
@@ -1250,7 +1280,7 @@ export default function NativeChatPage() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleSendMessage();
+                    if (!isLoading) handleSendMessage();
                   }
                 }}
                 placeholder={language === 'id' ? 'Ketik pesan Anda di sini...' : 'Type your message here...'}
@@ -1285,6 +1315,7 @@ export default function NativeChatPage() {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
                           transition={{ duration: 0.15 }}
+                          onClick={(e) => e.stopPropagation()}
                           className="absolute left-0 bottom-[calc(100%+8px)] w-64 bg-lyra-surface border border-lyra-accent/20 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col py-2 backdrop-blur-md"
                         >
                           <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">File & Media</div>
@@ -1349,14 +1380,16 @@ export default function NativeChatPage() {
                             </div>
                           </button>
 
-                          {/* Mode AI (Requirement 2) */}
+                          {/* Mode AI (Requirement 2 & Toggle Fix) */}
                           <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
                           <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Mode AI</div>
 
-                          <button 
-                            type="button" 
-                            onClick={() => setIsReasoningEnabled(!isReasoningEnabled)} 
-                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer"
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsReasoningEnabled(prev => !prev);
+                            }} 
+                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer select-none"
                           >
                             <div className="flex items-center gap-3">
                               <BrainCircuit size={16} className={isReasoningEnabled ? "text-purple-400" : "text-lyra-text-secondary"} />
@@ -1365,15 +1398,21 @@ export default function NativeChatPage() {
                                 <div className="text-[10px] text-lyra-text-secondary">{isReasoningEnabled ? `Aktif: ${thinkingEffort}` : 'Nonaktif'}</div>
                               </div>
                             </div>
-                            <div className={`w-8 h-4 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center ${isReasoningEnabled ? 'bg-purple-500' : 'bg-zinc-600'}`}>
-                              <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 ease-in-out ${isReasoningEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                              isReasoningEnabled ? 'bg-purple-500' : 'bg-zinc-600'
+                            }`}>
+                              <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                                isReasoningEnabled ? 'translate-x-3' : 'translate-x-0'
+                              }`} />
                             </div>
-                          </button>
+                          </div>
 
-                          <button 
-                            type="button" 
-                            onClick={() => setIsWebSearchEnabled(!isWebSearchEnabled)} 
-                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer"
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsWebSearchEnabled(prev => !prev);
+                            }} 
+                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer select-none"
                           >
                             <div className="flex items-center gap-3">
                               <Globe size={16} className={isWebSearchEnabled ? "text-blue-400" : "text-lyra-text-secondary"} />
@@ -1382,15 +1421,21 @@ export default function NativeChatPage() {
                                 <div className="text-[10px] text-lyra-text-secondary">{isWebSearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
                               </div>
                             </div>
-                            <div className={`w-8 h-4 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center ${isWebSearchEnabled ? 'bg-blue-500' : 'bg-zinc-600'}`}>
-                              <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 ease-in-out ${isWebSearchEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                              isWebSearchEnabled ? 'bg-blue-500' : 'bg-zinc-600'
+                            }`}>
+                              <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                                isWebSearchEnabled ? 'translate-x-3' : 'translate-x-0'
+                              }`} />
                             </div>
-                          </button>
+                          </div>
 
-                          <button 
-                            type="button" 
-                            onClick={() => setIsDeepResearchEnabled(!isDeepResearchEnabled)} 
-                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer"
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsDeepResearchEnabled(prev => !prev);
+                            }} 
+                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer select-none"
                           >
                             <div className="flex items-center gap-3">
                               <Search size={16} className={isDeepResearchEnabled ? "text-emerald-500" : "text-lyra-text-secondary"} />
@@ -1399,10 +1444,14 @@ export default function NativeChatPage() {
                                 <div className="text-[10px] text-lyra-text-secondary">{isDeepResearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
                               </div>
                             </div>
-                            <div className={`w-8 h-4 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center ${isDeepResearchEnabled ? 'bg-emerald-500' : 'bg-zinc-600'}`}>
-                              <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 ease-in-out ${isDeepResearchEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                              isDeepResearchEnabled ? 'bg-emerald-500' : 'bg-zinc-600'
+                            }`}>
+                              <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                                isDeepResearchEnabled ? 'translate-x-3' : 'translate-x-0'
+                              }`} />
                             </div>
-                          </button>
+                          </div>
 
                           <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
                           <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Integrasi</div>
@@ -1453,6 +1502,7 @@ export default function NativeChatPage() {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
                           transition={{ duration: 0.15 }}
+                          onClick={(e) => e.stopPropagation()}
                           className="absolute left-0 bottom-[calc(100%+8px)] w-72 bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-2xl z-50 p-2.5 backdrop-blur-md flex flex-col"
                         >
                           {/* Search Input */}
@@ -1552,6 +1602,7 @@ export default function NativeChatPage() {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
                           transition={{ duration: 0.15 }}
+                          onClick={(e) => e.stopPropagation()}
                           className="absolute left-0 bottom-[calc(100%+8px)] w-56 bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-2xl z-50 p-2.5 backdrop-blur-md select-none"
                         >
                           {/* OPTIONS Header */}
@@ -1559,21 +1610,27 @@ export default function NativeChatPage() {
                             OPTIONS
                           </div>
 
-                          {/* Thinking Toggle Row */}
-                          <button
-                            type="button"
-                            onClick={() => setIsReasoningEnabled(!isReasoningEnabled)}
-                            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-lyra-accent/10 transition-colors cursor-pointer"
+                          {/* Thinking Toggle Row (Toggle Switch Fix) */}
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsReasoningEnabled(prev => !prev);
+                            }}
+                            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-lyra-accent/10 transition-colors cursor-pointer select-none"
                           >
                             <span className="text-sm font-medium text-lyra-text">Thinking</span>
-                            <div className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out flex items-center ${
-                              isReasoningEnabled ? 'bg-[#D97757]' : 'bg-zinc-600'
-                            }`}>
-                              <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ease-in-out ${
-                                isReasoningEnabled ? 'translate-x-4' : 'translate-x-0'
-                              }`} />
+                            <div 
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                                isReasoningEnabled ? 'bg-[#D97757]' : 'bg-zinc-600'
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                  isReasoningEnabled ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
                             </div>
-                          </button>
+                          </div>
 
                           <div className="h-px bg-lyra-accent/10 my-2 mx-1" />
 
@@ -1613,15 +1670,29 @@ export default function NativeChatPage() {
 
                 </div>
 
-                {/* Right Send Button */}
-                <button
-                  type="button"
-                  onClick={handleSendMessage}
-                  disabled={isLoading || !inputMessage.trim()}
-                  className="p-2 bg-lyra-accent hover:bg-lyra-accent/80 text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 shadow-md shadow-lyra-accent/20 cursor-pointer"
-                >
-                  <Send size={16} />
-                </button>
+                {/* Right Send / Stop Button */}
+                <div className="flex items-center shrink-0 ml-2">
+                  {isLoading ? (
+                    <button
+                      type="button"
+                      onClick={handleStopGeneration}
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:bg-zinc-200 active:scale-95 transition-all shadow-md cursor-pointer shrink-0"
+                      title={language === 'id' ? 'Hentikan pembuatan' : 'Stop generation'}
+                    >
+                      <Square size={12} className="fill-current text-zinc-900" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSendMessage}
+                      disabled={!inputMessage.trim()}
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-lyra-accent hover:bg-lyra-accent/80 text-white disabled:opacity-25 disabled:cursor-not-allowed active:scale-95 transition-all shadow-sm cursor-pointer shrink-0"
+                      title={language === 'id' ? 'Kirim pesan' : 'Send message'}
+                    >
+                      <ArrowUp size={16} strokeWidth={2.5} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
