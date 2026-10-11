@@ -285,22 +285,30 @@ function WorkspaceView() {
 
   const loadedFilesRef = useRef<string | null>(null);
 
+  // Auto-load first file or liveTyping file immediately
   useEffect(() => {
+    if (liveTyping?.filePath) {
+      const name = liveTyping.filePath.split(/[\/\\]/).pop() || 'file';
+      loadFile(liveTyping.filePath, name);
+      return;
+    }
+
     if (activeFilePath) {
       if (loadedFilesRef.current === activeFilePath) return;
       loadedFilesRef.current = activeFilePath;
       const name = activeFilePath.split(/[\/\\]/).pop() || 'file';
       loadFile(activeFilePath, name);
-    } else if (activeAgentParam && files.length > 0) {
-      // Auto-open first project file once when arrived from agent deep link
-      if (loadedFilesRef.current) return;
-      const firstFile = files.find(f => !f.isDirectory);
-      if (firstFile) {
-        loadedFilesRef.current = firstFile.path;
-        loadFile(firstFile.path, firstFile.name);
+    } else if (files.length > 0) {
+      // Auto-open first file whenever user lands on workspace without open file
+      if (openFiles.length === 0 && !loadedFilesRef.current) {
+        const firstFile = files.find(f => !f.isDirectory);
+        if (firstFile) {
+          loadedFilesRef.current = firstFile.path;
+          loadFile(firstFile.path, firstFile.name);
+        }
       }
     }
-  }, [activeFilePath, activeAgentParam, files]);
+  }, [activeFilePath, files, liveTyping]);
 
   const handleNavigateUp = () => {
     if (!currentDir || currentDir === 'ROOT') return;

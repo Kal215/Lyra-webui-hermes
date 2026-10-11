@@ -43,6 +43,7 @@ import { useWorkSessionStore } from '@/lib/store/useWorkSessionStore';
 import { DynamicTodosCard } from '@/components/work/DynamicTodosCard';
 import { ReasoningAccordion } from '@/components/work/ReasoningAccordion';
 import { ToolExecutionBlock } from '@/components/work/ToolExecutionBlock';
+import { LiveCodingStudioBlock } from '@/components/work/LiveCodingStudioBlock';
 import { DeliverableCard } from '@/components/work/DeliverableCard';
 import { AutonomousConversationView } from '@/components/work/AutonomousConversationView';
 import { WorkSessionItem } from '@/components/work/WorkSessionItem';
@@ -88,7 +89,7 @@ export default function WorkPage() {
   const [isSpecialistsExpanded, setIsSpecialistsExpanded] = useState(true);
 
   // Right Workspace Drawer State (< and >)
-  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(true);
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [previewWorkspaceFile, setPreviewWorkspaceFile] = useState<string | null>(null);
 
   // Model & Reasoning Effort States (Matching Chat Prompt Toolbar)
@@ -460,6 +461,19 @@ export default function WorkPage() {
                 } else if (data.type === 'text') {
                   receivedAnyChunk = true;
                   appendAssistantChunk(data.text, getAgentInfo(selectedAgent).name);
+
+                  // Extract live code snippets if agent writes markdown code blocks
+                  const codeMatch = data.text.match(/```(?:[a-zA-Z0-9_\-]+)?\s*([\s\S]+?)```/);
+                  if (codeMatch && codeMatch[1]) {
+                    const agentInfo = getAgentInfo(selectedAgent);
+                    useWorkspaceStore.getState().setLiveTyping({
+                      active: true,
+                      agentName: agentInfo.name,
+                      agentRole: agentInfo.role,
+                      filePath: 'generated_output.ts',
+                      diffOrContent: codeMatch[1].trim()
+                    });
+                  }
                 }
               } catch (e) {}
             }
@@ -751,6 +765,9 @@ export default function WorkPage() {
               {toolLogsList.length > 0 && (
                 <ToolExecutionBlock toolLogs={toolLogsList} defaultExpanded={false} />
               )}
+
+              {/* 2.5 Live Realtime Coding Viewport (Z.ai / Bolt.new Style In-Stream Coding) */}
+              <LiveCodingStudioBlock />
 
               {/* 3. Dynamic Todos Card (The Star Component from Z.ai reference) */}
               {todos.length > 0 && (
