@@ -1675,16 +1675,15 @@ export default function NativeChatPage() {
         </div>
       </div>
 
-      {/* Floating Gelembung Toggle Sidebar Chat (Ketika Ditutup) */}
+      {/* Floating Minimal Toggle Sidebar Chat (Ketika Ditutup) */}
       {!isSidebarOpen && (
         <button
           type="button"
           onClick={() => setIsSidebarOpen(true)}
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-30 flex items-center gap-1 px-2 py-3 bg-lyra-surface/90 hover:bg-lyra-surface border-y border-r border-lyra-accent/30 hover:border-lyra-accent rounded-r-2xl shadow-xl backdrop-blur-md text-lyra-text-secondary hover:text-lyra-accent transition-all duration-200 group cursor-pointer hover:pr-3 active:scale-95"
-          title={language === 'id' ? 'Tampilkan Daftar Obrolan' : 'Show Chat History'}
+          className="fixed left-0 top-1/2 -translate-y-1/2 z-30 w-5 h-11 hover:w-6 bg-lyra-surface/90 hover:bg-lyra-surface border-y border-r border-lyra-accent/30 hover:border-lyra-accent rounded-r-lg shadow-md backdrop-blur-md flex items-center justify-center text-lyra-text-secondary hover:text-lyra-accent transition-all duration-200 cursor-pointer group active:scale-95"
+          title={language === 'id' ? 'Buka Daftar Obrolan' : 'Open Chats'}
         >
-          <Menu size={16} className="text-lyra-accent group-hover:scale-110 transition-transform" />
-          <ChevronRight size={14} className="text-lyra-accent group-hover:translate-x-0.5 transition-transform" />
+          <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform text-lyra-accent" />
         </button>
       )}
 
@@ -2696,19 +2695,15 @@ export default function NativeChatPage() {
         </div>
       </div>
       
-      {/* Floating Gelembung Toggle Workspace (Ketika Ditutup) */}
+      {/* Floating Minimal Toggle Workspace (Ketika Ditutup) */}
       {!isRightPanelOpen && (
         <button
           type="button"
           onClick={() => setIsRightPanelOpen(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-30 flex items-center gap-1.5 px-2.5 py-3.5 bg-lyra-surface/90 hover:bg-lyra-surface border-y border-l border-lyra-accent/30 hover:border-lyra-accent rounded-l-2xl shadow-xl backdrop-blur-md text-lyra-text-secondary hover:text-lyra-accent transition-all duration-200 group cursor-pointer hover:pl-3.5 active:scale-95"
-          title={language === 'id' ? 'Tampilkan Panel Workspace' : 'Open Workspace'}
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-30 w-5 h-11 hover:w-6 bg-lyra-surface/90 hover:bg-lyra-surface border-y border-l border-lyra-accent/30 hover:border-lyra-accent rounded-l-lg shadow-md backdrop-blur-md flex items-center justify-center text-lyra-text-secondary hover:text-lyra-accent transition-all duration-200 cursor-pointer group active:scale-95"
+          title={language === 'id' ? 'Buka Workspace' : 'Open Workspace'}
         >
-          <ChevronLeft size={16} className="text-lyra-accent group-hover:-translate-x-0.5 transition-transform" />
-          <FolderTree size={16} className="text-lyra-accent" />
-          <span className="text-[10px] font-bold tracking-widest text-lyra-text/90 group-hover:text-lyra-accent [writing-mode:vertical-rl] rotate-180 select-none">
-            WORKSPACE
-          </span>
+          <ChevronLeft size={14} className="group-hover:-translate-x-0.5 transition-transform text-lyra-accent" />
         </button>
       )}
 
@@ -2725,14 +2720,14 @@ export default function NativeChatPage() {
           }}
           onDrop={handleWorkspaceDrop}
         >
-          {/* Gelembung Toggle Collapse Workspace (Ketika Terbuka) */}
+          {/* Toggle Collapse Workspace (Ketika Terbuka) */}
           <button
             type="button"
             onClick={() => setIsRightPanelOpen(false)}
-            className="absolute -left-3.5 top-1/2 -translate-y-1/2 z-30 w-7 h-12 bg-lyra-surface border border-lyra-accent/30 hover:border-lyra-accent rounded-l-xl shadow-lg flex items-center justify-center text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer group active:scale-95"
-            title={language === 'id' ? 'Sembunyikan Panel Workspace' : 'Hide Workspace'}
+            className="absolute -left-5 top-1/2 -translate-y-1/2 z-30 w-5 h-11 bg-lyra-surface border-y border-l border-lyra-accent/30 hover:border-lyra-accent rounded-l-lg shadow-md flex items-center justify-center text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer group active:scale-95"
+            title={language === 'id' ? 'Tutup Workspace' : 'Close Workspace'}
           >
-            <ChevronRight size={15} className="group-hover:translate-x-0.5 transition-transform text-lyra-accent" />
+            <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform text-lyra-accent" />
           </button>
           {/* Drag Overlay */}
           {isWorkspaceDragging && (
