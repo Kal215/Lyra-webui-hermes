@@ -116,20 +116,22 @@ export async function ensureSpecialistProfiles(): Promise<void> {
       fs.mkdirSync(profilesDir, { recursive: true });
     }
 
-    // 3. Check existing profiles
-    const existing = new Set<string>();
-    try {
-      const entries = fs.readdirSync(profilesDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          existing.add(entry.name);
-        }
+    // 3. Load root config for providers and model
+    const rootConfigPath = path.join(hermesHome, 'config.yaml');
+    let rootConfig: any = null;
+    if (fs.existsSync(rootConfigPath)) {
+      try {
+        const yaml = require('js-yaml');
+        rootConfig = yaml.load(fs.readFileSync(rootConfigPath, 'utf8'));
+      } catch (e) {
+        // Fallback or ignore if js-yaml not present
       }
-    } catch (e) {}
+    }
 
-    // 4. Provision any missing specialist profiles
+    // 4. Provision any missing specialist profiles and ensure providers are synced
     for (const spec of SPECIALIST_SQUAD) {
-      if (!existing.has(spec.name)) {
+      const profileFolder = path.join(profilesDir, spec.name);
+      if (!fs.existsSync(profileFolder)) {
         try {
           await execFileAsync(
             'hermes',
@@ -138,13 +140,34 @@ export async function ensureSpecialistProfiles(): Promise<void> {
           );
 
           // Customize personality in SOUL.md if created
-          const soulPath = path.join(profilesDir, spec.name, 'SOUL.md');
-          if (fs.existsSync(path.dirname(soulPath))) {
+          const soulPath = path.join(profileFolder, 'SOUL.md');
+          if (fs.existsSync(profileFolder)) {
             fs.writeFileSync(soulPath, spec.soul + '\n', 'utf8');
           }
         } catch (createErr: any) {
           console.warn(`[Bootstrap] Note on profile ${spec.name}:`, createErr?.message || createErr);
         }
+      }
+
+      // Ensure profile config has providers and model matching root
+      const profileConfigPath = path.join(profileFolder, 'config.yaml');
+      if (fs.existsSync(profileConfigPath) && rootConfig) {
+        try {
+          const yaml = require('js-yaml');
+          const pConfig = yaml.load(fs.readFileSync(profileConfigPath, 'utf8')) || {};
+          let needsUpdate = false;
+          if (!pConfig.providers && rootConfig.providers) {
+            pConfig.providers = rootConfig.providers;
+            needsUpdate = true;
+          }
+          if (!pConfig.model && rootConfig.model) {
+            pConfig.model = rootConfig.model;
+            needsUpdate = true;
+          }
+          if (needsUpdate) {
+            fs.writeFileSync(profileConfigPath, yaml.dump(pConfig), 'utf8');
+          }
+        } catch (e) {}
       }
     }
   } catch (globalErr) {

@@ -6,7 +6,7 @@ import { getHermesEnv } from '@/lib/hermesEnv';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  let { message, session_id, workspace, attachments, systemPrompt, model, thinking, effort, webSearch, deepResearch } = await req.json();
+  let { message, session_id, workspace, attachments, systemPrompt, model, thinking, effort, webSearch, deepResearch, agent, profile } = await req.json();
 
   if (!message) {
     return new Response(JSON.stringify({ error: 'Message is required' }), {
@@ -45,8 +45,11 @@ export async function POST(req: NextRequest) {
   }
 
   const args = ['chat', '-q', message, '--oneshot', '--format', 'stream-json'];
+  const targetProfile = profile || agent;
   if (session_id) {
     args.push('-c', session_id);
+  } else if (targetProfile) {
+    args.push('--profile', targetProfile);
   } else {
     args.push('--profile', 'default');
   }

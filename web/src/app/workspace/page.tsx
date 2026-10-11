@@ -136,7 +136,7 @@ export default function WorkspacePage() {
   const { currentWorkspace, setCurrentWorkspace, activeFilePath } = useWorkspaceStore();
 
   const [files, setFiles] = useState<FileNode[]>([]);
-  const [currentDir, setCurrentDir] = useState<string>(currentWorkspace || '/');
+  const [currentDir, setCurrentDir] = useState<string>(currentWorkspace || '');
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activeFileIndex, setActiveFileIndex] = useState<number>(-1);
   const [isSaving, setIsSaving] = useState(false);
@@ -268,7 +268,7 @@ export default function WorkspacePage() {
   };
 
   useEffect(() => {
-    fetchFiles(currentWorkspace || '/');
+    fetchFiles(currentWorkspace || '');
   }, [currentWorkspace]);
 
   useEffect(() => {
@@ -285,10 +285,15 @@ export default function WorkspacePage() {
   }, [activeFilePath, activeAgentParam, files]);
 
   const handleNavigateUp = () => {
-    if (currentDir === '/') return;
-    const parts = currentDir.split('/').filter(Boolean);
-    parts.pop();
-    fetchFiles(parts.length === 0 ? '/' : '/' + parts.join('/'));
+    if (!currentDir || currentDir === 'ROOT') return;
+    const normalized = currentDir.replace(/\\/g, '/');
+    const parts = normalized.split('/').filter(Boolean);
+    if (parts.length > 1) {
+      parts.pop();
+      fetchFiles(parts.join('/'));
+    } else {
+      fetchFiles('ROOT');
+    }
   };
 
   const activeFile = activeFileIndex !== -1 ? openFiles[activeFileIndex] : null;
@@ -309,7 +314,7 @@ export default function WorkspacePage() {
 
         <div className="p-2 flex items-center gap-2 text-xs text-lyra-editor-muted border-b border-lyra-editor-border bg-lyra-editor-bg">
           <button
-            disabled={currentDir === '/'}
+            disabled={!currentDir || currentDir === 'ROOT'}
             onClick={handleNavigateUp}
             className="flex items-center hover:text-lyra-editor-text disabled:opacity-30 transition px-1 py-0.5 rounded hover:bg-lyra-editor-header"
           >
@@ -374,9 +379,10 @@ export default function WorkspacePage() {
             <div className="h-9 border-b border-lyra-editor-border bg-lyra-editor-header/40 flex items-center justify-between px-4 shrink-0 text-xs text-lyra-editor-muted">
               <span className="truncate">{activeFile.path}</span>
               {currentAgent && (
-                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-mono ${currentAgent.color} shadow-sm shrink-0`}>
-                  <Bot size={13} className="animate-pulse" />
-                  <span>@{currentAgent.name} is inspecting this file</span>
+                <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-mono ${currentAgent.color} shadow-sm shrink-0`}>
+                  <Bot size={13} className="text-lyra-accent" />
+                  <span className="font-semibold">{currentAgent.name}</span>
+                  <span className="opacity-60">({currentAgent.role})</span>
                 </div>
               )}
             </div>

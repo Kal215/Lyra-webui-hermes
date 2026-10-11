@@ -372,6 +372,7 @@ export default function WorkPage() {
       abortControllerRef.current = new AbortController();
       const streamPayload = {
         message: `[MODE OTONOM SQUAD WORKSPACE]\nTugas Otonom: ${userPrompt}\nPeran: ${selectedAgent}\n\nEksekusi tugas secara bertahap, berikan pemikiran mendalam terstruktur, gunakan tools, dan selesaikan semua deliverable sampai tuntas.`,
+        agent: selectedAgent,
         model: selectedModel,
         thinking: true,
         effort: thinkingEffort.toLowerCase(),

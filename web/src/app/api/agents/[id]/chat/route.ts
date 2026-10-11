@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import readline from 'readline';
+import { getHermesEnv } from '@/lib/hermesEnv';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     start(controller) {
       const child = spawn('hermes', args, { 
         shell: false,
-        env: { ...process.env, PYTHONUNBUFFERED: '1' }
+        env: getHermesEnv()
       });
       
       const rl = readline.createInterface({
