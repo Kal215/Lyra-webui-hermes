@@ -28,6 +28,7 @@ import { ReasoningAccordion } from '@/components/work/ReasoningAccordion';
 import { ToolExecutionBlock } from '@/components/work/ToolExecutionBlock';
 import { DeliverableCard } from '@/components/work/DeliverableCard';
 import { AutonomousConversationView } from '@/components/work/AutonomousConversationView';
+import { WorkSessionItem } from '@/components/work/WorkSessionItem';
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel';
 import Link from 'next/link';
 
@@ -87,6 +88,77 @@ export default function WorkPage() {
   // Chat Feed Ref
   const feedEndRef = useRef<HTMLDivElement>(null);
 
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+
+  // Handle Work Session Click: Load conversation & task status in Studio without navigating away
+  const handleSelectWorkTask = async (task: any) => {
+    setActiveTaskId(task.id);
+    initDemoSession(task.title || task.id, task.assignee || 'default');
+    
+    // Add task description and requirements as conversation
+    useWorkSessionStore.setState({ conversationMessages: [] });
+    addConversationMessage({
+      id: 'task_req_' + task.id,
+      role: 'user',
+      content: task.body || task.title || 'Instruksi pengerjaan otonom',
+      timestamp: task.created_at ? new Date(task.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined
+    });
+
+    const isDone = task.status === 'done';
+    const isRunning = task.status === 'running';
+
+    addConversationMessage({
+      id: 'task_resp_' + task.id,
+      role: 'assistant',
+      content: isDone 
+        ? `### Tugas Selesai Dikerjakan\n\nPekerjaan **"${task.title}"** telah diselesaikan oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** Selesai (${task.status})\n- **ID Tugas:** \`${task.id}\`\n${task.workspace_path ? `- **Direktori Hasil:** \`${task.workspace_path}\`` : ''}\n\nSemua perubahan telah terintegrasi dengan baik.`
+        : `### Status Pekerjaan Sedang Berjalan\n\nTugas **"${task.title}"** sedang dalam penanganan aktif oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** ${task.status.toUpperCase()}\n- **ID Tugas:** \`${task.id}\`\n\nSedang memantau eksekusi proses background...`,
+      agentName: getAgentInfo(task.assignee || 'default').name,
+      timestamp: task.completed_at ? new Date(task.completed_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined
+    });
+
+    // Populate deliverable card if done
+    if (isDone) {
+      dispatchAgentEvent({
+        type: 'DELIVERABLE_READY',
+        payload: {
+          title: `Hasil Pekerjaan: ${task.title}`,
+          summary: `Tugas #${task.id} telah diselesaikan secara otonom oleh @${task.assignee}. Berkas hasil pekerjaan tersimpan di workspace.`,
+          changedFiles: [
+            { path: task.workspace_path ? `${task.workspace_path}/output.txt` : 'workspace/output.txt', action: 'created' }
+          ],
+          nextActionableSteps: [
+            'Klik tombol "Detail Pekerjaan" pada menu tugas untuk membuka tab audit lengkap',
+            'Buka berkas hasil pada panel Workspace sebelah kanan'
+          ]
+        }
+      });
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await fetch(`/api/work/${taskId}`, { method: 'DELETE' });
+      setRecentTasks((prev) => prev.filter((t) => t.id !== taskId));
+      if (activeTaskId === taskId) {
+        resetSession();
+        setActiveTaskId(null);
+      }
+    } catch (e) {
+      console.error('Failed to delete task:', e);
+    }
+  };
+
+  const handleRenameTask = async (taskId: string, newTitle: string) => {
+    setRecentTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, title: newTitle } : t));
+  };
+
+  const handlePinTask = async (taskId: string, isPinned: boolean) => {
+    setRecentTasks((prev) => {
+      const updated = prev.map((t) => t.id === taskId ? { ...t, is_pinned: isPinned } : t);
+      return [...updated].sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0));
+    });
+  };
   // Fetch Specialist Agents & Recent Tasks
   const loadData = async () => {
     try {
@@ -394,34 +466,23 @@ export default function WorkPage() {
           </button>
 
           {isHistoryExpanded && (
-            <div className="flex-1 overflow-y-auto space-y-1.5 mt-2 pr-1">
+            <div className="flex-1 overflow-y-auto space-y-1 mt-2 pr-1 no-scrollbar">
               {loadingTasks ? (
                 <div className="text-center py-6 text-xs text-lyra-text-secondary/60">Memuat riwayat...</div>
               ) : recentTasks.length === 0 ? (
                 <div className="text-center py-6 text-xs text-lyra-text-secondary/60">Belum ada tugas otonom.</div>
               ) : (
-                recentTasks.slice(0, 15).map((t) => (
-                  <div
+                recentTasks.slice(0, 30).map((t) => (
+                  <WorkSessionItem
                     key={t.id}
-                    className="p-2 rounded-xl border border-lyra-accent/10 hover:border-lyra-accent/25 bg-lyra-surface/40 hover:bg-lyra-accent/5 transition-all cursor-pointer group"
-                    onClick={() => router.push(`/work/${t.id}`)}
-                  >
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <span className="text-xs font-medium text-lyra-text truncate group-hover:text-lyra-accent transition-colors">
-                        {t.title}
-                      </span>
-                      <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded-full font-mono ${
-                        t.status === 'done' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'
-                      }`}>
-                        {t.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] text-lyra-text-secondary/60 font-mono">
-                      <span>@{t.assignee}</span>
-                      <span>•</span>
-                      <span>{t.id}</span>
-                    </div>
-                  </div>
+                    task={t}
+                    isActive={activeTaskId === t.id}
+                    onClick={() => handleSelectWorkTask(t)}
+                    onViewDetail={(taskId) => router.push(`/work/${taskId}`)}
+                    onDelete={handleDeleteTask}
+                    onRename={handleRenameTask}
+                    onPin={handlePinTask}
+                  />
                 ))
               )}
             </div>

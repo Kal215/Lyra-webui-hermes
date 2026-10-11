@@ -21,6 +21,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const resolvedParams = await params;
+    const { id } = resolvedParams;
+    await execFileAsync('hermes', ['kanban', 'archive', id], { env: getHermesEnv() });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error(`Failed to delete work:`, error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const resolvedParams = await params;
@@ -36,6 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       case 'block': command = 'block'; break;
       case 'unblock': case 'todo': command = 'unblock'; break;
       case 'archive': command = 'archive'; break;
+      case 'delete': command = 'delete'; break;
       default: return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
 
