@@ -196,7 +196,10 @@ function WorkspaceView() {
       if (data.files) {
         setFiles(data.files);
         setCurrentDir(data.cwd);
-        setCurrentWorkspace(data.cwd);
+        // Only update currentWorkspace in store if it actually changed to prevent infinite loop
+        if (data.cwd && data.cwd !== currentWorkspace) {
+          setCurrentWorkspace(data.cwd);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -276,8 +279,9 @@ function WorkspaceView() {
   };
 
   useEffect(() => {
+    // Initial load or when user explicitly changes workspace
     fetchFiles(currentWorkspace || '');
-  }, [currentWorkspace]);
+  }, []);
 
   const loadedFilesRef = useRef<string | null>(null);
 
