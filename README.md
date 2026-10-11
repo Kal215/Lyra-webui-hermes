@@ -41,17 +41,17 @@ Whether you run local open models via Ollama, cloud inference engines (OpenRoute
 graph TD
     User([Developer / Operator]) -->|Browser Interface| WebUI[Lyra Studio Web UI - Next.js]
     
-    subgraph "Direct Inference Layer"
-        WebUI -->|HTTP SSE Stream| Providers[OpenRouter / DeepSeek / Anthropic / OpenAI / Ollama]
+    subgraph "Inference & AI Providers"
+        WebUI -->|Direct HTTP SSE| Providers[OpenRouter / DeepSeek / Anthropic / OpenAI / Ollama]
     end
 
-    subgraph "Autonomous Engineering Layer"
+    subgraph "Autonomous Engineering Studio"
         WebUI -->|Orchestrates| Swarm[Autonomous Agent Squad]
-        Swarm -->|Specialists| Forge[Forge - Coder]
-        Swarm -->|Specialists| Atlas[Atlas - Architect]
-        Swarm -->|Specialists| Scout[Scout - Research]
-        Swarm -->|Specialists| Sentinel[Sentinel - Security]
-        Swarm -->|Executes Tools| Tools[File Write / Terminal / Patch / Workspace]
+        Swarm -->|Specialist Roles| Forge[Forge - Coder]
+        Swarm -->|Specialist Roles| Atlas[Atlas - Architect]
+        Swarm -->|Specialist Roles| Scout[Scout - Research]
+        Swarm -->|Specialist Roles| Sentinel[Sentinel - Security]
+        Swarm -->|Workspace Tools| Tools[File Write / Terminal / Patch / Workspace]
     end
 ```
 

@@ -41,17 +41,17 @@ Baik Anda menggunakan model lokal (via Ollama), layanan komputasi awan (OpenRout
 graph TD
     User([Pengembang / Operator]) -->|Antarmuka Web Browser| WebUI[Lyra Studio Web UI - Next.js]
     
-    subgraph "Jalur Inferensi Langsung"
-        WebUI -->|HTTP SSE Stream| Providers[OpenRouter / DeepSeek / Anthropic / OpenAI / Ollama]
+    subgraph "Jalur Inferensi & AI Provider"
+        WebUI -->|Direct HTTP SSE| Providers[OpenRouter / DeepSeek / Anthropic / OpenAI / Ollama]
     end
 
-    subgraph "Jalur Eksekusi Otonom"
+    subgraph "Studio Rekayasa Otonom"
         WebUI -->|Orkestrasi Multi-Agen| Swarm[Skuad Agen Otonom]
-        Swarm -->|Spesialis| Forge[Forge - Coder]
-        Swarm -->|Spesialis| Atlas[Atlas - Architect]
-        Swarm -->|Spesialis| Scout[Scout - Research]
-        Swarm -->|Spesialis| Sentinel[Sentinel - Security]
-        Swarm -->|Eksekusi Operasi| Tools[Write File / Terminal / Patch / Workspace]
+        Swarm -->|Peran Spesialis| Forge[Forge - Coder]
+        Swarm -->|Peran Spesialis| Atlas[Atlas - Architect]
+        Swarm -->|Peran Spesialis| Scout[Scout - Research]
+        Swarm -->|Peran Spesialis| Sentinel[Sentinel - Security]
+        Swarm -->|Perkakas Workspace| Tools[Write File / Terminal / Patch / Workspace]
     end
 ```
 
