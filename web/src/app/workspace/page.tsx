@@ -6,6 +6,7 @@ import { Folder, File, ChevronLeft, Save, RefreshCw, FolderTree, Code, X, Bot, S
 import { NeoPanel } from '@/components/NeoPanel';
 import { NeoButton } from '@/components/NeoButton';
 import { useWorkspaceStore } from '@/store/workspace';
+import { useI18nStore } from '@/i18n';
 import Prism from 'prismjs';
 
 // Import essential Prism language modules
@@ -131,14 +132,16 @@ function SyntaxCodeEditor({
 }
 
 export default function WorkspacePage() {
+  const { language } = useI18nStore();
   return (
-    <React.Suspense fallback={<div className="h-screen flex items-center justify-center bg-lyra-bg text-lyra-text font-mono text-xs">Memuat Workspace...</div>}>
+    <React.Suspense fallback={<div className="h-screen flex items-center justify-center bg-lyra-bg text-lyra-text font-mono text-xs">{language === 'id' ? 'Memuat Workspace...' : 'Loading Workspace...'}</div>}>
       <WorkspaceView />
     </React.Suspense>
   );
 }
 
 function WorkspaceView() {
+  const { language } = useI18nStore();
   const searchParams = useSearchParams();
   const activeAgentParam = searchParams ? searchParams.get('activeAgent') : null;
   const { currentWorkspace, setCurrentWorkspace, activeFilePath, liveTyping, setLiveTyping } = useWorkspaceStore();
@@ -446,7 +449,11 @@ function WorkspaceView() {
               {simulatingTyping && liveTyping ? (
                 <div className="flex items-center gap-2 px-3 py-0.5 rounded-full border border-blue-500/40 bg-blue-500/20 text-blue-400 font-mono text-[11px] shadow-sm animate-pulse">
                   <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
-                  <span>@{liveTyping.agentName} sedang menulis kode secara realtime...</span>
+                  <span>
+                    {language === 'id' 
+                      ? `@${liveTyping.agentName} sedang menulis kode secara realtime...` 
+                      : `@${liveTyping.agentName} is writing code in real time...`}
+                  </span>
                 </div>
               ) : currentAgent ? (
                 <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-mono ${currentAgent.color} shadow-sm shrink-0`}>
@@ -496,8 +503,14 @@ function WorkspaceView() {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-lyra-editor-muted">
             <FolderTree className="w-20 h-20 mb-6 opacity-20" />
-            <p className="text-lg text-lyra-editor-text">Tidak ada file yang terbuka</p>
-            <p className="text-sm opacity-60 mt-2">Pilih berkas dari explorer di sisi kiri untuk membaca atau mengedit kode</p>
+            <p className="text-lg text-lyra-editor-text">
+              {language === 'id' ? 'Tidak ada file yang terbuka' : 'No file open'}
+            </p>
+            <p className="text-sm opacity-60 mt-2">
+              {language === 'id' 
+                ? 'Pilih berkas dari explorer di sisi kiri untuk membaca atau mengedit kode' 
+                : 'Select a file from the explorer on the left to read or edit code'}
+            </p>
           </div>
         )}
       </NeoPanel>

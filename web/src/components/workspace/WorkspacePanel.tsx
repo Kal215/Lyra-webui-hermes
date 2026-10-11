@@ -26,6 +26,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspace';
+import { useI18nStore } from '@/i18n';
 
 interface WorkspacePanelProps {
   isOpen: boolean;
@@ -35,7 +36,8 @@ interface WorkspacePanelProps {
 }
 
 export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewPath }: WorkspacePanelProps) {
-  const { currentWorkspace, setCurrentWorkspace, openFileInWorkspace, liveTyping } = useWorkspaceStore();
+  const { language } = useI18nStore();
+  const { currentWorkspace, setCurrentWorkspace, activeFilePath, liveTyping, openFileInWorkspace } = useWorkspaceStore();
   const [workspaceFiles, setWorkspaceFiles] = useState<any[]>([]);
   const [workspaceInput, setWorkspaceInput] = useState(currentWorkspace || '');
   const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState('');
@@ -228,7 +230,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
           type="button"
           onClick={onToggle}
           className="fixed right-0 top-1/2 -translate-y-1/2 z-30 w-5 h-12 hover:w-6 bg-lyra-surface/90 hover:bg-lyra-surface border-y border-l border-lyra-accent/30 hover:border-lyra-accent rounded-l-lg shadow-md backdrop-blur-md flex items-center justify-center text-lyra-text-secondary hover:text-lyra-accent transition-all duration-200 cursor-pointer group active:scale-95"
-          title="Buka Workspace"
+          title={language === 'id' ? 'Buka Workspace' : 'Open Workspace'}
         >
           <ChevronLeft size={14} className="group-hover:-translate-x-0.5 transition-transform text-lyra-accent" />
         </button>
@@ -251,7 +253,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
             type="button"
             onClick={onToggle}
             className="absolute -left-5 top-1/2 -translate-y-1/2 z-30 w-5 h-12 bg-lyra-surface border-y border-l border-lyra-accent/30 hover:border-lyra-accent rounded-l-lg shadow-md flex items-center justify-center text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer group active:scale-95"
-            title="Tutup Workspace"
+            title={language === 'id' ? 'Tutup Workspace' : 'Close Workspace'}
           >
             <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform text-lyra-accent" />
           </button>
@@ -260,8 +262,12 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
           {isWorkspaceDragging && (
             <div className="absolute inset-0 z-50 bg-lyra-surface/95 border-2 border-dashed border-lyra-accent flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm pointer-events-none">
               <Upload size={36} className="text-lyra-accent animate-bounce mb-2" />
-              <p className="text-sm font-bold text-lyra-text">Lepaskan file di sini</p>
-              <p className="text-xs text-lyra-text-secondary mt-1">File akan diunggah ke workspace saat ini</p>
+              <p className="text-sm font-bold text-lyra-text">
+                {language === 'id' ? 'Lepaskan file di sini' : 'Drop files here'}
+              </p>
+              <p className="text-xs text-lyra-text-secondary mt-1">
+                {language === 'id' ? 'File akan diunggah ke workspace saat ini' : 'Files will be uploaded to current workspace'}
+              </p>
             </div>
           )}
 
@@ -290,7 +296,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                 onClick={handleWorkspaceBack} 
                 disabled={!currentWorkspace || currentWorkspace === 'ROOT'}
                 className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors disabled:opacity-30 cursor-pointer"
-                title="Naik satu tingkat folder"
+                title={language === 'id' ? 'Naik satu tingkat folder' : 'Up one folder level'}
               >
                 <CornerLeftUp size={14} />
               </button>
@@ -300,7 +306,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                 onClick={() => fileInputRef.current?.click()} 
                 disabled={!currentWorkspace || currentWorkspace === 'ROOT' || isWorkspaceUploading}
                 className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors disabled:opacity-30 cursor-pointer"
-                title="Unggah file"
+                title={language === 'id' ? 'Unggah file' : 'Upload files'}
               >
                 <Upload size={14} className={isWorkspaceUploading ? 'animate-spin' : ''} />
               </button>
@@ -309,7 +315,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                 type="button"
                 onClick={() => loadWorkspaceFiles(currentWorkspace)} 
                 className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer"
-                title="Muat ulang"
+                title={language === 'id' ? 'Muat ulang' : 'Refresh'}
               >
                 <RotateCw size={14} />
               </button>
@@ -322,7 +328,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                 }} 
                 disabled={!currentWorkspace || currentWorkspace === 'ROOT'}
                 className={`p-1.5 rounded-lg transition-colors cursor-pointer ${creatingType === 'file' ? 'bg-lyra-accent/20 text-lyra-accent' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'} disabled:opacity-30`}
-                title="Buat berkas baru"
+                title={language === 'id' ? 'Buat berkas baru' : 'Create new file'}
               >
                 <FilePlus size={14} />
               </button>
@@ -335,7 +341,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                 }} 
                 disabled={!currentWorkspace || currentWorkspace === 'ROOT'}
                 className={`p-1.5 rounded-lg transition-colors cursor-pointer ${creatingType === 'folder' ? 'bg-lyra-accent/20 text-lyra-accent' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'} disabled:opacity-30`}
-                title="Buat folder baru"
+                title={language === 'id' ? 'Buat folder baru' : 'Create new directory'}
               >
                 <FolderPlus size={14} />
               </button>
@@ -443,7 +449,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
           <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-0.5 text-xs font-mono">
             {workspaceFiles.length === 0 ? (
               <div className="py-12 text-center text-lyra-text-secondary/50 text-[11px]">
-                Direktori kosong atau belum dimuat.
+                {language === 'id' ? 'Direktori kosong atau belum dimuat.' : 'Directory is empty or not loaded.'}
               </div>
             ) : (
               workspaceFiles

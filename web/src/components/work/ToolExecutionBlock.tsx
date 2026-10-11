@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, ChevronDown, Check, Terminal, FileCode2, Clock, Globe } from 'lucide-react';
 import { ToolCallLog } from '@/types/agent-studio';
+import { useI18nStore } from '@/i18n';
 
 interface ToolExecutionGroupProps {
   toolLogs: ToolCallLog[];
@@ -14,6 +15,7 @@ export const ToolExecutionBlock: React.FC<ToolExecutionGroupProps> = ({
   toolLogs,
   defaultExpanded = false 
 }) => {
+  const { language } = useI18nStore();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const totalCount = toolLogs.length;
   const isRunning = toolLogs.some((t) => t.status === 'running');
@@ -43,17 +45,19 @@ export const ToolExecutionBlock: React.FC<ToolExecutionGroupProps> = ({
             <Zap className="h-3 w-3 fill-current" />
           </div>
           <span className="font-medium text-lyra-text">
-            Menjalankan {totalCount} operasi sistem
+            {language === 'id' 
+              ? `Menjalankan ${totalCount} operasi sistem` 
+              : `Executing ${totalCount} system operation${totalCount > 1 ? 's' : ''}`}
           </span>
           <span className="text-lyra-text-secondary/50">•</span>
           {isRunning ? (
             <span className="inline-flex items-center gap-1 font-mono text-[11px] text-lyra-accent">
               <span className="h-1.5 w-1.5 rounded-full bg-lyra-accent animate-ping" />
-              Running...
+              {language === 'id' ? 'Sedang Berjalan...' : 'Running...'}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-400 font-semibold">
-              <Check className="h-3 w-3" /> Done
+              <Check className="h-3 w-3" /> {language === 'id' ? 'Selesai' : 'Done'}
             </span>
           )}
         </div>

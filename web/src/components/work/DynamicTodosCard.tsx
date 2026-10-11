@@ -4,6 +4,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ListTodo } from 'lucide-react';
 import { AgentTodoItem } from '@/types/agent-studio';
+import { useI18nStore } from '@/i18n';
 
 interface DynamicTodosCardProps {
   todos: AgentTodoItem[];
@@ -11,6 +12,7 @@ interface DynamicTodosCardProps {
 }
 
 export const DynamicTodosCard: React.FC<DynamicTodosCardProps> = ({ todos, className = '' }) => {
+  const { language } = useI18nStore();
   const completedCount = todos.filter((t) => t.state === 'completed').length;
   const progressPercentage = todos.length > 0 ? (completedCount / todos.length) * 100 : 0;
 
@@ -24,7 +26,7 @@ export const DynamicTodosCard: React.FC<DynamicTodosCardProps> = ({ todos, class
           </div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold tracking-tight text-lyra-text">
-              Todos
+              {language === 'id' ? 'Daftar Rencana Tugas (Todos)' : 'Task Plan List (Todos)'}
             </h3>
             <span className="rounded-full bg-lyra-accent/15 px-2 py-0.5 font-mono text-[11px] font-semibold text-lyra-accent">
               {todos.length}
@@ -34,7 +36,7 @@ export const DynamicTodosCard: React.FC<DynamicTodosCardProps> = ({ todos, class
 
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs font-medium text-lyra-text-secondary">
-            {completedCount}/{todos.length} Selesai
+            {completedCount}/{todos.length} {language === 'id' ? 'Selesai' : 'Done'}
           </span>
           <span className="rounded-full bg-lyra-bg border border-lyra-accent/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-lyra-accent">
             {Math.round(progressPercentage)}%

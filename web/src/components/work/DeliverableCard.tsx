@@ -3,6 +3,7 @@
 import React from 'react';
 import { PackageCheck, ArrowRight, GitCommit, FileCheck } from 'lucide-react';
 import { DeliverableArtifact } from '@/types/agent-studio';
+import { useI18nStore } from '@/i18n';
 
 interface DeliverableCardProps {
   artifact: DeliverableArtifact;
@@ -17,6 +18,8 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
   onReject,
   onSelectFile
 }) => {
+  const { language } = useI18nStore();
+
   return (
     <div className="mt-6 overflow-hidden rounded-2xl border border-emerald-500/20 bg-lyra-surface/90 p-6 shadow-xl backdrop-blur-md">
       <div className="flex items-center gap-3">
@@ -28,7 +31,9 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
             {artifact.title}
           </h2>
           <p className="text-xs text-lyra-text-secondary">
-            Tahapan kerja selesai dan terverifikasi. Siap untuk integrasi.
+            {language === 'id' 
+              ? 'Tahapan kerja selesai dan terverifikasi. Siap untuk integrasi.' 
+              : 'Work phases completed and verified. Ready for integration.'}
           </p>
         </div>
       </div>
@@ -40,7 +45,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       {artifact.changedFiles && artifact.changedFiles.length > 0 && (
         <div className="mt-5">
           <span className="font-mono text-[11px] uppercase tracking-wider text-lyra-text-secondary/70">
-            Berkas & Perubahan yang Dihasilkan
+            {language === 'id' ? 'Berkas & Perubahan yang Dihasilkan' : 'Generated Files & Changes'}
           </span>
           <div className="mt-2 flex flex-wrap gap-2">
             {artifact.changedFiles.map((file) => (
@@ -49,7 +54,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
                 type="button"
                 onClick={() => onSelectFile?.(file.path)}
                 className="flex items-center gap-1.5 rounded-lg border border-lyra-accent/20 bg-lyra-bg/80 hover:bg-lyra-accent/15 hover:border-lyra-accent/40 px-2.5 py-1 font-mono text-[11px] text-lyra-text transition-all cursor-pointer group"
-                title="Buka berkas di workspace"
+                title={language === 'id' ? 'Buka berkas di workspace' : 'Open file in workspace'}
               >
                 <FileCheck className="h-3 w-3 text-emerald-400 group-hover:scale-110 transition-transform" />
                 <span className="group-hover:text-lyra-accent transition-colors">{file.path}</span>
@@ -63,7 +68,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
       {artifact.nextActionableSteps && artifact.nextActionableSteps.length > 0 && (
         <div className="mt-5 border-t border-lyra-accent/10 pt-4">
           <span className="font-mono text-[11px] uppercase tracking-wider text-lyra-text-secondary/70">
-            Langkah Rekomendasi Selanjutnya
+            {language === 'id' ? 'Langkah Rekomendasi Selanjutnya' : 'Recommended Next Steps'}
           </span>
           <ul className="mt-2 space-y-1.5">
             {artifact.nextActionableSteps.map((step, idx) => (
@@ -92,7 +97,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
             onClick={onReject}
             className="rounded-xl border border-lyra-accent/20 px-3.5 py-1.5 text-xs font-medium text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer"
           >
-            Tolak / Minta Revisi
+            {language === 'id' ? 'Tolak / Minta Revisi' : 'Reject / Request Revision'}
           </button>
         )}
         {onApprove && (
@@ -101,7 +106,7 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
             onClick={onApprove}
             className="rounded-xl bg-lyra-accent hover:bg-lyra-accent/90 px-4 py-1.5 text-xs font-semibold text-white shadow-md transition-all cursor-pointer"
           >
-            Setujui & Gabungkan
+            {language === 'id' ? 'Setujui & Gabungkan' : 'Approve & Merge'}
           </button>
         )}
       </div>

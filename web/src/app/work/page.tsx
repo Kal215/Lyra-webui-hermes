@@ -720,7 +720,7 @@ Instruksi format respon:
             type="button"
             onClick={resetSession}
             className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer"
-            title="Sesi Baru"
+            title={language === 'id' ? 'Sesi Baru' : 'New Session'}
           >
             <Plus size={15} />
           </button>
@@ -734,7 +734,7 @@ Instruksi format respon:
             className="flex items-center justify-between w-full py-1 text-[11px] font-mono uppercase tracking-wider text-lyra-text-secondary hover:text-lyra-text transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-1.5">
-              <span>Pekerja Spesialis</span>
+              <span>{language === 'id' ? 'Pekerja Spesialis' : 'Specialist Agents'}</span>
               <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-lyra-surface text-lyra-accent font-mono border border-lyra-accent/20">
                 {availableAgents.length}
               </span>
@@ -806,7 +806,7 @@ Instruksi format respon:
             onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
             className="flex items-center justify-between w-full py-1 text-[11px] font-mono uppercase tracking-wider text-lyra-text-secondary hover:text-lyra-text transition-colors cursor-pointer shrink-0"
           >
-            <span>Riwayat Tugas Terakhir</span>
+            <span>{language === 'id' ? 'Riwayat Tugas Terakhir' : 'Recent Work Tasks'}</span>
             <span className="text-xs text-lyra-text-secondary">
               {isHistoryExpanded ? '▲' : '▼'}
             </span>
@@ -815,9 +815,13 @@ Instruksi format respon:
           {isHistoryExpanded && (
             <div className="flex-1 overflow-y-auto space-y-1 mt-2 pr-1 no-scrollbar">
               {loadingTasks ? (
-                <div className="text-center py-6 text-xs text-lyra-text-secondary/60">Memuat riwayat...</div>
+                <div className="text-center py-6 text-xs text-lyra-text-secondary/60">
+                  {language === 'id' ? 'Memuat riwayat...' : 'Loading task history...'}
+                </div>
               ) : recentTasks.length === 0 ? (
-                <div className="text-center py-6 text-xs text-lyra-text-secondary/60">Belum ada tugas otonom.</div>
+                <div className="text-center py-6 text-xs text-lyra-text-secondary/60">
+                  {language === 'id' ? 'Belum ada tugas otonom.' : 'No autonomous tasks yet.'}
+                </div>
               ) : (
                 recentTasks.slice(0, 30).map((t) => (
                   <WorkSessionItem
@@ -844,7 +848,9 @@ Instruksi format respon:
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-base text-lyra-text">
-                {sessionId ? `Sesi Pengerjaan Otonom: ${getAgentInfo(selectedAgent).name}` : 'Autonomous Agent Studio'}
+                {sessionId 
+                  ? (language === 'id' ? `Sesi Pengerjaan Otonom: ${getAgentInfo(selectedAgent).name}` : `Autonomous Work Session: ${getAgentInfo(selectedAgent).name}`)
+                  : (language === 'id' ? 'Studio Agen Otonom' : 'Autonomous Agent Studio')}
               </span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-lyra-accent/10 text-lyra-accent border border-lyra-accent/20 font-mono">
                 {getAgentInfo(selectedAgent).role}
@@ -859,7 +865,11 @@ Instruksi format respon:
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/15 text-xs text-lyra-text font-medium transition-colors cursor-pointer"
             >
               <FolderTree size={13} className="text-lyra-accent" />
-              <span>{isWorkspaceOpen ? 'Tutup Workspace' : 'Buka Workspace'}</span>
+              <span>
+                {isWorkspaceOpen 
+                  ? (language === 'id' ? 'Tutup Workspace' : 'Close Workspace') 
+                  : (language === 'id' ? 'Buka Workspace' : 'Open Workspace')}
+              </span>
             </button>
             <button
               type="button"
@@ -867,7 +877,7 @@ Instruksi format respon:
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-lyra-accent/15 hover:bg-lyra-accent/25 text-lyra-accent text-xs font-medium transition-colors cursor-pointer"
             >
               <ExternalLink size={13} />
-              <span>Lihat di World HQ</span>
+              <span>{language === 'id' ? 'Lihat di World HQ' : 'View in World HQ'}</span>
             </button>
           </div>
         </div>
@@ -1004,19 +1014,25 @@ Instruksi format respon:
                   onChange={(e) => setSelectedAgent(e.target.value)}
                   className="bg-lyra-surface border border-lyra-accent/20 rounded-lg px-2 py-0.5 text-xs text-lyra-text font-medium outline-none cursor-pointer hover:border-lyra-accent"
                 >
-                  <option value="default">✨ Full Autonomous Swarm (Semua Spesialis Bekerja Sama)</option>
+                  <option value="default">
+                    {language === 'id' 
+                      ? '✨ Full Autonomous Swarm (Semua Spesialis Bekerja Sama)' 
+                      : '✨ Full Autonomous Swarm (All Specialists Working Together)'}
+                  </option>
                   {availableAgents.filter(a => a !== 'default').map((agId) => {
                     const info = getAgentInfo(agId);
                     return (
                       <option key={agId} value={agId} className="bg-lyra-surface text-lyra-text">
-                        Spesifik: {info.name} ({info.role})
+                        {language === 'id' ? 'Spesifik:' : 'Specific:'} {info.name} ({info.role})
                       </option>
                     );
                   })}
                 </select>
               </div>
               <span className="font-mono text-[11px] opacity-70 hidden sm:inline">
-                Autonomous Studio • Bertahap & Berhasil Maksimal
+                {language === 'id' 
+                  ? 'Studio Otonom • Bertahap & Berhasil Maksimal' 
+                  : 'Autonomous Studio • Step-by-Step & Verified'}
               </span>
             </div>
 
@@ -1032,7 +1048,8 @@ Instruksi format respon:
               {isDraggingOver && (
                 <div className="absolute inset-0 z-30 flex items-center justify-center bg-lyra-surface/90 backdrop-blur-sm rounded-2xl pointer-events-none border-2 border-dashed border-lyra-accent">
                   <div className="text-lyra-accent font-bold flex items-center gap-2 text-sm">
-                    <Plus size={18} /> Lepaskan file atau folder di sini
+                    <Plus size={18} /> 
+                    {language === 'id' ? 'Lepaskan file atau folder di sini' : 'Drop files or folders here'}
                   </div>
                 </div>
               )}
@@ -1489,10 +1506,13 @@ Instruksi format respon:
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-lyra-surface border border-lyra-accent/20 rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <h3 className="text-base font-bold text-lyra-text mb-2 flex items-center gap-2">
-              <LinkIcon size={18} className="text-lyra-accent" /> Tautkan URL / Dokumentasi
+              <LinkIcon size={18} className="text-lyra-accent" /> 
+              {language === 'id' ? 'Tautkan URL / Dokumentasi' : 'Attach URL / Documentation'}
             </h3>
             <p className="text-xs text-lyra-text-secondary mb-4">
-              Masukkan URL web, dokumentasi library, atau endpoint API untuk dijadikan konteks langsung bagi AI agen.
+              {language === 'id' 
+                ? 'Masukkan URL web, dokumentasi library, atau endpoint API untuk dijadikan konteks langsung bagi AI agen.' 
+                : 'Enter a web URL, library docs, or API endpoint to provide direct context to AI agents.'}
             </p>
             <input
               type="url"
@@ -1515,7 +1535,7 @@ Instruksi format respon:
                 onClick={() => { setUrlModalOpen(false); setUrlInput(''); }}
                 className="px-3.5 py-2 rounded-xl bg-lyra-accent/10 hover:bg-lyra-accent/20 text-lyra-text cursor-pointer transition-colors"
               >
-                Batal
+                {language === 'id' ? 'Batal' : 'Cancel'}
               </button>
               <button
                 type="button"
@@ -1529,7 +1549,7 @@ Instruksi format respon:
                 }}
                 className="px-4 py-2 rounded-xl bg-lyra-accent hover:bg-lyra-accent/90 text-white font-medium disabled:opacity-50 cursor-pointer transition-colors shadow-md"
               >
-                Tambahkan Tautan
+                {language === 'id' ? 'Tambahkan Tautan' : 'Add Link'}
               </button>
             </div>
           </div>

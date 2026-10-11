@@ -4,6 +4,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Bot, User, Check, Clipboard } from 'lucide-react';
+import { useI18nStore } from '@/i18n';
 
 interface AutonomousMessage {
   id: string;
@@ -19,6 +20,7 @@ interface AutonomousConversationViewProps {
 }
 
 function InlineCodeBlock({ inline, className, children, ...props }: any) {
+  const { language } = useI18nStore();
   const [copied, setCopied] = React.useState(false);
   const codeString = String(children).replace(/\n$/, '');
   const match = /language-(\w+)/.exec(className || '');
@@ -55,12 +57,14 @@ function InlineCodeBlock({ inline, className, children, ...props }: any) {
           {copied ? (
             <>
               <Check size={11} className="text-emerald-400" />
-              <span className="text-emerald-400 font-medium">Tersalin</span>
+              <span className="text-emerald-400 font-medium">
+                {language === 'id' ? 'Tersalin' : 'Copied'}
+              </span>
             </>
           ) : (
             <>
               <Clipboard size={11} />
-              <span>Salin</span>
+              <span>{language === 'id' ? 'Salin' : 'Copy'}</span>
             </>
           )}
         </button>
@@ -97,6 +101,7 @@ export const AutonomousConversationView: React.FC<AutonomousConversationViewProp
   messages,
   isStreaming
 }) => {
+  const { language } = useI18nStore();
   if (!messages || messages.length === 0) return null;
 
   return (
@@ -145,7 +150,11 @@ export const AutonomousConversationView: React.FC<AutonomousConversationViewProp
       {isStreaming && (
         <div className="flex items-center gap-2 text-xs text-lyra-accent/80 font-mono pl-3 animate-pulse">
           <span className="w-2 h-2 rounded-full bg-lyra-accent" />
-          <span>Agen sedang menyusun respon & mengeksekusi...</span>
+          <span>
+            {language === 'id' 
+              ? 'Agen sedang menyusun respon & mengeksekusi...' 
+              : 'Agent is compiling response & executing...'}
+          </span>
         </div>
       )}
     </div>

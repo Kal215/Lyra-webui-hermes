@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Code2, Bot, ExternalLink, ChevronDown, Check, Sparkles, X } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspace';
+import { useI18nStore } from '@/i18n';
 import Link from 'next/link';
 
 export function LiveCodingStudioBlock() {
+  const { language } = useI18nStore();
   const { liveTyping } = useWorkspaceStore();
   const [isExpanded, setIsExpanded] = useState(true);
   const [displayedText, setDisplayedText] = useState('');
@@ -46,13 +48,13 @@ export function LiveCodingStudioBlock() {
             <span className="text-[10px] text-blue-400/70 truncate hidden sm:inline">({liveTyping.filePath})</span>
           </div>
           {isTyping ? (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-400 text-[10px] font-mono animate-pulse">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
-              @{liveTyping.agentName} sedang menulis live...
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-lyra-accent animate-pulse">
+              <Sparkles size={10} />
+              @{liveTyping.agentName} {language === 'id' ? 'sedang menulis live...' : 'typing live...'}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-mono">
-              <Check size={10} /> Selesai ditulis
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-400">
+              <Check size={10} /> {language === 'id' ? 'Selesai ditulis' : 'Finished writing'}
             </span>
           )}
         </div>
@@ -61,17 +63,19 @@ export function LiveCodingStudioBlock() {
           <Link
             href={`/workspace?activeAgent=coder`}
             className="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 text-xs font-mono transition-colors flex items-center gap-1.5"
-            title="Buka di Workspace IDE Penuh"
+            title={language === 'id' ? 'Buka di Workspace IDE Penuh' : 'Open in Full Workspace IDE'}
           >
             <ExternalLink size={12} />
-            <span className="hidden sm:inline">Buka di Workspace</span>
+            <span className="hidden sm:inline">
+              {language === 'id' ? 'Buka di Workspace' : 'Open in Workspace'}
+            </span>
           </Link>
 
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-1 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-white/5 transition-colors cursor-pointer"
-            title={isExpanded ? 'Ciutkan' : 'Perluas'}
+            title={isExpanded ? (language === 'id' ? 'Ciutkan' : 'Collapse') : (language === 'id' ? 'Perluas' : 'Expand')}
           >
             <ChevronDown size={14} className={isExpanded ? 'rotate-180 transition-transform' : 'transition-transform'} />
           </button>
@@ -80,7 +84,7 @@ export function LiveCodingStudioBlock() {
             type="button"
             onClick={() => useWorkspaceStore.getState().setLiveTyping(null)}
             className="p-1 rounded-lg text-lyra-text-secondary hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-            title="Tutup jendela live coding"
+            title={language === 'id' ? 'Tutup jendela live coding' : 'Close live coding window'}
           >
             <X size={14} />
           </button>

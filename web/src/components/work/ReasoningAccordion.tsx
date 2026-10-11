@@ -2,41 +2,43 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, ChevronDown, Sparkles } from 'lucide-react';
+import { BrainCircuit, ChevronDown, Sparkles } from 'lucide-react';
+import { useI18nStore } from '@/i18n';
 
 interface ReasoningAccordionProps {
-  thought: string;
-  isStreaming: boolean;
-  defaultOpen?: boolean;
+  thought?: string;
+  isStreaming?: boolean;
 }
 
-export const ReasoningAccordion: React.FC<ReasoningAccordionProps> = ({
+export const ReasoningAccordion: React.FC<ReasoningAccordionProps> = ({ 
   thought,
-  isStreaming,
-  defaultOpen = true,
+  isStreaming = false 
 }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const { language } = useI18nStore();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!thought) return null;
 
   return (
-    <div className="my-3 overflow-hidden rounded-xl border border-lyra-accent/15 bg-lyra-surface/60 backdrop-blur-sm">
+    <div className="my-2.5 overflow-hidden rounded-xl border border-lyra-accent/15 bg-lyra-surface/60 backdrop-blur-sm transition-all hover:border-lyra-accent/30">
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between px-4 py-2.5 text-left text-xs font-medium text-lyra-text-secondary hover:text-lyra-text transition-colors cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex w-full items-center justify-between px-3.5 py-2 text-left text-xs text-lyra-text transition-colors hover:bg-lyra-accent/5 cursor-pointer"
       >
         <div className="flex items-center gap-2">
-          <Brain className={`h-4 w-4 ${isStreaming ? 'animate-pulse text-lyra-accent' : 'text-lyra-text-secondary/70'}`} />
-          <span className="font-mono uppercase tracking-wider text-[11px] text-lyra-text-secondary">
-            Thought Process
+          <BrainCircuit className="h-3.5 w-3.5 text-lyra-accent shrink-0" />
+          <span className="font-semibold text-lyra-text">
+            {language === 'id' ? 'Proses Penalaran (Thought Process)' : 'Thought Process'}
           </span>
           {isStreaming && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-lyra-accent/10 px-2 py-0.5 text-[10px] font-medium text-lyra-accent">
-              <Sparkles className="h-2.5 w-2.5 animate-spin" /> Sedang Berpikir...
+            <span className="inline-flex items-center gap-1 font-mono text-[11px] text-lyra-accent">
+              <Sparkles className="h-2.5 w-2.5 animate-spin" /> {language === 'id' ? 'Sedang Berpikir...' : 'Thinking...'}
             </span>
           )}
         </div>
         <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
+          animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
           <ChevronDown className="h-3.5 w-3.5 text-lyra-text-secondary/70" />
@@ -44,7 +46,7 @@ export const ReasoningAccordion: React.FC<ReasoningAccordionProps> = ({
       </button>
 
       <AnimatePresence initial={false}>
-        {isOpen && (
+        {isExpanded && (
           <motion.div
             key="reasoning-body"
             initial={{ height: 0, opacity: 0 }}

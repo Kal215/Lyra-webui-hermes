@@ -2241,8 +2241,9 @@ function NativeChatContent() {
             >
               {isDraggingOver && (
                 <div className="absolute inset-0 z-30 flex items-center justify-center bg-lyra-surface/90 backdrop-blur-sm rounded-2xl pointer-events-none border-2 border-dashed border-lyra-accent">
-                  <div className="text-lyra-accent font-bold flex items-center gap-2">
-                    <Plus size={20} /> Lepaskan file di sini
+                  <div className="text-lyra-accent font-bold flex items-center gap-2 text-base">
+                    <Plus size={20} /> 
+                    {language === 'id' ? 'Lepaskan file di sini' : 'Drop files here'}
                   </div>
                 </div>
               )}
@@ -2751,8 +2752,12 @@ function NativeChatContent() {
           {isWorkspaceDragging && (
             <div className="absolute inset-0 z-50 bg-lyra-surface/95 border-2 border-dashed border-lyra-accent flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm pointer-events-none">
               <Upload size={36} className="text-lyra-accent animate-bounce mb-2" />
-              <p className="text-sm font-bold text-lyra-text">Lepaskan file di sini</p>
-              <p className="text-xs text-lyra-text-secondary mt-1">File akan langsung diunggah ke folder ini</p>
+              <p className="text-sm font-bold text-lyra-text">
+                {language === 'id' ? 'Lepaskan file di sini' : 'Drop files here'}
+              </p>
+              <p className="text-xs text-lyra-text-secondary mt-1">
+                {language === 'id' ? 'File akan langsung diunggah ke folder ini' : 'Files will be uploaded directly to this folder'}
+              </p>
             </div>
           )}
 

@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Bot
 } from 'lucide-react';
+import { useI18nStore } from '@/i18n';
 
 interface WorkSessionItemProps {
   task: any;
@@ -33,6 +34,7 @@ export function WorkSessionItem({
   onRename,
   onPin
 }: WorkSessionItemProps) {
+  const { language } = useI18nStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title || task.id);
@@ -66,7 +68,9 @@ export function WorkSessionItem({
     }`}>
       {isConfirmingDelete ? (
         <div className="flex-1 flex items-center justify-between p-2 text-xs bg-red-500/10 rounded-xl">
-          <span className="text-red-500 pl-1 truncate font-semibold">Hapus tugas?</span>
+          <span className="text-red-500 pl-1 truncate font-semibold">
+            {language === 'id' ? 'Hapus tugas?' : 'Delete task?'}
+          </span>
           <div className="flex gap-1 shrink-0">
             <button
               type="button"
@@ -172,7 +176,7 @@ export function WorkSessionItem({
                     className="w-full text-left px-3 py-2 text-lyra-text hover:bg-lyra-accent/10 flex items-center gap-2 transition-colors cursor-pointer"
                   >
                     <ExternalLink size={13} className="text-sky-400" />
-                    <span>Detail Pekerjaan</span>
+                    <span>{language === 'id' ? 'Detail Pekerjaan' : 'Work Details'}</span>
                   </button>
 
                   {/* Pin / Unpin */}
@@ -186,7 +190,7 @@ export function WorkSessionItem({
                     className="w-full text-left px-3 py-2 text-lyra-text hover:bg-lyra-accent/10 flex items-center gap-2 transition-colors cursor-pointer"
                   >
                     {task.is_pinned ? <PinOff size={13} className="opacity-70" /> : <Pin size={13} className="opacity-70 text-amber-400" />}
-                    <span>{task.is_pinned ? 'Lepas Pin' : 'Pin Tugas'}</span>
+                    <span>{task.is_pinned ? (language === 'id' ? 'Lepas Pin' : 'Unpin Task') : (language === 'id' ? 'Pin Tugas' : 'Pin Task')}</span>
                   </button>
 
                   {/* Rename */}
@@ -200,7 +204,7 @@ export function WorkSessionItem({
                     className="w-full text-left px-3 py-2 text-lyra-text hover:bg-lyra-accent/10 flex items-center gap-2 transition-colors cursor-pointer"
                   >
                     <Edit2 size={13} className="opacity-70 text-emerald-400" />
-                    <span>Ubah Nama (Rename)</span>
+                    <span>{language === 'id' ? 'Ubah Nama' : 'Rename'}</span>
                   </button>
 
                   {/* Export */}
@@ -219,7 +223,7 @@ export function WorkSessionItem({
                     className="w-full text-left px-3 py-2 text-lyra-text hover:bg-lyra-accent/10 flex items-center gap-2 transition-colors cursor-pointer"
                   >
                     <DownloadCloud size={13} className="opacity-70 text-indigo-400" />
-                    <span>Ekspor Tugas (JSON)</span>
+                    <span>{language === 'id' ? 'Ekspor Tugas (JSON)' : 'Export Task (JSON)'}</span>
                   </button>
 
                   {/* Delete */}
@@ -233,7 +237,7 @@ export function WorkSessionItem({
                     className="w-full text-left px-3 py-2 text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-colors border-t border-lyra-accent/10 mt-1 pt-1.5 cursor-pointer"
                   >
                     <Trash2 size={13} />
-                    <span>Hapus Tugas</span>
+                    <span>{language === 'id' ? 'Hapus Tugas' : 'Delete Task'}</span>
                   </button>
                 </div>
               </>
