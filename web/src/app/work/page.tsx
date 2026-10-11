@@ -40,6 +40,7 @@ export default function WorkPage() {
   const [sortBy, setSortBy] = useState<'latest' | 'oldest' | 'title'>('latest');
 
   const [realTasks, setRealTasks] = useState<RealWorkItem[]>([]);
+  const [availableAgents, setAvailableAgents] = useState<string[]>(['default']);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +50,32 @@ export default function WorkPage() {
   const [newTaskAssignee, setNewTaskAssignee] = useState('default');
   const [newTaskPriority, setNewTaskPriority] = useState('0');
   const [creating, setCreating] = useState(false);
+
+  const getAgentLabel = (id: string) => {
+    const map: Record<string, string> = {
+      default: 'Aster (Coordinator - Sentral)',
+      coder: 'Forge (Coder - Rekayasa Kode)',
+      planner: 'Atlas (Planner - Perencana)',
+      researcher: 'Scout (Researcher - Riset & Web)',
+      qa: 'Iris (QA - Pengujian)',
+      'qa-kanban': 'Patch (QA Coordinator)',
+      verifier: 'Nova (Verifier - Verifikasi)',
+      synthesizer: 'Echo (Synthesizer - Sintesis)',
+      security: 'Sentinel (Security - Keamanan)',
+      'security-kanban': 'Cipher (Security Coordinator)',
+    };
+    return map[id] || `${id.charAt(0).toUpperCase() + id.slice(1)} (Custom Agent)`;
+  };
+
+  const fetchAgents = async () => {
+    try {
+      const res = await fetch('/api/agents');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+        setAvailableAgents(data.data);
+      }
+    } catch (e) {}
+  };
 
   const fetchWork = async () => {
     try {
@@ -82,6 +109,7 @@ export default function WorkPage() {
 
   useEffect(() => {
     fetchWork();
+    fetchAgents();
   }, []);
 
   const handleCreateTask = async (e: React.FormEvent) => {
@@ -472,13 +500,18 @@ export default function WorkPage() {
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">Ditugaskan Kepada (Assignee)</label>
-                      <input 
+                      <select 
                         required 
-                        type="text" 
                         value={newTaskAssignee} 
                         onChange={e => setNewTaskAssignee(e.target.value)} 
-                        className="w-full bg-black/20 border border-lyra-accent/20 rounded-xl p-3 text-lyra-text focus:border-lyra-accent outline-none font-mono text-sm" 
-                      />
+                        className="w-full bg-lyra-surface border border-lyra-accent/20 rounded-xl p-3 text-lyra-text focus:border-lyra-accent outline-none text-sm cursor-pointer"
+                      >
+                        {availableAgents.map(ag => (
+                          <option key={ag} value={ag} className="bg-lyra-surface text-lyra-text">
+                            {getAgentLabel(ag)}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="w-24">
                       <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">Prioritas</label>

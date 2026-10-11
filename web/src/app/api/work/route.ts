@@ -8,6 +8,7 @@ import {
   prepareWorkForDispatch,
   type ReasoningClassification,
 } from '@/lib/reasoning';
+import { ensureSpecialistProfiles } from '@/lib/bootstrapProfiles';
 
 const execFileAsync = promisify(execFile);
 
@@ -80,6 +81,7 @@ function publicReasoningSummary(
 
 export async function GET() {
   try {
+    await ensureSpecialistProfiles();
     const { stdout } = await execFileAsync(
       'hermes',
       ['kanban', 'list', '--archived', '--json'],
@@ -118,6 +120,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureSpecialistProfiles();
     const rawBody: unknown = await req.json();
 
     if (!isRecord(rawBody)) {

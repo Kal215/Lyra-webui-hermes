@@ -3,12 +3,14 @@ import { promisify } from 'util';
 import path from 'path';
 import { getHermesEnv } from '@/lib/hermesEnv';
 import { NextRequest, NextResponse } from 'next/server';
+import { ensureSpecialistProfiles } from '@/lib/bootstrapProfiles';
 
 const execFileAsync = promisify(execFile);
 
 export async function GET() {
   try {
     const env = getHermesEnv();
+    await ensureSpecialistProfiles();
     const { stdout } = await execFileAsync('hermes', ['profile', 'list'], { env });
     
     const lines = stdout.split('\n').filter(l => l.trim().length > 0 && !l.includes('────') && !l.includes('Profile'));
