@@ -118,7 +118,9 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h2 className="text-base font-bold text-lyra-text">AI Engine Connection</h2>
-                <p className="text-sm text-lyra-text-muted mt-0.5">Konfigurasi alamat server AI, model, dan autentikasi</p>
+                <p className="text-sm text-lyra-text-muted mt-0.5">
+                  {language === 'id' ? 'Konfigurasi alamat server AI, model, dan autentikasi' : 'Configure AI server address, models, and authentication'}
+                </p>
               </div>
             </div>
             <div className="text-lyra-text-muted">
@@ -139,7 +141,11 @@ export default function SettingsPage() {
                   {/* Warning Box */}
                   <div className="flex gap-3 p-4 rounded-lyra-sm bg-amber-500/10 border border-amber-500/20 text-amber-600/90 dark:text-amber-400/90">
                     <ShieldAlert size={20} className="shrink-0" />
-                    <p className="text-sm">Pilih penyedia layanan AI. Pengaturan ini akan diterapkan di ruang terisolasi (Lyra Web) dan tidak mengubah JARVIS Utama Anda.</p>
+                    <p className="text-sm">
+                      {language === 'id' 
+                        ? 'Pilih penyedia layanan AI. Pengaturan ini akan diterapkan di ruang terisolasi (Lyra Web) dan tidak mengubah JARVIS Utama Anda.' 
+                        : 'Select AI service provider. This configuration applies exclusively to Lyra Web isolation and does not alter your primary JARVIS setup.'}
+                    </p>
                   </div>
                   
                   {/* Provider Tabs */}
@@ -169,7 +175,11 @@ export default function SettingsPage() {
                           <label className="text-sm font-bold uppercase tracking-wider text-lyra-text-secondary flex items-center gap-2">
                             <Link size={16} /> Base URL Provider
                           </label>
-                          <p className="text-xs text-lyra-text-muted mb-2">Alamat API endpoint yang kompatibel dengan OpenAI (v1).</p>
+                          <p className="text-xs text-lyra-text-muted mb-2">
+                            {language === 'id' 
+                              ? 'Alamat API endpoint yang kompatibel dengan OpenAI (v1).' 
+                              : 'OpenAI-compatible (v1) API endpoint address.'}
+                          </p>
                           <input 
                             type="text" 
                             className="w-full bg-lyra-bg border border-lyra-border rounded-lyra-md px-4 py-3 text-sm text-lyra-text focus:outline-none focus:border-lyra-accent focus:shadow-[0_0_0_2px_rgba(var(--color-lyra-accent),0.2)] transition-all shadow-neo-inset"
@@ -182,10 +192,17 @@ export default function SettingsPage() {
 
                       <div className="space-y-2">
                         <label className="text-sm font-bold uppercase tracking-wider text-lyra-text-secondary flex items-center gap-2">
-                          <Server size={16} /> Nama Model Default
+                          <Server size={16} /> 
+                          {language === 'id' ? 'Nama Model Default' : 'Default Model Name'}
                         </label>
                         <p className="text-xs text-lyra-text-muted mb-2">
-                          {providerType === 'openai' ? 'Contoh: gpt-4o, gpt-4o-mini' : providerType === 'anthropic' ? 'Contoh: claude-3-5-sonnet-latest' : providerType === 'ollama' ? 'Contoh: llama3.1, mistral' : 'Nama spesifik model yang akan dipanggil saat chat.'}
+                          {providerType === 'openai' 
+                            ? (language === 'id' ? 'Contoh: gpt-4o, gpt-4o-mini' : 'e.g. gpt-4o, gpt-4o-mini') 
+                            : providerType === 'anthropic' 
+                            ? (language === 'id' ? 'Contoh: claude-3-5-sonnet-latest' : 'e.g. claude-3-5-sonnet-latest') 
+                            : providerType === 'ollama' 
+                            ? (language === 'id' ? 'Contoh: llama3.1, mistral' : 'e.g. llama3.1, mistral') 
+                            : (language === 'id' ? 'Nama spesifik model yang akan dipanggil saat chat.' : 'Specific model name called during chat.')}
                         </p>
                         <input 
                           type="text" 
@@ -202,10 +219,15 @@ export default function SettingsPage() {
                       {providerType !== 'ollama' && (
                         <div className="space-y-2">
                           <label className="text-sm font-bold uppercase tracking-wider text-lyra-text-secondary flex items-center gap-2">
-                            <KeyRound size={16} /> API Key Rahasia
+                            <KeyRound size={16} /> 
+                            {language === 'id' ? 'API Key Rahasia' : 'Secret API Key'}
                           </label>
                           <p className="text-xs text-lyra-text-muted mb-2">
-                            {providerType === 'openai' ? 'Token akses dari platform.openai.com' : providerType === 'anthropic' ? 'Token akses dari console.anthropic.com' : 'Token akses (akan dienkripsi di config backend).'}
+                            {providerType === 'openai' 
+                              ? (language === 'id' ? 'Token akses dari platform.openai.com' : 'Access token from platform.openai.com') 
+                              : providerType === 'anthropic' 
+                              ? (language === 'id' ? 'Token akses dari console.anthropic.com' : 'Access token from console.anthropic.com') 
+                              : (language === 'id' ? 'Token akses (akan dienkripsi di config backend).' : 'Access token (encrypted in backend config).')}
                           </p>
                           <input 
                             type="password" 
@@ -226,17 +248,23 @@ export default function SettingsPage() {
                       onClick={handleSaveAiConfig}
                       disabled={aiStatus === 'saving'}
                     >
-                      {aiStatus === 'saving' ? 'Menyimpan...' : 'Simpan Koneksi'}
+                      {aiStatus === 'saving' 
+                        ? (language === 'id' ? 'Menyimpan...' : 'Saving...') 
+                        : (language === 'id' ? 'Simpan Koneksi' : 'Save Connection')}
                     </NeoButton>
                     {aiStatus === 'saved' && (
                       <motion.span initial={{opacity:0, x:-10}} animate={{opacity:1, x:0}} className="text-sm text-lyra-success font-medium flex items-center gap-1.5">
                         <div className="w-5 h-5 rounded-full bg-lyra-success/20 flex items-center justify-center">
                           <Check size={12}/>
                         </div> 
-                        Tersimpan!
+                        {language === 'id' ? 'Tersimpan!' : 'Saved!'}
                       </motion.span>
                     )}
-                    {aiStatus === 'error' && <span className="text-sm text-red-500 font-medium">Gagal menyimpan data</span>}
+                    {aiStatus === 'error' && (
+                      <span className="text-sm text-red-500 font-medium">
+                        {language === 'id' ? 'Gagal menyimpan data' : 'Failed to save settings'}
+                      </span>
+                    )}
                   </div>
                 </div>
               </motion.div>

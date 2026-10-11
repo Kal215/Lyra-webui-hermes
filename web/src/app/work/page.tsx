@@ -891,19 +891,37 @@ Instruksi format respon:
                 <Sparkles size={28} />
               </div>
               <h2 className="text-xl font-bold text-lyra-text mb-2">
-                Pendelegasian Tugas Otonom Berjenjang
+                {language === 'id' ? 'Pendelegasian Tugas Otonom Berjenjang' : 'Tiered Autonomous Task Delegation'}
               </h2>
               <p className="text-sm text-lyra-text-secondary max-w-md mb-8 leading-relaxed">
-                Berbeda dari chat biasa, mode ini menyusun rencana kerja (*Todos*), mengeksekusi perintah di komputer lokal Anda, dan mencentang setiap tahapan hingga selesai sempurna.
+                {language === 'id' 
+                  ? 'Berbeda dari chat biasa, mode ini menyusun rencana kerja (Todos), mengeksekusi perintah di komputer lokal Anda, dan mencentang setiap tahapan hingga selesai sempurna.' 
+                  : 'Unlike regular chat, this mode drafts an execution plan (Todos), runs operations directly on your local system, and checks off each stage through completion.'}
               </p>
 
               {/* Sample Quick Starters */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl text-left">
                 {[
-                  { title: 'Scrape 20 Data Toko Roti', prompt: 'Cari 20 data toko roti di Jakarta beserta alamat dan websitenya, simpan ke file toko_roti.csv', agent: 'researcher' },
-                  { title: 'Audit Keamanan & Dependency', prompt: 'Audit seluruh file package.json dan periksa potensi celah keamanan di dependensi proyek', agent: 'security' },
-                  { title: 'Buat Modul Script Python', prompt: 'Buatkan script otomatisasi pembersih log dengan rotasi harian dan unit test', agent: 'coder' },
-                  { title: 'Periksa & Refactor Performa', prompt: 'Analisis file konfigurasi dan optimalkan bundle build agar waktu load lebih cepat', agent: 'planner' }
+                  { 
+                    title: language === 'id' ? 'Scrape 20 Data Toko Roti' : 'Scrape 20 Bakery Records', 
+                    prompt: language === 'id' ? 'Cari 20 data toko roti di Jakarta beserta alamat dan websitenya, simpan ke file toko_roti.csv' : 'Find 20 bakery records in Jakarta with address and website, save to toko_roti.csv', 
+                    agent: 'researcher' 
+                  },
+                  { 
+                    title: language === 'id' ? 'Audit Keamanan & Dependency' : 'Security & Dependency Audit', 
+                    prompt: language === 'id' ? 'Audit seluruh file package.json dan periksa potensi celah keamanan di dependensi proyek' : 'Audit all package.json files and check for security vulnerabilities in dependencies', 
+                    agent: 'security' 
+                  },
+                  { 
+                    title: language === 'id' ? 'Buat Modul Script Python' : 'Create Python Script Module', 
+                    prompt: language === 'id' ? 'Buatkan script otomatisasi pembersih log dengan rotasi harian dan unit test' : 'Build an automated log-cleaner script with daily rotation and unit tests', 
+                    agent: 'coder' 
+                  },
+                  { 
+                    title: language === 'id' ? 'Periksa & Refactor Performa' : 'Inspect & Refactor Performance', 
+                    prompt: language === 'id' ? 'Analisis file konfigurasi dan optimalkan bundle build agar waktu load lebih cepat' : 'Analyze config files and optimize the build bundle for faster load times', 
+                    agent: 'planner' 
+                  }
                 ].map((s, idx) => (
                   <button
                     key={idx}
@@ -1159,7 +1177,7 @@ Instruksi format respon:
                       className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                         isAttachMenuOpen ? 'bg-lyra-accent text-white' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'
                       }`}
-                      title="Lampirkan & Opsi Mode AI"
+                      title={language === 'id' ? 'Lampirkan & Opsi Mode AI' : 'Attach & AI Mode Options'}
                     >
                       <Plus size={18} className={`transition-transform duration-200 ${isAttachMenuOpen ? 'rotate-45' : ''}`} />
                     </button>
@@ -1249,12 +1267,16 @@ Instruksi format respon:
                           >
                             <LinkIcon size={15} className="text-lyra-text" />
                             <div className="flex-1">
-                              <div className="font-medium text-lyra-text">Tautkan URL / Dokumentasi</div>
+                              <div className="font-medium text-lyra-text">
+                                {language === 'id' ? 'Tautkan URL / Dokumentasi' : 'Attach URL / Documentation'}
+                              </div>
                             </div>
                           </button>
 
                           <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
-                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Mode AI</div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">
+                            {language === 'id' ? 'Mode AI' : 'AI Mode'}
+                          </div>
 
                           {/* Web Search Toggle */}
                           <div 
@@ -1267,8 +1289,14 @@ Instruksi format respon:
                             <div className="flex items-center gap-2.5">
                               <Globe size={15} className={isWebSearchEnabled ? "text-blue-400" : "text-lyra-text-secondary"} />
                               <div>
-                                <div className="font-medium text-lyra-text">Pencarian Web</div>
-                                <div className="text-[10px] text-lyra-text-secondary">{isWebSearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
+                                <div className="font-medium text-lyra-text">
+                                  {language === 'id' ? 'Pencarian Web' : 'Web Search'}
+                                </div>
+                                <div className="text-[10px] text-lyra-text-secondary">
+                                  {isWebSearchEnabled 
+                                    ? (language === 'id' ? 'Aktif' : 'Active') 
+                                    : (language === 'id' ? 'Nonaktif' : 'Inactive')}
+                                </div>
                               </div>
                             </div>
                             <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
@@ -1293,8 +1321,14 @@ Instruksi format respon:
                             <div className="flex items-center gap-2.5">
                               <Search size={15} className={isDeepResearchEnabled ? "text-emerald-500" : "text-lyra-text-secondary"} />
                               <div>
-                                <div className="font-medium text-lyra-text">Riset Mendalam</div>
-                                <div className="text-[10px] text-lyra-text-secondary">{isDeepResearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
+                                <div className="font-medium text-lyra-text">
+                                  {language === 'id' ? 'Riset Mendalam' : 'Deep Research'}
+                                </div>
+                                <div className="text-[10px] text-lyra-text-secondary">
+                                  {isDeepResearchEnabled 
+                                    ? (language === 'id' ? 'Aktif' : 'Active') 
+                                    : (language === 'id' ? 'Nonaktif' : 'Inactive')}
+                                </div>
                               </div>
                             </div>
                             <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
@@ -1348,7 +1382,7 @@ Instruksi format respon:
                               type="text"
                               value={modelSearchQuery}
                               onChange={(e) => setModelSearchQuery(e.target.value)}
-                              placeholder="Cari model AI..."
+                              placeholder={language === 'id' ? 'Cari model AI...' : 'Search AI models...'}
                               className="w-full bg-lyra-bg border border-lyra-accent/20 rounded-xl py-1.5 pl-8 pr-3 text-xs text-lyra-text placeholder:text-lyra-text-secondary focus:outline-none focus:border-lyra-accent"
                               autoFocus
                             />
@@ -1455,7 +1489,7 @@ Instruksi format respon:
                       type="button"
                       onClick={handleStopGeneration}
                       className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:bg-zinc-200 active:scale-95 transition-all shadow-md cursor-pointer shrink-0"
-                      title="Hentikan pembuatan (Stop)"
+                      title={language === 'id' ? 'Hentikan pembuatan (Stop)' : 'Stop generation (Stop)'}
                     >
                       <Square size={12} className="fill-current text-zinc-900" />
                     </button>
@@ -1468,7 +1502,7 @@ Instruksi format respon:
                           ? 'bg-lyra-surface text-lyra-text-secondary/40 border border-lyra-accent/10 cursor-not-allowed'
                           : 'bg-lyra-accent hover:bg-lyra-accent/90 text-white shadow-[0_0_12px_rgba(59,130,246,0.4)]'
                       }`}
-                      title="Kirim pesan / Jalankan tugas"
+                      title={language === 'id' ? 'Kirim pesan / Jalankan tugas' : 'Send message / Run task'}
                     >
                       <ArrowUp size={16} strokeWidth={2.5} />
                     </button>

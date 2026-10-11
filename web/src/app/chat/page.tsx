@@ -2999,8 +2999,10 @@ function NativeChatContent() {
             {workspaceFiles.length === 0 ? (
               <div className="text-center text-xs text-lyra-text-secondary/60 py-10 px-4">
                 <Folder size={28} className="mx-auto mb-2 opacity-30" />
-                <p>Direktori kosong atau belum dimuat.</p>
-                <p className="text-[11px] mt-1 opacity-70">Gunakan drag & drop untuk mengunggah file.</p>
+                <p>{language === 'id' ? 'Direktori kosong atau belum dimuat.' : 'Directory is empty or not loaded.'}</p>
+                <p className="text-[11px] mt-1 opacity-70">
+                  {language === 'id' ? 'Gunakan drag & drop untuk mengunggah file.' : 'Use drag & drop to upload files.'}
+                </p>
               </div>
             ) : (
               workspaceFiles

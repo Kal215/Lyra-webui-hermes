@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, FolderOpen, Trash2, Edit2, Command, Play, FolderTree, Sparkles, X, Save, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkspaceStore } from '@/store/workspace';
+import { useI18nStore } from '@/i18n';
 
 interface Project {
   id: string;
@@ -16,6 +17,7 @@ interface Project {
 }
 
 export default function ProjectsPage() {
+  const { language } = useI18nStore();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -137,7 +139,9 @@ export default function ProjectsPage() {
       <div className="max-w-6xl mx-auto">
         <header className="mb-12">
           <h1 className="text-4xl font-bold text-lyra-text tracking-tight mb-2">Projects</h1>
-          <p className="text-lyra-text-secondary">Kelola agen dan lingkungan kerja (workspace) spesifik Anda.</p>
+                <p className="text-lyra-text-secondary text-sm">
+                  {language === 'id' ? 'Kelola agen dan lingkungan kerja (workspace) spesifik Anda.' : 'Manage your specific agents and workspaces.'}
+                </p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -151,8 +155,12 @@ export default function ProjectsPage() {
             <div className="w-16 h-16 bg-lyra-accent/10 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Plus size={28} className="text-lyra-accent" />
             </div>
-            <h3 className="text-xl font-bold text-lyra-text">Buat Proyek Baru</h3>
-            <p className="text-sm text-lyra-text-secondary mt-2">Siapkan agen dengan karakter dan folder khusus.</p>
+            <h3 className="text-xl font-bold text-lyra-text">
+              {language === 'id' ? 'Buat Proyek Baru' : 'Create New Project'}
+            </h3>
+            <p className="text-sm text-lyra-text-secondary mt-2">
+              {language === 'id' ? 'Siapkan agen dengan karakter dan folder khusus.' : 'Set up agents with custom roles and dedicated folders.'}
+            </p>
           </motion.div>
 
           {/* Project Cards */}

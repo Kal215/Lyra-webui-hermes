@@ -5,8 +5,10 @@ import { NeoPanel } from '@/components/NeoPanel';
 import { NeoButton } from '@/components/NeoButton';
 import { Brain, User, Save, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useTactileSound } from '@/hooks/use-tactile-sound';
+import { useI18nStore } from '@/i18n';
 
 export default function MemoryPage() {
+  const { language } = useI18nStore();
   const { playClick } = useTactileSound();
   const [memoryMd, setMemoryMd] = useState('');
   const [userMd, setUserMd] = useState('');
@@ -40,10 +42,10 @@ export default function MemoryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memory: memoryMd, user: userMd })
       });
-      if (!res.ok) throw new Error('Gagal menyimpan');
+      if (!res.ok) throw new Error(language === 'id' ? 'Gagal menyimpan' : 'Failed to save');
     } catch (e) {
       console.error(e);
-      alert('Gagal menyimpan memori');
+      alert(language === 'id' ? 'Gagal menyimpan memori' : 'Failed to save memory');
     } finally {
       setTimeout(() => setSaving(false), 500);
     }
@@ -55,10 +57,12 @@ export default function MemoryPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-lyra-text flex items-center gap-3">
             <Brain size={32} className="text-lyra-accent" />
-            Ingatan Inti (Memory)
+            {language === 'id' ? 'Ingatan Inti (Memory)' : 'Core Memory'}
           </h1>
           <p className="text-lyra-text-muted mt-2 max-w-2xl">
-            Pusat ingatan permanen JARVIS. Apa yang tertulis di sini akan selalu diingat oleh AI di setiap percakapan dan sesi yang Anda buka, menetapkan kepribadian dan pengetahuan absolut sistem.
+            {language === 'id' 
+              ? 'Pusat ingatan permanen JARVIS. Apa yang tertulis di sini akan selalu diingat oleh AI di setiap percakapan dan sesi yang Anda buka, menetapkan kepribadian dan pengetahuan absolut sistem.' 
+              : 'JARVIS permanent memory center. Content here is preserved across all AI conversations and sessions, establishing absolute system knowledge and persona.'}
           </p>
         </div>
         
@@ -67,9 +71,10 @@ export default function MemoryPage() {
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </NeoButton>
           <NeoButton variant="raised" className="px-6" onClick={handleSave} disabled={saving || loading}>
-            {saving ? 'Menyimpan...' : (
+            {saving ? (language === 'id' ? 'Menyimpan...' : 'Saving...') : (
               <>
-                <Save size={18} className="mr-2" /> Simpan Memori
+                <Save size={18} className="mr-2" /> 
+                {language === 'id' ? 'Simpan Memori' : 'Save Memory'}
               </>
             )}
           </NeoButton>
@@ -104,7 +109,7 @@ export default function MemoryPage() {
       <NeoPanel depth={1} className="flex-1 overflow-hidden flex flex-col p-1 rounded-2xl relative">
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-lyra-text-muted animate-pulse">
-            Menyinkronkan dengan JARVIS_CORE...
+            {language === 'id' ? 'Menyinkronkan dengan JARVIS_CORE...' : 'Synchronizing with JARVIS_CORE...'}
           </div>
         ) : (
           <textarea
@@ -114,14 +119,22 @@ export default function MemoryPage() {
               if (activeTab === 'memory') setMemoryMd(e.target.value);
               else setUserMd(e.target.value);
             }}
-            placeholder={`Tuliskan instruksi sistem atau ingatan absolut di sini...\n\nSetiap perubahan akan ditanamkan ke dalam inti AI.`}
+            placeholder={
+              language === 'id'
+                ? `Tuliskan instruksi sistem atau ingatan absolut di sini...\n\nSetiap perubahan akan ditanamkan ke dalam inti AI.`
+                : `Write system instructions or absolute memories here...\n\nEvery change will be embedded into the core AI.`
+            }
           />
         )}
       </NeoPanel>
 
       <div className="flex items-center gap-3 p-4 rounded-lyra-sm bg-amber-500/10 border border-amber-500/20 text-amber-600/90 dark:text-amber-400/90 shrink-0">
         <AlertTriangle size={20} className="shrink-0" />
-        <p className="text-xs">Berhati-hatilah mengedit file ini. Semakin panjang memori yang ditulis, semakin besar token awal yang dibutuhkan AI setiap kali merespons.</p>
+        <p className="text-xs">
+          {language === 'id' 
+            ? 'Berhati-hatilah mengedit file ini. Semakin panjang memori yang ditulis, semakin besar token awal yang dibutuhkan AI setiap kali merespons.' 
+            : 'Edit this file carefully. The longer the stored memory, the more initial tokens the AI requires on every response.'}
+        </p>
       </div>
     </div>
   );

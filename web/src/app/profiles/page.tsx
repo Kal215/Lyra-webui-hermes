@@ -155,7 +155,7 @@ export default function ProfilesPage() {
               {prof.is_active && (
                 <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full text-green-400 text-[10px] font-bold tracking-wider uppercase">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                  Aktif
+                  {language === 'id' ? 'Aktif' : 'Active'}
                 </div>
               )}
 
@@ -175,14 +175,22 @@ export default function ProfilesPage() {
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-lyra-bg/40 border border-lyra-border/30">
                   <ShieldCheck className="w-4 h-4 text-lyra-text-secondary mt-0.5 shrink-0" />
                   <div>
-                    <div className="text-xs font-semibold text-lyra-text mb-0.5">Isolasi Keamanan</div>
-                    <div className="text-[11px] text-lyra-text-muted leading-relaxed">Profil ini tidak bisa membaca config.yaml atau API Key milik profil lain.</div>
+                    <div className="text-xs font-semibold text-lyra-text mb-0.5">
+                      {language === 'id' ? 'Isolasi Keamanan' : 'Security Isolation'}
+                    </div>
+                    <div className="text-[11px] text-lyra-text-muted leading-relaxed">
+                      {language === 'id' 
+                        ? 'Profil ini tidak bisa membaca config.yaml atau API Key milik profil lain.' 
+                        : 'This profile cannot access config.yaml or API Keys belonging to other profiles.'}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-lyra-bg/40 border border-lyra-border/30">
                   <HardDrive className="w-4 h-4 text-lyra-text-secondary mt-0.5 shrink-0" />
                   <div className="w-full min-w-0">
-                    <div className="text-xs font-semibold text-lyra-text mb-0.5">Path Penyimpanan</div>
+                    <div className="text-xs font-semibold text-lyra-text mb-0.5">
+                      {language === 'id' ? 'Path Penyimpanan' : 'Storage Path'}
+                    </div>
                     <div className="text-[10px] text-lyra-text-muted font-mono truncate" title={prof.dir}>{prof.dir}</div>
                   </div>
                 </div>

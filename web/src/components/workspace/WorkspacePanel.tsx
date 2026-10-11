@@ -449,7 +449,10 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
           <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-0.5 text-xs font-mono">
             {workspaceFiles.length === 0 ? (
               <div className="py-12 text-center text-lyra-text-secondary/50 text-[11px]">
-                {language === 'id' ? 'Direktori kosong atau belum dimuat.' : 'Directory is empty or not loaded.'}
+                <p>{language === 'id' ? 'Direktori kosong atau belum dimuat.' : 'Directory is empty or not loaded.'}</p>
+                <p className="text-[10px] mt-1 opacity-70">
+                  {language === 'id' ? 'Gunakan drag & drop untuk mengunggah file.' : 'Use drag & drop to upload files.'}
+                </p>
               </div>
             ) : (
               workspaceFiles
