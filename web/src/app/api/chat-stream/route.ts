@@ -1,17 +1,38 @@
 import { NextRequest } from 'next/server';
-import { spawn, ChildProcess } from 'child_process';
-import readline from 'readline';
-import { getHermesEnv } from '@/lib/hermesEnv';
+import fs from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
-// Global map tracking active child CLI processes across server requests
-export const activeChildProcesses = new Map<string, ChildProcess>();
+// Global map tracking active child CLI processes across server requests (kept for backward-compatibility with /api/work/stop)
+export const activeChildProcesses = new Map<string, any>();
+
+const CONFIG_DIR = path.join(process.cwd(), '.hermes-backend');
+const AI_CONFIG_PATH = path.join(CONFIG_DIR, 'ai-config.json');
+
+interface AiConfig {
+  providerId: string;
+  baseUrl: string;
+  model: string;
+  apiKey: string;
+}
+
+function getAiConfig(): AiConfig {
+  try {
+    if (fs.existsSync(AI_CONFIG_PATH)) {
+      return JSON.parse(fs.readFileSync(AI_CONFIG_PATH, 'utf8'));
+    }
+  } catch (e) {}
+  return {
+    providerId: 'custom',
+    baseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    apiKey: process.env.OPENAI_API_KEY || ''
+  };
+}
 
 export async function POST(req: NextRequest) {
-  let { message, session_id, workspace, attachments, systemPrompt, model, thinking, effort, webSearch, deepResearch, agent, profile, executionId } = await req.json();
-
-  const currentExecId = executionId || session_id || ('exec_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6));
+  let { message, session_id, attachments, systemPrompt, model, thinking } = await req.json();
 
   if (!message) {
     return new Response(JSON.stringify({ error: 'Message is required' }), {
@@ -20,188 +41,191 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Prepend deep research or web search directive if enabled
-  if (deepResearch) {
-    message = `[DIRECTIVE: MODE RISET MENDALAM (DEEP RESEARCH) DIAKTIFKAN. Lakukan investigasi komprehensif, telaah berbagai sudut pandang/sumber, dan berikan laporan analitis terstruktur dengan fakta dan penalaran mendalam.]\n\n${message}`;
-  } else if (webSearch) {
-    message = `[DIRECTIVE: PENCARIAN WEB DIAKTIFKAN. Gunakan kapabilitas pencarian web untuk mendapatkan informasi faktual dan data terbaru secara akurat.]\n\n${message}`;
-  }
+  const aiConfig = getAiConfig();
+  const effectiveBaseUrl = aiConfig.baseUrl?.replace(/\/$/, '') || 'https://api.openai.com/v1';
+  const effectiveModel = (model && model !== 'default' && model !== 'Hermes Agent') 
+    ? model 
+    : (aiConfig.model || 'gpt-4o-mini');
+  const apiKey = aiConfig.apiKey;
 
-  // Format directive: only inject for detailed requests, never overshadow simple conversational greetings
-  const formattingStandard = `[FORMATTING RULES]:
-- Gunakan struktur Markdown rapi. Jika respon panjang, gunakan heading dan bullet points.
-- Hindari garis pemisah mentah (===...). Gunakan tabel jika ada perbandingan.`;
-
-  if (systemPrompt && !session_id) {
-    message = `[SYSTEM INSTRUCTION]\n${systemPrompt}\n\n[USER MESSAGE]\n${message}`;
+  if (!apiKey && !effectiveBaseUrl.includes('localhost') && !effectiveBaseUrl.includes('127.0.0.1')) {
+    const errorMsg = 'API Key belum dikonfigurasi. Silakan buka menu Pengaturan (Settings) untuk memasukkan API Key.';
+    return new Response(
+      `data: ${JSON.stringify({ type: 'text', text: errorMsg })}\n\ndata: {"type": "done"}\n\n`,
+      {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        }
+      }
+    );
   }
 
   // Prepend file context references to the prompt message
   if (attachments && Array.isArray(attachments)) {
     let contextPrefix = '';
-    const workspaceTargetFiles: string[] = [];
-
     for (const file of attachments) {
-      if (file.isWorkspaceRef) {
-        contextPrefix += `[TARGET EXCLUSIVE CONTEXT - ${file.isDirectory ? 'DIREKTORI' : 'BERKAS'}: ${file.path}]\n`;
-        workspaceTargetFiles.push(file.path);
-      } else if (file.isUrl) {
+      if (file.isUrl) {
         contextPrefix += `[Attached URL Context: ${file.url || file.path}]\n`;
       } else if (file.type && !file.type.startsWith('image/')) {
         contextPrefix += `[Attached Document/File: ${file.path}]\n`;
       }
     }
-
-    if (workspaceTargetFiles.length > 0) {
-      contextPrefix += `[STRICT DIRECTIVE: Pengguna secara spesifik menunjuk berkas/direktori target: ${workspaceTargetFiles.map(f => `\`${f}\``).join(', ')}. Fokus dan eksekusi HANYA berkas atau folder target ini. JANGAN memodifikasi atau menyentuh berkas di luar target yang ditunjuk tersebut kecuali jika secara eksplisit diinstruksikan.]\n`;
-    }
-
     if (contextPrefix) {
       message = `${contextPrefix}\n${message}`;
     }
   }
 
-  const args = ['chat', '-q', message, '--oneshot', '--format', 'stream-json'];
-  const targetProfile = profile || agent;
-  if (session_id) {
-    args.push('-c', session_id);
-  } else if (targetProfile) {
-    args.push('--profile', targetProfile);
-  } else {
-    args.push('--profile', 'default');
-  }
+  const messages: Array<{ role: string; content: string }> = [];
 
-  if (workspace) {
-    args.push('--in', workspace);
-  }
+  const formattingStandard = `[FORMATTING RULES]:
+- Gunakan struktur GitHub-Flavored Markdown yang rapi, elegan, dan profesional.
+- Gunakan heading yang jelas (##, ###) untuk membagi bagian.
+- Gunakan bullet points (-) dan penekanan tebal (**teks**) pada poin-poin kunci.
+- DILARANG KERAS menggunakan garis pemisah ASCII kuno seperti (===...) atau (---...).
+- Prioritaskan format tabel Markdown atau bullet terstruktur jika menyajikan perbandingan.`;
 
-  // Model selection
-  if (model && model !== 'default' && model !== 'Hermes Agent') {
-    // If user passed a model name (e.g. from UI dropdown like "Claude 3.5 Sonnet"), find its real ID or pass as is
-    args.push('-m', model);
-  }
+  const finalSystemPrompt = systemPrompt 
+    ? `${systemPrompt}\n\n${formattingStandard}`
+    : formattingStandard;
 
-  // Reasoning / Thinking level
-  if (thinking === false) {
-    args.push('--reasoning', 'none');
-  } else if (effort) {
-    const effortStr = String(effort).toLowerCase();
-    const effortMap: Record<string, string> = {
-      minimal: 'minimal',
-      low: 'low',
-      med: 'medium',
-      medium: 'medium',
-      high: 'high',
-      'extra high': 'xhigh',
-      xhigh: 'xhigh',
-      max: 'max',
-      ultra: 'ultra'
+  messages.push({ role: 'system', content: finalSystemPrompt });
+  messages.push({ role: 'user', content: message });
+
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
     };
-    const level = effortMap[effortStr] || 'medium';
-    args.push('--reasoning', level);
-  }
-
-  if (attachments && Array.isArray(attachments)) {
-    for (const file of attachments) {
-      if ((file.type && file.type.startsWith('image/')) || (file.path && file.path.match(/\.(png|jpe?g|webp|gif)$/i))) {
-        args.push('--image', file.path);
-      }
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
     }
-  }
 
-  const child = spawn('hermes', args, { 
-    shell: false,
-    env: getHermesEnv()
-  });
+    const payload: any = {
+      model: effectiveModel,
+      messages,
+      stream: true
+    };
 
-  activeChildProcesses.set(currentExecId, child);
-
-  // Hook request cancellation signal (e.g. browser refreshed or aborted)
-  if (req.signal) {
-    req.signal.addEventListener('abort', () => {
-      try {
-        child.kill('SIGTERM');
-      } catch (e) {}
-      activeChildProcesses.delete(currentExecId);
+    const endpoint = `${effectiveBaseUrl}/chat/completions`;
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      signal: req.signal
     });
-  }
 
-  const rl = readline.createInterface({
-    input: child.stdout,
-    terminal: false
-  });
+    if (!response.ok) {
+      const errBody = await response.text();
+      let parsedError = errBody;
+      try {
+        const json = JSON.parse(errBody);
+        parsedError = json.error?.message || errBody;
+      } catch (e) {}
 
-  const stream = new ReadableStream({
-    start(controller) {
-      let isClosed = false;
-      const safeEnqueue = (payload: string) => {
-        if (isClosed) return;
-        try {
-          controller.enqueue(new TextEncoder().encode(payload));
-        } catch (e) {
-          isClosed = true;
+      return new Response(
+        `data: ${JSON.stringify({ type: 'text', text: `\n\n**[API Error ${response.status}]**: ${parsedError}` })}\n\ndata: {"type": "done"}\n\n`,
+        {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+          }
         }
-      };
+      );
+    }
 
-      // Pad to force proxy flush
-      safeEnqueue(':' + ' '.repeat(2048) + '\n\n');
-      // Announce executionId to client
-      safeEnqueue(`data: ${JSON.stringify({ type: 'execution_id', executionId: currentExecId })}\n\n`);
-      
-      rl.on('line', (line) => {
-        if (isClosed) return;
-        const t = line.trim();
-        if (!t) return;
-        
-        if (t.startsWith('session_id:')) {
-          const sid = t.split(':')[1].trim();
-          safeEnqueue(`data: ${JSON.stringify({ type: 'session_id', session_id: sid })}\n\n`);
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body?.getReader();
+        if (!reader) {
+          controller.close();
           return;
         }
-        
-        if (t.startsWith('{') && t.endsWith('}')) {
-          try {
-            const event = JSON.parse(t);
-            safeEnqueue(`data: ${JSON.stringify(event)}\n\n`);
-          } catch (e) {}
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        try {
+          // Announce session_id
+          const sid = session_id || 'session_' + Date.now();
+          controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'session_id', session_id: sid })}\n\n`));
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || !trimmed.startsWith('data:')) continue;
+
+              const dataStr = trimmed.replace(/^data:\s*/, '');
+              if (dataStr === '[DONE]') {
+                controller.enqueue(new TextEncoder().encode(`data: {"type": "done"}\n\n`));
+                continue;
+              }
+
+              try {
+                const parsed = JSON.parse(dataStr);
+                const delta = parsed.choices?.[0]?.delta;
+                
+                // Handle text content
+                if (delta?.content) {
+                  controller.enqueue(
+                    new TextEncoder().encode(`data: ${JSON.stringify({ type: 'text', text: delta.content })}\n\n`)
+                  );
+                }
+                
+                // Handle reasoning/thinking
+                if (delta?.reasoning_content || delta?.thinking) {
+                  const thinkText = delta.reasoning_content || delta.thinking;
+                  controller.enqueue(
+                    new TextEncoder().encode(`data: ${JSON.stringify({ type: 'text', text: `<think>${thinkText}</think>` })}\n\n`)
+                  );
+                }
+              } catch (e) {
+                // Ignore parse errors from non-json stream lines
+              }
+            }
+          }
+
+          controller.enqueue(new TextEncoder().encode(`data: {"type": "done"}\n\n`));
+        } catch (err: any) {
+          if (err.name !== 'AbortError') {
+            controller.enqueue(
+              new TextEncoder().encode(`data: ${JSON.stringify({ type: 'text', text: `\n\n**[Stream Error]**: ${err.message}` })}\n\n`)
+            );
+          }
+        } finally {
+          controller.close();
         }
-      });
+      }
+    });
 
-      child.stderr.on('data', (data) => {
-        const errText = data.toString();
-        console.error('Hermes Error:', errText);
-        if (errText.includes('Error') || errText.includes('Exception') || errText.includes('invalid') || errText.includes('failed') || errText.includes('not found')) {
-          safeEnqueue(`data: ${JSON.stringify({ type: 'text', text: `\n\n**[Hermes Engine Error]**: ${errText.trim()}` })}\n\n`);
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'Content-Encoding': 'none',
+        'X-Accel-Buffering': 'no'
+      }
+    });
+
+  } catch (error: any) {
+    return new Response(
+      `data: ${JSON.stringify({ type: 'text', text: `\n\n**[Connection Error]**: ${error.message}` })}\n\ndata: {"type": "done"}\n\n`,
+      {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
         }
-      });
-
-      child.on('close', () => {
-        activeChildProcesses.delete(currentExecId);
-        if (isClosed) return;
-        safeEnqueue(`data: {"type": "done"}\n\n`);
-        try { controller.close(); } catch(e) {}
-      });
-      
-      child.on('error', (err) => {
-        activeChildProcesses.delete(currentExecId);
-        if (isClosed) return;
-        safeEnqueue(`data: {"type": "error", "message": "Failed to start Hermes CLI"}\n\n`);
-        try { controller.close(); } catch(e) {}
-      });
-    },
-    cancel() {
-      activeChildProcesses.delete(currentExecId);
-      try { child.kill('SIGTERM'); } catch (e) {}
-    }
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
-      'Content-Encoding': 'none',
-      'X-Accel-Buffering': 'no'
-    }
-  });
+      }
+    );
+  }
 }
