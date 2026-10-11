@@ -1398,12 +1398,14 @@ export default function NativeChatPage() {
                                 <div className="text-[10px] text-lyra-text-secondary">{isReasoningEnabled ? `Aktif: ${thinkingEffort}` : 'Nonaktif'}</div>
                               </div>
                             </div>
-                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
                               isReasoningEnabled ? 'bg-purple-500' : 'bg-zinc-600'
                             }`}>
-                              <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-                                isReasoningEnabled ? 'translate-x-3' : 'translate-x-0'
-                              }`} />
+                              <motion.span 
+                                animate={{ x: isReasoningEnabled ? 12 : 0 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                                className="inline-block h-3 w-3 rounded-full bg-white shadow-md pointer-events-none" 
+                              />
                             </div>
                           </div>
 
@@ -1421,12 +1423,14 @@ export default function NativeChatPage() {
                                 <div className="text-[10px] text-lyra-text-secondary">{isWebSearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
                               </div>
                             </div>
-                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
                               isWebSearchEnabled ? 'bg-blue-500' : 'bg-zinc-600'
                             }`}>
-                              <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-                                isWebSearchEnabled ? 'translate-x-3' : 'translate-x-0'
-                              }`} />
+                              <motion.span 
+                                animate={{ x: isWebSearchEnabled ? 12 : 0 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                                className="inline-block h-3 w-3 rounded-full bg-white shadow-md pointer-events-none" 
+                              />
                             </div>
                           </div>
 
@@ -1444,12 +1448,14 @@ export default function NativeChatPage() {
                                 <div className="text-[10px] text-lyra-text-secondary">{isDeepResearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
                               </div>
                             </div>
-                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
                               isDeepResearchEnabled ? 'bg-emerald-500' : 'bg-zinc-600'
                             }`}>
-                              <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-                                isDeepResearchEnabled ? 'translate-x-3' : 'translate-x-0'
-                              }`} />
+                              <motion.span 
+                                animate={{ x: isDeepResearchEnabled ? 12 : 0 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                                className="inline-block h-3 w-3 rounded-full bg-white shadow-md pointer-events-none" 
+                              />
                             </div>
                           </div>
 
@@ -1620,14 +1626,14 @@ export default function NativeChatPage() {
                           >
                             <span className="text-sm font-medium text-lyra-text">Thinking</span>
                             <div 
-                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
                                 isReasoningEnabled ? 'bg-[#D97757]' : 'bg-zinc-600'
                               }`}
                             >
-                              <span
-                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                                  isReasoningEnabled ? 'translate-x-4' : 'translate-x-0'
-                                }`}
+                              <motion.span
+                                animate={{ x: isReasoningEnabled ? 16 : 0 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                                className="inline-block h-4 w-4 rounded-full bg-white shadow-md pointer-events-none"
                               />
                             </div>
                           </div>
