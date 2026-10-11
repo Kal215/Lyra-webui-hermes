@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation, useI18nStore } from '@/i18n';
-import { MessageSquare, Plus, Send, Menu, Terminal, Globe, FileText, Wrench, ChevronDown, ChevronRight, ChevronLeft, ArrowDown, CheckCircle2, CircleDashed, BrainCircuit, MoreVertical, Edit2, Trash2, Check, X, Pin, DownloadCloud, PinOff, Paperclip, Folder, File, ImageIcon, XCircle, Columns, Monitor, Settings, Zap, Database, FolderTree, Clipboard, PenTool, Link, Search, ImagePlus, GitBranch, Library, Command, Sparkles, Code, FileEdit, Lightbulb, Coffee, RefreshCw, Square, ArrowUp, Share2, ThumbsDown, Volume2, RotateCw, MoreHorizontal } from 'lucide-react';
+import { MessageSquare, Plus, Send, Menu, Terminal, Globe, FileText, Wrench, ChevronDown, ChevronRight, ChevronLeft, ArrowDown, CheckCircle2, CircleDashed, BrainCircuit, MoreVertical, Edit2, Trash2, Check, X, Pin, DownloadCloud, PinOff, Paperclip, Folder, File, ImageIcon, XCircle, Columns, Monitor, Settings, Zap, Database, FolderTree, Clipboard, PenTool, Link, Search, ImagePlus, GitBranch, Library, Command, Sparkles, Code, FileEdit, Lightbulb, Coffee, RefreshCw, Square, ArrowUp, Share2, ThumbsDown, Volume2, RotateCw, MoreHorizontal, FolderPlus, FilePlus, CornerLeftUp, ExternalLink, Upload } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -361,6 +361,16 @@ export default function NativeChatPage() {
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(true);
   const [isReasoningEnabled, setIsReasoningEnabled] = useState(true);
   const [isDeepResearchEnabled, setIsDeepResearchEnabled] = useState(false);
+
+  // Enhanced Workspace States
+  const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState('');
+  const [isWorkspaceDragging, setIsWorkspaceDragging] = useState(false);
+  const [isWorkspaceUploading, setIsWorkspaceUploading] = useState(false);
+  const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null);
+  const [creatingName, setCreatingName] = useState('');
+  const [activeFileMenu, setActiveFileMenu] = useState<any | null>(null);
+  const [deleteConfirmFile, setDeleteConfirmFile] = useState<any | null>(null);
+  const workspaceFileInputRef = useRef<HTMLInputElement>(null);
 
   // Model & Reasoning Effort states (Matching Image 3 & Image 4)
   const DEFAULT_MODELS = [
@@ -766,10 +776,199 @@ export default function NativeChatPage() {
       const data = await res.json();
       if (data.files) {
         setWorkspaceFiles(data.files);
-        setCurrentWorkspace(data.cwd);
-        setWorkspaceInput(data.cwd);
+        if (data.cwd) {
+          const cleanCwd = data.cwd.replace(/\\/g, '/');
+          setCurrentWorkspace(cleanCwd);
+          setWorkspaceInput(cleanCwd);
+        }
       }
-    } catch(e) {}
+    } catch(e) {
+      console.error(e);
+    }
+  };
+
+  const handleWorkspaceBack = () => {
+    if (!currentWorkspace || currentWorkspace === 'ROOT') return;
+    const norm = currentWorkspace.replace(/\\/g, '/').replace(/\/$/, '');
+    const parts = norm.split('/').filter(Boolean);
+    if (parts.length <= 1) {
+      loadWorkspaceFiles('ROOT');
+      return;
+    }
+    parts.pop();
+    const parentDir = parts.join('/') + (norm.startsWith('/') ? '/' : '');
+    const finalParent = parentDir.match(/^[a-zA-Z]:$/) ? `${parentDir}/` : parentDir;
+    loadWorkspaceFiles(finalParent);
+  };
+
+  const handleWorkspaceRefresh = () => {
+    if (currentWorkspace) {
+      loadWorkspaceFiles(currentWorkspace);
+    }
+  };
+
+  const handleWorkspaceUpload = async (fileList: FileList | File[]) => {
+    if (!currentWorkspace || fileList.length === 0) return;
+    setIsWorkspaceUploading(true);
+    try {
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('targetDir', currentWorkspace);
+        await fetch('/api/workspace/upload', {
+          method: 'POST',
+          body: formData
+        });
+      }
+      await loadWorkspaceFiles(currentWorkspace);
+      setBranchNotification(language === 'id' ? 'File berhasil diunggah ke workspace' : 'Files uploaded to workspace');
+      setTimeout(() => setBranchNotification(null), 3000);
+    } catch (err: any) {
+      alert(err.message || 'Upload gagal');
+    } finally {
+      setIsWorkspaceUploading(false);
+      setIsWorkspaceDragging(false);
+    }
+  };
+
+  const handleWorkspaceDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsWorkspaceDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await handleWorkspaceUpload(e.dataTransfer.files);
+    }
+  };
+
+  const handleCreateFileOrFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creatingName.trim() || !currentWorkspace) return;
+    try {
+      if (creatingType === 'folder') {
+        const res = await fetch('/api/workspace/mkdir', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dirPath: currentWorkspace, folderName: creatingName.trim() })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+      } else if (creatingType === 'file') {
+        const res = await fetch('/api/workspace/create-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dirPath: currentWorkspace, fileName: creatingName.trim() })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+      }
+      setCreatingType(null);
+      setCreatingName('');
+      await loadWorkspaceFiles(currentWorkspace);
+    } catch (err: any) {
+      alert(err.message || 'Gagal membuat file/folder');
+    }
+  };
+
+  const handleDeleteWorkspaceItem = async (targetPath: string) => {
+    try {
+      const res = await fetch('/api/workspace/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPath })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setDeleteConfirmFile(null);
+      await loadWorkspaceFiles(currentWorkspace);
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus');
+    }
+  };
+
+  const handleRevealInExplorer = async (targetPath: string) => {
+    try {
+      await fetch('/api/workspace/reveal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetPath })
+      });
+    } catch (e) {
+      console.error('Failed to reveal in explorer', e);
+    }
+  };
+
+  const handleMentionInChat = (fileItem: any) => {
+    const refTag = fileItem.isDirectory ? `@folder:${fileItem.name} ` : `@file:${fileItem.name} `;
+    setInputMessage(prev => prev ? `${prev} ${refTag}` : refTag);
+    setAttachments(prev => {
+      const exists = prev.some(a => a.path === fileItem.path);
+      if (exists) return prev;
+      return [...prev, {
+        name: fileItem.name,
+        path: fileItem.path,
+        isDirectory: fileItem.isDirectory,
+        isWorkspaceRef: true
+      }];
+    });
+    setBranchNotification(language === 'id' ? `Disematkan di chat: ${fileItem.name}` : `Mentioned in chat: ${fileItem.name}`);
+    setTimeout(() => setBranchNotification(null), 2500);
+  };
+
+  const handleCopyPath = (targetPath: string) => {
+    navigator.clipboard.writeText(targetPath);
+    setBranchNotification(language === 'id' ? 'Path berhasil disalin' : 'Path copied');
+    setTimeout(() => setBranchNotification(null), 2500);
+  };
+
+  const getFileIcon = (fileName: string, isDirectory: boolean) => {
+    if (isDirectory) {
+      return <Folder size={15} className="text-amber-400 shrink-0" />;
+    }
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'ts':
+      case 'tsx':
+        return <Code size={15} className="text-blue-400 shrink-0" />;
+      case 'js':
+      case 'jsx':
+        return <Code size={15} className="text-yellow-400 shrink-0" />;
+      case 'py':
+        return <Code size={15} className="text-emerald-400 shrink-0" />;
+      case 'json':
+        return <FileText size={15} className="text-amber-500 shrink-0" />;
+      case 'md':
+        return <FileText size={15} className="text-purple-400 shrink-0" />;
+      case 'css':
+      case 'scss':
+        return <FileText size={15} className="text-cyan-400 shrink-0" />;
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+      case 'svg':
+      case 'webp':
+        return <ImageIcon size={15} className="text-rose-400 shrink-0" />;
+      case 'html':
+        return <Globe size={15} className="text-orange-400 shrink-0" />;
+      default:
+        return <File size={15} className="text-lyra-text-secondary/70 shrink-0" />;
+    }
+  };
+
+  const getBreadcrumbSegments = (currPath: string) => {
+    if (!currPath || currPath === 'ROOT') return [{ name: 'ROOT', path: 'ROOT' }];
+    const norm = currPath.replace(/\\/g, '/');
+    const parts = norm.split('/').filter(Boolean);
+    const segments: { name: string, path: string }[] = [];
+    let buildPath = '';
+    for (let i = 0; i < parts.length; i++) {
+      if (i === 0 && parts[0].includes(':')) {
+        buildPath = `${parts[0]}/`;
+      } else {
+        buildPath = `${buildPath}${buildPath.endsWith('/') ? '' : '/'}${parts[i]}`;
+      }
+      segments.push({ name: parts[i], path: buildPath });
+    }
+    return segments;
   };
 
   const loadBrowseDir = async (dir: string) => {
@@ -2486,48 +2685,340 @@ export default function NativeChatPage() {
       
       {/* Workspace Right Panel */}
       {isRightPanelOpen && (
-        <div className="w-72 bg-lyra-surface border-l border-lyra-accent/10 flex flex-col transition-all duration-300">
-          <div className="p-4 border-b border-lyra-accent/10 flex justify-between items-center bg-lyra-bg">
-            <span className="font-medium flex items-center gap-2"><Folder size={16} className="text-lyra-accent"/> Workspace</span>
-            <button onClick={() => setIsRightPanelOpen(false)} className="p-1 hover:bg-lyra-accent/10 rounded"><X size={16}/></button>
+        <div 
+          className="w-80 sm:w-96 bg-lyra-surface border-l border-lyra-accent/10 flex flex-col transition-all duration-300 relative z-20 shadow-2xl"
+          onDragOver={(e) => { e.preventDefault(); setIsWorkspaceDragging(true); }}
+          onDragLeave={(e) => {
+            // Only deactivate if leaving the container
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setIsWorkspaceDragging(false);
+            }
+          }}
+          onDrop={handleWorkspaceDrop}
+        >
+          {/* Drag Overlay */}
+          {isWorkspaceDragging && (
+            <div className="absolute inset-0 z-50 bg-lyra-surface/95 border-2 border-dashed border-lyra-accent flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm pointer-events-none">
+              <Upload size={36} className="text-lyra-accent animate-bounce mb-2" />
+              <p className="text-sm font-bold text-lyra-text">Lepaskan file di sini</p>
+              <p className="text-xs text-lyra-text-secondary mt-1">File akan langsung diunggah ke folder ini</p>
+            </div>
+          )}
+
+          {/* Hidden File Input for Workspace Upload */}
+          <input 
+            ref={workspaceFileInputRef} 
+            type="file" 
+            multiple 
+            className="hidden" 
+            onChange={(e) => { 
+              if (e.target.files && e.target.files.length > 0) {
+                handleWorkspaceUpload(e.target.files);
+              }
+            }} 
+          />
+
+          {/* Panel Top Header & Toolbar */}
+          <div className="p-3.5 border-b border-lyra-accent/10 flex items-center justify-between bg-lyra-bg/70 backdrop-blur-md">
+            <div className="flex items-center gap-2 min-w-0">
+              <FolderTree size={17} className="text-lyra-accent shrink-0" />
+              <span className="font-semibold text-sm text-lyra-text truncate">Workspace</span>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Tombol Kembali / Naik Folder */}
+              <button 
+                type="button"
+                onClick={handleWorkspaceBack} 
+                disabled={!currentWorkspace || currentWorkspace === 'ROOT'}
+                className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                title={language === 'id' ? 'Naik satu tingkat folder (Kembali)' : 'Go up one folder'}
+              >
+                <CornerLeftUp size={15} />
+              </button>
+
+              {/* Tombol Upload */}
+              <button 
+                type="button"
+                onClick={() => workspaceFileInputRef.current?.click()} 
+                disabled={!currentWorkspace || currentWorkspace === 'ROOT' || isWorkspaceUploading}
+                className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                title={language === 'id' ? 'Unggah file ke folder ini' : 'Upload files here'}
+              >
+                <Upload size={15} className={isWorkspaceUploading ? 'animate-spin' : ''} />
+              </button>
+
+              {/* Tombol Refresh */}
+              <button 
+                type="button"
+                onClick={handleWorkspaceRefresh} 
+                className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer"
+                title={language === 'id' ? 'Muat ulang daftar file' : 'Refresh file list'}
+              >
+                <RotateCw size={15} />
+              </button>
+
+              {/* Tombol Buat File Baru */}
+              <button 
+                type="button"
+                onClick={() => {
+                  setCreatingType(creatingType === 'file' ? null : 'file');
+                  setCreatingName('');
+                }} 
+                disabled={!currentWorkspace || currentWorkspace === 'ROOT'}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${creatingType === 'file' ? 'bg-lyra-accent/20 text-lyra-accent' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'} disabled:opacity-30`}
+                title={language === 'id' ? 'Buat file baru' : 'Create new file'}
+              >
+                <FilePlus size={15} />
+              </button>
+
+              {/* Tombol Buat Folder Baru */}
+              <button 
+                type="button"
+                onClick={() => {
+                  setCreatingType(creatingType === 'folder' ? null : 'folder');
+                  setCreatingName('');
+                }} 
+                disabled={!currentWorkspace || currentWorkspace === 'ROOT'}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${creatingType === 'folder' ? 'bg-lyra-accent/20 text-lyra-accent' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'} disabled:opacity-30`}
+                title={language === 'id' ? 'Buat folder baru' : 'Create new folder'}
+              >
+                <FolderPlus size={15} />
+              </button>
+
+              {/* Tombol Buka di Windows Explorer */}
+              <button 
+                type="button"
+                onClick={() => currentWorkspace && handleRevealInExplorer(currentWorkspace)} 
+                disabled={!currentWorkspace || currentWorkspace === 'ROOT'}
+                className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors disabled:opacity-30 cursor-pointer"
+                title={language === 'id' ? 'Buka di Windows Explorer' : 'Reveal in Explorer'}
+              >
+                <ExternalLink size={15} />
+              </button>
+
+              {/* Tombol Tutup Panel */}
+              <button 
+                type="button"
+                onClick={() => setIsRightPanelOpen(false)} 
+                className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer ml-1"
+                title="Tutup panel"
+              >
+                <X size={15} />
+              </button>
+            </div>
           </div>
-          <div className="p-3 border-b border-lyra-accent/10">
-            <form onSubmit={(e) => { e.preventDefault(); loadWorkspaceFiles(workspaceInput); }} className="flex gap-2">
+
+          {/* Interactive Breadcrumb Bar */}
+          <div className="px-3 py-2 border-b border-lyra-accent/10 bg-lyra-surface/40 flex items-center gap-1 overflow-x-auto text-[11px] font-mono no-scrollbar">
+            {getBreadcrumbSegments(currentWorkspace).map((seg, idx, arr) => (
+              <React.Fragment key={seg.path}>
+                <button
+                  type="button"
+                  onClick={() => loadWorkspaceFiles(seg.path)}
+                  className={`hover:text-lyra-accent hover:underline truncate max-w-[120px] transition-colors cursor-pointer ${
+                    idx === arr.length - 1 ? 'font-semibold text-lyra-accent' : 'text-lyra-text-secondary'
+                  }`}
+                  title={seg.path}
+                >
+                  {seg.name}
+                </button>
+                {idx < arr.length - 1 && <span className="text-lyra-text-secondary/40 select-none">/</span>}
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* Quick Filter Search & Path Input */}
+          <div className="p-2.5 border-b border-lyra-accent/10 flex flex-col gap-2">
+            <div className="relative flex items-center">
+              <Search size={13} className="absolute left-2.5 text-lyra-text-secondary/60 pointer-events-none" />
+              <input
+                value={workspaceSearchQuery}
+                onChange={e => setWorkspaceSearchQuery(e.target.value)}
+                placeholder={language === 'id' ? 'Cari file/folder di sini...' : 'Filter files...'}
+                className="w-full bg-lyra-bg border border-lyra-accent/15 text-xs pl-8 pr-2.5 py-1.5 rounded-xl focus:outline-none focus:border-lyra-accent text-lyra-text placeholder:text-lyra-text-secondary/50"
+              />
+              {workspaceSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceSearchQuery('')}
+                  className="absolute right-2 text-lyra-text-secondary/60 hover:text-lyra-text"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Direct Path Input Form */}
+            <form onSubmit={(e) => { e.preventDefault(); loadWorkspaceFiles(workspaceInput); }} className="flex gap-1.5">
               <input 
                 value={workspaceInput} 
                 onChange={e => setWorkspaceInput(e.target.value)} 
                 placeholder="D:/project/..." 
-                className="flex-1 bg-lyra-bg border border-lyra-accent/20 text-xs p-2 rounded focus:outline-none focus:border-lyra-accent text-lyra-text"
+                className="flex-1 bg-lyra-bg border border-lyra-accent/15 text-[11px] font-mono px-2.5 py-1 rounded-xl focus:outline-none focus:border-lyra-accent text-lyra-text"
               />
-              <button type="submit" className="bg-lyra-accent/10 text-lyra-accent px-2 rounded hover:bg-lyra-accent/20 text-xs font-medium">Load</button>
+              <button type="submit" className="bg-lyra-accent/15 text-lyra-accent hover:bg-lyra-accent/25 px-2.5 py-1 rounded-xl text-xs font-medium cursor-pointer transition-colors">
+                Buka
+              </button>
             </form>
           </div>
-          <div className="flex-1 overflow-y-auto p-2 text-sm">
-            {workspaceFiles.length === 0 ? (
-              <div className="text-center text-xs opacity-50 p-4">No workspace loaded or directory empty.</div>
-            ) : (
-              workspaceFiles.map((f, i) => (
-                <div 
-                  key={i}
-                  draggable
-                  onDragStart={(e) => handleDragStartWorkspaceItem(e, f)}
-                  className="flex items-center gap-2 p-2 hover:bg-lyra-accent/5 rounded cursor-grab active:cursor-grabbing text-lyra-text-secondary transition-colors group"
-                  onClick={() => {
-                    if (f.isDirectory) {
-                      loadWorkspaceFiles(f.path);
-                    } else {
-                      openFileInWorkspace(f.path);
-                      router.push('/workspace');
-                    }
-                  }}
-                >
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity -ml-1 text-lyra-text-secondary/50">
-                    ⋮⋮
-                  </div>
-                  {f.isDirectory ? <Folder size={14} className="text-lyra-accent/70"/> : <File size={14} className="opacity-50"/>}
-                  <span className="truncate flex-1 text-xs" title={f.name}>{f.name}</span>
+
+          {/* Inline Form: Create File / Create Folder */}
+          <AnimatePresence>
+            {creatingType && (
+              <motion.form
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                onSubmit={handleCreateFileOrFolder}
+                className="p-2.5 border-b border-lyra-accent/10 bg-lyra-accent/5 flex flex-col gap-2 overflow-hidden"
+              >
+                <div className="flex items-center justify-between text-xs font-semibold text-lyra-accent">
+                  <span>{creatingType === 'folder' ? '+ Folder Baru' : '+ File Baru'}</span>
+                  <button type="button" onClick={() => setCreatingType(null)} className="text-lyra-text-secondary hover:text-lyra-text">
+                    <X size={13} />
+                  </button>
                 </div>
-              ))
+                <input
+                  autoFocus
+                  value={creatingName}
+                  onChange={e => setCreatingName(e.target.value)}
+                  placeholder={creatingType === 'folder' ? 'Nama folder...' : 'Nama file (misal: script.py)...'}
+                  className="w-full bg-lyra-bg border border-lyra-accent/30 text-xs px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-lyra-accent text-lyra-text"
+                />
+                <div className="flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCreatingType(null)}
+                    className="px-2.5 py-1 rounded-md text-xs text-lyra-text-secondary hover:text-lyra-text cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!creatingName.trim()}
+                    className="px-3 py-1 rounded-md text-xs font-medium bg-lyra-accent text-white hover:bg-lyra-accent/90 disabled:opacity-40 cursor-pointer shadow-sm"
+                  >
+                    Buat
+                  </button>
+                </div>
+              </motion.form>
+            )}
+          </AnimatePresence>
+
+          {/* Delete Confirmation Modal / Banner */}
+          <AnimatePresence>
+            {deleteConfirmFile && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-3 border-b border-rose-500/20 bg-rose-500/10 flex flex-col gap-2"
+              >
+                <div className="text-xs text-rose-300 font-medium truncate">
+                  Hapus permanent: <span className="font-bold">{deleteConfirmFile.name}</span>?
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmFile(null)}
+                    className="px-2 py-1 text-xs text-lyra-text-secondary hover:text-lyra-text cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteWorkspaceItem(deleteConfirmFile.path)}
+                    className="px-2.5 py-1 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-md cursor-pointer shadow-sm"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Files List Area */}
+          <div className="flex-1 overflow-y-auto p-2 text-sm space-y-0.5">
+            {workspaceFiles.length === 0 ? (
+              <div className="text-center text-xs text-lyra-text-secondary/60 py-10 px-4">
+                <Folder size={28} className="mx-auto mb-2 opacity-30" />
+                <p>Direktori kosong atau belum dimuat.</p>
+                <p className="text-[11px] mt-1 opacity-70">Gunakan drag & drop untuk mengunggah file.</p>
+              </div>
+            ) : (
+              workspaceFiles
+                .filter(f => !workspaceSearchQuery || f.name.toLowerCase().includes(workspaceSearchQuery.toLowerCase()))
+                .map((f, i) => (
+                  <div 
+                    key={f.path || i}
+                    draggable
+                    onDragStart={(e) => handleDragStartWorkspaceItem(e, f)}
+                    className="flex items-center gap-2 p-1.5 hover:bg-lyra-accent/10 rounded-xl cursor-pointer text-lyra-text-secondary hover:text-lyra-text transition-colors group relative"
+                    onClick={() => {
+                      if (f.isDirectory) {
+                        loadWorkspaceFiles(f.path);
+                      } else {
+                        openFileInWorkspace(f.path);
+                        router.push('/workspace');
+                      }
+                    }}
+                  >
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity -ml-0.5 text-lyra-text-secondary/40 cursor-grab active:cursor-grabbing text-xs select-none">
+                      ⋮⋮
+                    </div>
+
+                    {/* Smart File Icon */}
+                    {getFileIcon(f.name, f.isDirectory)}
+
+                    <span className="truncate flex-1 text-xs select-none font-medium text-lyra-text" title={f.name}>
+                      {f.name}
+                    </span>
+
+                    {/* Hover Quick Action Buttons */}
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0" onClick={e => e.stopPropagation()}>
+                      {/* Mention in Chat */}
+                      <button
+                        type="button"
+                        onClick={() => handleMentionInChat(f)}
+                        className="p-1 rounded-md hover:bg-lyra-accent/20 text-lyra-text-secondary hover:text-lyra-accent transition-colors cursor-pointer"
+                        title={language === 'id' ? 'Sebutkan di percakapan chat' : 'Mention in chat'}
+                      >
+                        <MessageSquare size={13} />
+                      </button>
+
+                      {/* Copy Path */}
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPath(f.path)}
+                        className="p-1 rounded-md hover:bg-lyra-accent/20 text-lyra-text-secondary hover:text-lyra-accent transition-colors cursor-pointer"
+                        title={language === 'id' ? 'Salin path file' : 'Copy path'}
+                      >
+                        <Clipboard size={13} />
+                      </button>
+
+                      {/* Reveal in Explorer */}
+                      <button
+                        type="button"
+                        onClick={() => handleRevealInExplorer(f.path)}
+                        className="p-1 rounded-md hover:bg-lyra-accent/20 text-lyra-text-secondary hover:text-lyra-accent transition-colors cursor-pointer"
+                        title={language === 'id' ? 'Buka di Explorer' : 'Reveal in Explorer'}
+                      >
+                        <ExternalLink size={13} />
+                      </button>
+
+                      {/* Delete Item */}
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirmFile(f)}
+                        className="p-1 rounded-md hover:bg-rose-500/20 text-lyra-text-secondary hover:text-rose-400 transition-colors cursor-pointer"
+                        title={language === 'id' ? 'Hapus item ini' : 'Delete'}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))
             )}
           </div>
         </div>
