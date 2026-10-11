@@ -28,8 +28,18 @@ export async function POST(req: NextRequest) {
   }
 
   // Inject system prompt to the message if present
+  const formattingStandard = `[FORMATTING & STYLING RULES (STRICTLY REQUIRED)]:
+- Gunakan struktur GitHub-Flavored Markdown yang rapi, elegan, dan profesional.
+- Gunakan heading yang jelas (##, ###) untuk membagi bagian.
+- Gunakan bullet points (-) dan penekanan tebal (**teks**) secara konsisten pada poin-poin kunci atau istilah penting.
+- Berikan spasi/jeda antar paragraf yang cukup agar tidak menumpuk padat (wall of text).
+- DILARANG KERAS menggunakan garis pemisah ASCII kuno seperti garis sama-dengan panjang (===...) atau garis strip panjang (---...). Gunakan garis horizontal standar Markdown (---) secukupnya jika memisahkan bab besar.
+- Jika menyajikan perbandingan atau rekomendasi, prioritaskan format tabel Markdown atau bullet terstruktur.`;
+
   if (systemPrompt && !session_id) {
-    message = `[SYSTEM INSTRUCTION (OBEY STRICTLY)]\n${systemPrompt}\n\n[USER MESSAGE]\n${message}`;
+    message = `[SYSTEM INSTRUCTION (OBEY STRICTLY)]\n${systemPrompt}\n\n${formattingStandard}\n\n[USER MESSAGE]\n${message}`;
+  } else if (!session_id) {
+    message = `${formattingStandard}\n\n${message}`;
   }
 
   // Prepend file context references to the prompt message
