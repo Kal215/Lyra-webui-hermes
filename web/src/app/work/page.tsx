@@ -17,6 +17,21 @@ import {
   ExternalLink,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
+  Check,
+  Search,
+  Settings,
+  RefreshCw,
+  FileText,
+  Folder,
+  Monitor,
+  Clipboard,
+  PenTool,
+  Database,
+  Link as LinkIcon,
+  MessageSquare,
+  BrainCircuit,
+  Globe,
   X,
   History
 } from 'lucide-react';
@@ -67,6 +82,46 @@ export default function WorkPage() {
   // Right Workspace Drawer State (< and >)
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(true);
   const [previewWorkspaceFile, setPreviewWorkspaceFile] = useState<string | null>(null);
+
+  // Model & Reasoning Effort States (Matching Chat Prompt Toolbar)
+  const DEFAULT_MODELS = [
+    { id: 'hermes-agent', name: 'Hermes Agent', badge: 'Med' },
+    { id: 'kat-coder-pro', name: 'Kat Coder Pro V2.5:Free', badge: 'Med' },
+    { id: 'frontier', name: 'Frontier', badge: 'Med' },
+    { id: 'balanced', name: 'Balanced', badge: 'Med' },
+    { id: 'minimax-m2.7', name: 'Minimax M2.7', badge: 'Med' },
+    { id: 'minimax-m3', name: 'Minimax M3', badge: 'Med' },
+    { id: 'glm-5.2', name: 'Glm 5.2', badge: 'Med' },
+    { id: 'deepseek-v4-pro', name: 'Deepseek V4 Pro', badge: 'Med' },
+    { id: 'deepseek-v4-flash', name: 'Deepseek V4 Flash', badge: 'Med' },
+    { id: 'kimi-k2.6', name: 'Kimi K2.6', badge: 'Med' },
+    { id: 'nemotron-3-ultra', name: 'Nemotron 3 Ultra 550b A55b', badge: 'Med' },
+  ];
+  const [modelsList, setModelsList] = useState(DEFAULT_MODELS);
+  const [selectedModel, setSelectedModel] = useState('Hermes Agent');
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [isEffortMenuOpen, setIsEffortMenuOpen] = useState(false);
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+  const [modelSearchQuery, setModelSearchQuery] = useState('');
+  const [thinkingEffort, setThinkingEffort] = useState<'Minimal' | 'Low' | 'Medium' | 'High' | 'Extra High' | 'Max' | 'Ultra'>('Medium');
+  const [isReasoningEnabled, setIsReasoningEnabled] = useState(true);
+  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
+  const [isDeepResearchEnabled, setIsDeepResearchEnabled] = useState(false);
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getEffortBadge = (effort: string) => {
+    switch (effort) {
+      case 'Minimal': return 'Min';
+      case 'Low': return 'Low';
+      case 'Medium': return 'Med';
+      case 'High': return 'High';
+      case 'Extra High': return 'X-High';
+      case 'Max': return 'Max';
+      case 'Ultra': return 'Ultra';
+      default: return 'Med';
+    }
+  };
 
   // Store bindings
   const sessionId = useWorkSessionStore((s) => s.sessionId);
@@ -240,8 +295,12 @@ export default function WorkPage() {
       // 3. Connect real LLM stream from /api/chat-stream for true autonomous reasoning, conversation & tools
       const streamPayload = {
         message: `[MODE OTONOM SQUAD WORKSPACE]\nTugas Otonom: ${userPrompt}\nPeran Anda: Aster (Koordinator Autonomous Swarm). Eksekusi instruksi ini secara nyata. Laporkan rencana kerja (Todos), eksekusi aksi, dan berikan evaluasi menyeluruh serta berkas yang dihasilkan.`,
-        thinking: true,
-        effort: 'high'
+        model: selectedModel === 'Hermes Agent' ? 'default' : selectedModel,
+        thinking: isReasoningEnabled,
+        effort: thinkingEffort.toLowerCase(),
+        webSearch: isWebSearchEnabled,
+        deepResearch: isDeepResearchEnabled,
+        attachments: attachments
       };
 
       const res = await fetch('/api/chat-stream', {
@@ -624,60 +683,396 @@ export default function WorkPage() {
           <div ref={feedEndRef} />
         </div>
 
-        {/* Bottom Autonomous Dispatch Prompt Bar */}
+        {/* Bottom Autonomous Dispatch Prompt Bar (Exact Mirror of Chat Input Bar) */}
         <div className="p-4 border-t border-lyra-accent/10 bg-lyra-surface/90 backdrop-blur-md shrink-0 z-10 shadow-lg">
           <form onSubmit={handleLaunchAutonomousWork} className="max-w-4xl mx-auto flex flex-col gap-2">
-            <div className="flex items-center justify-between text-xs text-lyra-text-secondary px-1">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span className="text-xs">Mode Pengerjaan:</span>
-                <select
-                  value={selectedAgent}
-                  onChange={(e) => setSelectedAgent(e.target.value)}
-                  className="bg-lyra-surface border border-lyra-accent/20 rounded-lg px-2 py-0.5 text-xs text-lyra-text font-medium outline-none cursor-pointer hover:border-lyra-accent"
-                >
-                  <option value="default">✨ Full Autonomous Swarm (Semua Spesialis Bekerja Sama)</option>
-                  {availableAgents.filter(a => a !== 'default').map((agId) => {
-                    const info = getAgentInfo(agId);
-                    return (
-                      <option key={agId} value={agId} className="bg-lyra-surface text-lyra-text">
-                        Spesifik: {info.name} ({info.role})
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-              <span className="font-mono text-[11px] opacity-70 hidden sm:inline">
-                Autonomous Studio • Bertahap & Berhasil Maksimal
-              </span>
-            </div>
+            
+            {/* Input Box Container */}
+            <div className="relative rounded-2xl border border-lyra-accent/20 bg-lyra-surface/80 focus-within:border-lyra-accent/50 focus-within:ring-2 focus-within:ring-lyra-accent/20 shadow-sm transition-all overflow-visible">
+              
+              {/* Hidden File Input for Attachment */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    const newFiles = Array.from(e.target.files).map(f => ({
+                      name: f.name,
+                      path: (f as any).path || f.name,
+                      type: f.type,
+                      size: f.size
+                    }));
+                    setAttachments(prev => [...prev, ...newFiles]);
+                  }
+                }}
+              />
 
-            <div className="flex items-center gap-2 bg-lyra-bg border border-lyra-accent/20 focus-within:border-lyra-accent rounded-2xl p-2 transition-all shadow-sm">
+              {/* Attachments Pills if present */}
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 px-3 pt-2">
+                  {attachments.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lyra-accent/10 border border-lyra-accent/20 text-xs text-lyra-text font-mono"
+                    >
+                      <FileText size={12} className="text-lyra-accent" />
+                      <span className="truncate max-w-[120px]">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                        className="hover:text-red-400 cursor-pointer ml-1"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Textarea */}
               <textarea
                 value={promptInput}
                 onChange={(e) => setPromptInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleLaunchAutonomousWork(e);
+                    if (!isSubmitting) handleLaunchAutonomousWork(e);
                   }
                 }}
                 rows={2}
-                placeholder={language === 'id' 
-                  ? 'Delegasikan instruksi tugas besar di sini (misal: "Buat sistem portfolio lengkap beserta CV PDF dan validasi linting")...' 
-                  : 'Delegate a deep autonomous task here...'}
-                className="flex-1 bg-transparent border-0 text-sm text-lyra-text placeholder:text-lyra-text-secondary/50 focus:outline-none resize-none px-2 py-1 leading-relaxed"
+                placeholder={language === 'id' ? 'Ketik pesan Anda di sini...' : 'Type your message here...'}
+                className="w-full bg-transparent px-4 py-3 text-lyra-text placeholder:text-lyra-text-secondary focus:outline-none resize-none min-h-[56px] max-h-48 overflow-y-auto text-sm"
               />
 
-              <button
-                type="submit"
-                disabled={!promptInput.trim() || isSubmitting}
-                className="w-10 h-10 rounded-xl bg-lyra-accent hover:bg-lyra-accent/80 text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-md shrink-0 cursor-pointer active:scale-95"
-                title="Jalankan Tugas Otonom"
-              >
-                <ArrowUp size={18} strokeWidth={2.5} />
-              </button>
+              {/* Bottom Toolbar Row (Matching User Image: [+] [Hermes Agent v] [Med v] ... [↑]) */}
+              <div className="flex items-center justify-between px-3 pb-2.5 pt-1 border-t border-lyra-accent/5">
+                
+                {/* Left Controls: Plus Button, Model Selector, Effort Selector */}
+                <div className="flex items-center gap-1.5 relative">
+
+                  {/* Plus Attach & Options Button */}
+                  <div className="relative">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setIsAttachMenuOpen(!isAttachMenuOpen);
+                        setIsModelMenuOpen(false);
+                        setIsEffortMenuOpen(false);
+                      }}
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                        isAttachMenuOpen ? 'bg-lyra-accent text-white' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'
+                      }`}
+                      title="Lampirkan & Opsi Mode AI"
+                    >
+                      <Plus size={18} className={`transition-transform duration-200 ${isAttachMenuOpen ? 'rotate-45' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {isAttachMenuOpen && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute left-0 bottom-[calc(100%+8px)] w-64 bg-lyra-surface border border-lyra-accent/20 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col py-2 backdrop-blur-md"
+                        >
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">File & Media</div>
+                          
+                          <button 
+                            type="button" 
+                            onClick={() => { 
+                              fileInputRef.current?.click(); 
+                              setIsAttachMenuOpen(false); 
+                            }} 
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
+                          >
+                            <FileText size={15} className="text-lyra-text" />
+                            <span className="font-medium text-lyra-text">Unggah file atau dokumen</span>
+                          </button>
+                          
+                          <button 
+                            type="button" 
+                            onClick={() => { 
+                              setIsWorkspaceOpen(true); 
+                              setIsAttachMenuOpen(false); 
+                            }} 
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
+                          >
+                            <FolderTree size={15} className="text-lyra-text" />
+                            <span className="font-medium text-lyra-text">Pilih dari Workspace</span>
+                          </button>
+
+                          <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Mode AI</div>
+
+                          {/* Reasoning Toggle */}
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsReasoningEnabled(prev => !prev);
+                            }} 
+                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer select-none"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <BrainCircuit size={15} className={isReasoningEnabled ? "text-purple-400" : "text-lyra-text-secondary"} />
+                              <div>
+                                <div className="font-medium text-lyra-text">Pikirkan (Reasoning)</div>
+                                <div className="text-[10px] text-lyra-text-secondary">{isReasoningEnabled ? `Aktif: ${thinkingEffort}` : 'Nonaktif'}</div>
+                              </div>
+                            </div>
+                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
+                              isReasoningEnabled ? 'bg-purple-500' : 'bg-zinc-600'
+                            }`}>
+                              <motion.span 
+                                animate={{ x: isReasoningEnabled ? 12 : 0 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                                className="inline-block h-3 w-3 rounded-full bg-white shadow-md pointer-events-none" 
+                              />
+                            </div>
+                          </div>
+
+                          {/* Web Search Toggle */}
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsWebSearchEnabled(prev => !prev);
+                            }} 
+                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer select-none"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Globe size={15} className={isWebSearchEnabled ? "text-blue-400" : "text-lyra-text-secondary"} />
+                              <div>
+                                <div className="font-medium text-lyra-text">Pencarian Web</div>
+                                <div className="text-[10px] text-lyra-text-secondary">{isWebSearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
+                              </div>
+                            </div>
+                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
+                              isWebSearchEnabled ? 'bg-blue-500' : 'bg-zinc-600'
+                            }`}>
+                              <motion.span 
+                                animate={{ x: isWebSearchEnabled ? 12 : 0 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                                className="inline-block h-3 w-3 rounded-full bg-white shadow-md pointer-events-none" 
+                              />
+                            </div>
+                          </div>
+
+                          {/* Deep Research Toggle */}
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsDeepResearchEnabled(prev => !prev);
+                            }} 
+                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer select-none"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Search size={15} className={isDeepResearchEnabled ? "text-emerald-500" : "text-lyra-text-secondary"} />
+                              <div>
+                                <div className="font-medium text-lyra-text">Riset Mendalam</div>
+                                <div className="text-[10px] text-lyra-text-secondary">{isDeepResearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
+                              </div>
+                            </div>
+                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
+                              isDeepResearchEnabled ? 'bg-emerald-500' : 'bg-zinc-600'
+                            }`}>
+                              <motion.span 
+                                animate={{ x: isDeepResearchEnabled ? 12 : 0 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                                className="inline-block h-3 w-3 rounded-full bg-white shadow-md pointer-events-none" 
+                              />
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Model Selector Pill (Hermes Agent ˅) */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsModelMenuOpen(!isModelMenuOpen);
+                        setIsEffortMenuOpen(false);
+                        setIsAttachMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors border cursor-pointer ${
+                        isModelMenuOpen 
+                          ? 'bg-lyra-accent/20 border-lyra-accent text-lyra-text shadow-sm' 
+                          : 'bg-lyra-surface/90 border-lyra-accent/20 text-lyra-text hover:border-lyra-accent/40 hover:bg-lyra-accent/10'
+                      }`}
+                    >
+                      <span className="truncate max-w-[130px]">{selectedModel}</span>
+                      <ChevronDown size={13} className={`opacity-60 transition-transform ${isModelMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {isModelMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute left-0 bottom-[calc(100%+8px)] w-72 bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-2xl z-50 p-2.5 backdrop-blur-md flex flex-col"
+                        >
+                          {/* Search Input */}
+                          <div className="relative mb-2">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-lyra-text-secondary opacity-60" />
+                            <input
+                              type="text"
+                              value={modelSearchQuery}
+                              onChange={(e) => setModelSearchQuery(e.target.value)}
+                              placeholder="Cari model AI..."
+                              className="w-full bg-lyra-bg border border-lyra-accent/20 rounded-xl py-1.5 pl-8 pr-3 text-xs text-lyra-text placeholder:text-lyra-text-secondary focus:outline-none focus:border-lyra-accent"
+                              autoFocus
+                            />
+                          </div>
+
+                          <div className="h-px bg-lyra-accent/10 mx-1 mb-1.5" />
+
+                          {/* Model Items */}
+                          <div className="overflow-y-auto space-y-0.5 max-h-52 pr-1 no-scrollbar">
+                            {modelsList
+                              .filter(m => m.name.toLowerCase().includes(modelSearchQuery.toLowerCase()))
+                              .map((m) => (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedModel(m.name);
+                                    setIsModelMenuOpen(false);
+                                  }}
+                                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors text-left cursor-pointer ${
+                                    selectedModel === m.name
+                                      ? 'bg-lyra-accent/20 text-lyra-text font-semibold'
+                                      : 'text-lyra-text hover:bg-lyra-accent/10'
+                                  }`}
+                                >
+                                  <span className="truncate pr-2">{m.name}</span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-white/5 font-mono">
+                                    {isReasoningEnabled ? getEffortBadge(thinkingEffort) : 'Off'}
+                                  </span>
+                                </button>
+                              ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Effort Selector Pill (Med ˅) */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEffortMenuOpen(!isEffortMenuOpen);
+                        setIsModelMenuOpen(false);
+                        setIsAttachMenuOpen(false);
+                      }}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border cursor-pointer ${
+                        isEffortMenuOpen
+                          ? 'bg-lyra-accent/20 border-lyra-accent text-lyra-text shadow-sm'
+                          : 'bg-lyra-surface/90 border-lyra-accent/20 text-lyra-text hover:border-lyra-accent/40 hover:bg-lyra-accent/10'
+                      }`}
+                    >
+                      <span>{isReasoningEnabled ? getEffortBadge(thinkingEffort) : 'Off'}</span>
+                      <ChevronDown size={13} className={`opacity-60 transition-transform ${isEffortMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {isEffortMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute left-0 bottom-[calc(100%+8px)] w-56 bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-2xl z-50 p-2.5 backdrop-blur-md select-none"
+                        >
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-2.5 py-1 uppercase tracking-wider">
+                            OPTIONS
+                          </div>
+
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsReasoningEnabled(prev => !prev);
+                            }}
+                            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-lyra-accent/10 transition-colors cursor-pointer select-none"
+                          >
+                            <span className="text-xs font-medium text-lyra-text">Thinking</span>
+                            <div 
+                              className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
+                                isReasoningEnabled ? 'bg-[#D97757]' : 'bg-zinc-600'
+                              }`}
+                            >
+                              <motion.span
+                                animate={{ x: isReasoningEnabled ? 12 : 0 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                                className="inline-block h-3 w-3 rounded-full bg-white shadow-md pointer-events-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="h-px bg-lyra-accent/10 my-2 mx-1" />
+
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-2.5 py-1 uppercase tracking-wider">
+                            EFFORT
+                          </div>
+
+                          <div className="space-y-0.5">
+                            {(['Minimal', 'Low', 'Medium', 'High', 'Extra High', 'Max', 'Ultra'] as const).map((lvl) => (
+                              <button
+                                key={lvl}
+                                type="button"
+                                onClick={() => {
+                                  setThinkingEffort(lvl);
+                                  setIsReasoningEnabled(true);
+                                  setIsEffortMenuOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer ${
+                                  thinkingEffort === lvl && isReasoningEnabled
+                                    ? 'bg-lyra-accent/15 text-lyra-text font-medium'
+                                    : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'
+                                }`}
+                              >
+                                <span>{lvl}</span>
+                                {thinkingEffort === lvl && isReasoningEnabled && (
+                                  <Check size={14} className="text-lyra-accent stroke-[2.5]" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                </div>
+
+                {/* Right Send Button (Circle Button with Arrow Up ↑) */}
+                <div className="flex items-center shrink-0 ml-2">
+                  <button
+                    type="submit"
+                    disabled={!promptInput.trim() || isSubmitting}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-md cursor-pointer active:scale-95 shrink-0 ${
+                      !promptInput.trim() || isSubmitting
+                        ? 'bg-lyra-surface text-lyra-text-secondary/40 border border-lyra-accent/10 cursor-not-allowed'
+                        : 'bg-lyra-accent hover:bg-lyra-accent/90 text-white shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+                    }`}
+                    title="Kirim pesan / Jalankan tugas"
+                  >
+                    <ArrowUp size={16} strokeWidth={2.5} />
+                  </button>
+                </div>
+
+              </div>
             </div>
+
           </form>
         </div>
       </div>
