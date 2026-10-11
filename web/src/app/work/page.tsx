@@ -574,8 +574,14 @@ export default function WorkPage() {
       });
 
     } catch (err: any) {
-      // Don't show connection error banner if user deliberately aborted/stopped
-      if (err.name === 'AbortError' || err.message?.includes('aborted') || err.message?.includes('user')) {
+      // Don't log or show error banner if user deliberately aborted/stopped
+      const isUserAbort = 
+        err === 'User stopped generation' ||
+        err?.name === 'AbortError' ||
+        (typeof err === 'string' && (err.toLowerCase().includes('user') || err.toLowerCase().includes('abort'))) ||
+        (err?.message && (err.message.toLowerCase().includes('user') || err.message.toLowerCase().includes('abort')));
+
+      if (isUserAbort) {
         appendAssistantChunk(
           `*Generasi tugas dihentikan oleh pengguna.*`,
           getAgentInfo(selectedAgent).name
@@ -583,7 +589,7 @@ export default function WorkPage() {
       } else {
         console.error('Launch failed:', err);
         appendAssistantChunk(
-          `Terjadi kendala saat menghubungkan ke engine: ${err.message || 'Error koneksi'}. Tugas tetap didaftarkan ke antrian sistem.`,
+          `Terjadi kendala saat menghubungkan ke engine: ${err?.message || String(err) || 'Error koneksi'}. Tugas tetap didaftarkan ke antrian sistem.`,
           getAgentInfo(selectedAgent).name
         );
       }
