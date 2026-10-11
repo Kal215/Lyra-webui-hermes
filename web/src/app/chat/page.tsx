@@ -1437,13 +1437,16 @@ function NativeChatContent() {
     let currentSessionId = activeSessionId;
 
     // Send payload
+    const activeModelObj = modelsList.find(m => m.name === selectedModel);
+    const resolvedModelParam = activeModelObj ? activeModelObj.id : selectedModel;
+
     const payload = {
       message: userText,
       session_id: activeSessionId,
       workspace: currentWorkspace || undefined,
       attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
       systemPrompt: activeProject?.systemPrompt || undefined,
-      model: selectedModel,
+      model: resolvedModelParam,
       thinking: isReasoningEnabled,
       effort: thinkingEffort,
       webSearch: isWebSearchEnabled,

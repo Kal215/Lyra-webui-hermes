@@ -27,19 +27,13 @@ export async function POST(req: NextRequest) {
     message = `[DIRECTIVE: PENCARIAN WEB DIAKTIFKAN. Gunakan kapabilitas pencarian web untuk mendapatkan informasi faktual dan data terbaru secara akurat.]\n\n${message}`;
   }
 
-  // Inject system prompt to the message if present
-  const formattingStandard = `[FORMATTING & STYLING RULES (STRICTLY REQUIRED)]:
-- Gunakan struktur GitHub-Flavored Markdown yang rapi, elegan, dan profesional.
-- Gunakan heading yang jelas (##, ###) untuk membagi bagian.
-- Gunakan bullet points (-) dan penekanan tebal (**teks**) secara konsisten pada poin-poin kunci atau istilah penting.
-- Berikan spasi/jeda antar paragraf yang cukup agar tidak menumpuk padat (wall of text).
-- DILARANG KERAS menggunakan garis pemisah ASCII kuno seperti garis sama-dengan panjang (===...) atau garis strip panjang (---...). Gunakan garis horizontal standar Markdown (---) secukupnya jika memisahkan bab besar.
-- Jika menyajikan perbandingan atau rekomendasi, prioritaskan format tabel Markdown atau bullet terstruktur.`;
+  // Format directive: only inject for detailed requests, never overshadow simple conversational greetings
+  const formattingStandard = `[FORMATTING RULES]:
+- Gunakan struktur Markdown rapi. Jika respon panjang, gunakan heading dan bullet points.
+- Hindari garis pemisah mentah (===...). Gunakan tabel jika ada perbandingan.`;
 
   if (systemPrompt && !session_id) {
-    message = `[SYSTEM INSTRUCTION (OBEY STRICTLY)]\n${systemPrompt}\n\n${formattingStandard}\n\n[USER MESSAGE]\n${message}`;
-  } else if (!session_id) {
-    message = `${formattingStandard}\n\n${message}`;
+    message = `[SYSTEM INSTRUCTION]\n${systemPrompt}\n\n[USER MESSAGE]\n${message}`;
   }
 
   // Prepend file context references to the prompt message
@@ -83,6 +77,7 @@ export async function POST(req: NextRequest) {
 
   // Model selection
   if (model && model !== 'default' && model !== 'Hermes Agent') {
+    // If user passed a model name (e.g. from UI dropdown like "Claude 3.5 Sonnet"), find its real ID or pass as is
     args.push('-m', model);
   }
 
@@ -173,7 +168,11 @@ export async function POST(req: NextRequest) {
       });
 
       child.stderr.on('data', (data) => {
-        console.error('Hermes Error:', data.toString());
+        const errText = data.toString();
+        console.error('Hermes Error:', errText);
+        if (errText.includes('Error') || errText.includes('Exception') || errText.includes('invalid') || errText.includes('failed') || errText.includes('not found')) {
+          safeEnqueue(`data: ${JSON.stringify({ type: 'text', text: `\n\n**[Hermes Engine Error]**: ${errText.trim()}` })}\n\n`);
+        }
       });
 
       child.on('close', () => {

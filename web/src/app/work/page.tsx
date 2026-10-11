@@ -446,6 +446,9 @@ export default function WorkPage() {
       localStorage.setItem('lyra_active_execution_id', currentExecId);
       localStorage.setItem('lyra_is_submitting_work', 'true');
 
+      const activeModelObj = modelsList.find(m => m.name === selectedModel);
+      const resolvedModelParam = activeModelObj ? activeModelObj.id : selectedModel;
+
       const streamPayload = {
         executionId: currentExecId,
         message: `[MODE OTONOM SQUAD WORKSPACE]
@@ -461,7 +464,7 @@ Instruksi format respon:
 2. Berikan pemikiran mendalam terstruktur.
 3. Eksekusi tugas dan selesaikan semua deliverable sampai tuntas.`,
         agent: selectedAgent,
-        model: selectedModel,
+        model: resolvedModelParam,
         thinking: true,
         effort: thinkingEffort.toLowerCase(),
         webSearch: isWebSearchEnabled,
