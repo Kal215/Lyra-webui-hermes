@@ -7,6 +7,7 @@ import {
   Sparkles, 
   Plus, 
   ArrowUp, 
+  Square,
   Terminal, 
   FileCode2, 
   FolderTree, 
@@ -109,6 +110,15 @@ export default function WorkPage() {
   const [isDeepResearchEnabled, setIsDeepResearchEnabled] = useState(false);
   const [attachments, setAttachments] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsSubmitting(false);
+  };
 
   const getEffortBadge = (effort: string) => {
     switch (effort) {
@@ -293,6 +303,7 @@ export default function WorkPage() {
       }).then(() => loadData()).catch(() => {});
 
       // 3. Connect real LLM stream from /api/chat-stream for true autonomous reasoning, conversation & tools
+      abortControllerRef.current = new AbortController();
       const streamPayload = {
         message: `[MODE OTONOM SQUAD WORKSPACE]\nTugas Otonom: ${userPrompt}\nPeran Anda: Aster (Koordinator Autonomous Swarm). Eksekusi instruksi ini secara nyata. Laporkan rencana kerja (Todos), eksekusi aksi, dan berikan evaluasi menyeluruh serta berkas yang dihasilkan.`,
         model: selectedModel === 'Hermes Agent' ? 'default' : selectedModel,
@@ -306,7 +317,8 @@ export default function WorkPage() {
       const res = await fetch('/api/chat-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(streamPayload)
+        body: JSON.stringify(streamPayload),
+        signal: abortControllerRef.current.signal
       });
 
       if (!res.body) throw new Error('No readable stream from engine');
@@ -687,6 +699,32 @@ export default function WorkPage() {
         <div className="p-4 border-t border-lyra-accent/10 bg-lyra-surface/90 backdrop-blur-md shrink-0 z-10 shadow-lg">
           <form onSubmit={handleLaunchAutonomousWork} className="max-w-4xl mx-auto flex flex-col gap-2">
             
+            {/* Top Selector: Mode Pengerjaan Squad / Spesialis */}
+            <div className="flex items-center justify-between text-xs text-lyra-text-secondary px-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="text-xs">Penanggung Jawab:</span>
+                <select
+                  value={selectedAgent}
+                  onChange={(e) => setSelectedAgent(e.target.value)}
+                  className="bg-lyra-surface border border-lyra-accent/20 rounded-lg px-2 py-0.5 text-xs text-lyra-text font-medium outline-none cursor-pointer hover:border-lyra-accent"
+                >
+                  <option value="default">✨ Full Autonomous Swarm (Semua Spesialis Bekerja Sama)</option>
+                  {availableAgents.filter(a => a !== 'default').map((agId) => {
+                    const info = getAgentInfo(agId);
+                    return (
+                      <option key={agId} value={agId} className="bg-lyra-surface text-lyra-text">
+                        Spesifik: {info.name} ({info.role})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <span className="font-mono text-[11px] opacity-70 hidden sm:inline">
+                Autonomous Studio • Bertahap & Berhasil Maksimal
+              </span>
+            </div>
+
             {/* Input Box Container */}
             <div className="relative rounded-2xl border border-lyra-accent/20 bg-lyra-surface/80 focus-within:border-lyra-accent/50 focus-within:ring-2 focus-within:ring-lyra-accent/20 shadow-sm transition-all overflow-visible">
               
@@ -1054,20 +1092,31 @@ export default function WorkPage() {
 
                 </div>
 
-                {/* Right Send Button (Circle Button with Arrow Up ↑) */}
+                {/* Right Action: Send Button OR Stop Button (Matching Chat) */}
                 <div className="flex items-center shrink-0 ml-2">
-                  <button
-                    type="submit"
-                    disabled={!promptInput.trim() || isSubmitting}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-md cursor-pointer active:scale-95 shrink-0 ${
-                      !promptInput.trim() || isSubmitting
-                        ? 'bg-lyra-surface text-lyra-text-secondary/40 border border-lyra-accent/10 cursor-not-allowed'
-                        : 'bg-lyra-accent hover:bg-lyra-accent/90 text-white shadow-[0_0_12px_rgba(59,130,246,0.4)]'
-                    }`}
-                    title="Kirim pesan / Jalankan tugas"
-                  >
-                    <ArrowUp size={16} strokeWidth={2.5} />
-                  </button>
+                  {isSubmitting ? (
+                    <button
+                      type="button"
+                      onClick={handleStopGeneration}
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:bg-zinc-200 active:scale-95 transition-all shadow-md cursor-pointer shrink-0"
+                      title="Hentikan pembuatan (Stop)"
+                    >
+                      <Square size={12} className="fill-current text-zinc-900" />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={!promptInput.trim()}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-md cursor-pointer active:scale-95 shrink-0 ${
+                        !promptInput.trim()
+                          ? 'bg-lyra-surface text-lyra-text-secondary/40 border border-lyra-accent/10 cursor-not-allowed'
+                          : 'bg-lyra-accent hover:bg-lyra-accent/90 text-white shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+                      }`}
+                      title="Kirim pesan / Jalankan tugas"
+                    >
+                      <ArrowUp size={16} strokeWidth={2.5} />
+                    </button>
+                  )}
                 </div>
 
               </div>
