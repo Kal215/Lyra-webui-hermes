@@ -365,6 +365,81 @@ export default function NativeChatPage() {
     }
   };
 
+  // --- PERSISTENCE (localStorage) ---
+  // Restore preferences on initial mount
+  useEffect(() => {
+    try {
+      const savedModel = localStorage.getItem('lyra_chat_model');
+      if (savedModel) setSelectedModel(savedModel);
+
+      const savedReasoning = localStorage.getItem('lyra_chat_reasoning');
+      if (savedReasoning !== null) setIsReasoningEnabled(savedReasoning === 'true');
+
+      const savedEffort = localStorage.getItem('lyra_chat_effort');
+      if (savedEffort) setThinkingEffort(savedEffort as any);
+
+      const savedWebSearch = localStorage.getItem('lyra_chat_web_search');
+      if (savedWebSearch !== null) setIsWebSearchEnabled(savedWebSearch === 'true');
+
+      const savedDeepResearch = localStorage.getItem('lyra_chat_deep_research');
+      if (savedDeepResearch !== null) setIsDeepResearchEnabled(savedDeepResearch === 'true');
+    } catch (e) {
+      console.warn('Failed to load chat preferences from localStorage', e);
+    }
+  }, []);
+
+  // Save preferences whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('lyra_chat_model', selectedModel);
+    } catch (e) {}
+  }, [selectedModel]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lyra_chat_reasoning', String(isReasoningEnabled));
+    } catch (e) {}
+  }, [isReasoningEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lyra_chat_effort', thinkingEffort);
+    } catch (e) {}
+  }, [thinkingEffort]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lyra_chat_web_search', String(isWebSearchEnabled));
+    } catch (e) {}
+  }, [isWebSearchEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lyra_chat_deep_research', String(isDeepResearchEnabled));
+    } catch (e) {}
+  }, [isDeepResearchEnabled]);
+
+  // Sync draft message per-session from localStorage
+  useEffect(() => {
+    try {
+      const draftKey = activeSessionId ? `lyra_chat_draft_${activeSessionId}` : 'lyra_chat_draft_new';
+      const saved = localStorage.getItem(draftKey);
+      setInputMessage(saved || '');
+    } catch (e) {}
+  }, [activeSessionId]);
+
+  // Save typing draft message to localStorage
+  useEffect(() => {
+    try {
+      const draftKey = activeSessionId ? `lyra_chat_draft_${activeSessionId}` : 'lyra_chat_draft_new';
+      if (inputMessage) {
+        localStorage.setItem(draftKey, inputMessage);
+      } else {
+        localStorage.removeItem(draftKey);
+      }
+    } catch (e) {}
+  }, [inputMessage, activeSessionId]);
+
   const [activeModal, setActiveModal] = useState<'none' | 'sketch' | 'snippets' | 'github' | 'notion' | 'folderPicker' | 'projectPicker' | 'urlConnector'>('none');
   const [githubToken, setGithubToken] = useState('');
   const [notionToken, setNotionToken] = useState('');
@@ -707,6 +782,13 @@ export default function NativeChatPage() {
     const sid = params.get('session');
     if (sid) {
       setActiveSessionId(sid);
+    } else {
+      try {
+        const savedSid = localStorage.getItem('lyra_chat_active_session');
+        if (savedSid) {
+          setActiveSessionId(savedSid);
+        }
+      } catch (e) {}
     }
     fetchSessions();
   }, []);
@@ -721,11 +803,17 @@ export default function NativeChatPage() {
 
   useEffect(() => {
     if (activeSessionId) {
+      try {
+        localStorage.setItem('lyra_chat_active_session', activeSessionId);
+      } catch (e) {}
       if (!isStreamingRef.current) {
         fetchMessages(activeSessionId);
       }
       updateUrlWithSession(activeSessionId);
     } else {
+      try {
+        localStorage.removeItem('lyra_chat_active_session');
+      } catch (e) {}
       updateUrlWithSession(null);
       setMessages([]);
     }
@@ -800,6 +888,10 @@ export default function NativeChatPage() {
     
     const userText = inputMessage;
     setInputMessage('');
+    try {
+      const draftKey = activeSessionId ? `lyra_chat_draft_${activeSessionId}` : 'lyra_chat_draft_new';
+      localStorage.removeItem(draftKey);
+    } catch (e) {}
     
     const newMessage = { role: 'user', content: userText, tools: [], reasoning: null, attachments: [...attachments] };
     setMessages(prev => [...prev, newMessage, { 
@@ -1026,6 +1118,11 @@ export default function NativeChatPage() {
               setActiveSessionId(null);
               setMessages([]);
               updateUrlWithSession(null);
+              try {
+                localStorage.removeItem('lyra_chat_active_session');
+                const saved = localStorage.getItem('lyra_chat_draft_new');
+                setInputMessage(saved || '');
+              } catch (e) {}
             }}
             className="w-full bg-lyra-accent/10 hover:bg-lyra-accent/20 text-lyra-accent py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors font-medium cursor-pointer"
           >
