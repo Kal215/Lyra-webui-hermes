@@ -18,30 +18,15 @@ export function LiveCodingStudioBlock() {
     }
 
     const fullContent = liveTyping.diffOrContent || '// Menginisialisasi modifikasi berkas...';
-    // If text already received or short, update immediately without jarring reset
-    if (fullContent.length < 50) {
-      setDisplayedText(fullContent);
-      return;
-    }
-
+    // Update immediately so there is zero latency/lag
+    setDisplayedText(fullContent);
     setIsTyping(true);
-    let currentIdx = Math.max(0, displayedText.length);
 
-    const interval = setInterval(() => {
-      currentIdx += 12;
-      if (currentIdx >= fullContent.length) {
-        setDisplayedText(fullContent);
-        setIsTyping(false);
-        clearInterval(interval);
-      } else {
-        setDisplayedText(fullContent.slice(0, currentIdx));
-      }
-    }, 20);
-
-    return () => {
-      clearInterval(interval);
+    const timeout = setTimeout(() => {
       setIsTyping(false);
-    };
+    }, 400);
+
+    return () => clearTimeout(timeout);
   }, [liveTyping?.diffOrContent, liveTyping?.active]);
 
   if (!liveTyping) return null;

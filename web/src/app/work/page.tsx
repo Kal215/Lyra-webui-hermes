@@ -388,6 +388,16 @@ export default function WorkPage() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
 
+    // Immediately trigger visible live-coding block so user sees immediate feedback
+    const agentInfo = getAgentInfo(selectedAgent);
+    useWorkspaceStore.getState().setLiveTyping({
+      active: true,
+      agentName: agentInfo.name,
+      agentRole: agentInfo.role,
+      filePath: 'workspace/main_task.ts',
+      diffOrContent: `// @${agentInfo.name} (${agentInfo.role}) memulai pengerjaan otonom...\n// Tugas: ${taskTitle}\n\n// Menyiapkan lingkungan pengerjaan & modul kode...`
+    });
+
     try {
       // 2. Dispatch real task to Hermes backend kanban
       fetch('/api/work', {
@@ -496,7 +506,7 @@ export default function WorkPage() {
 
                   // Extract live code snippets from accumulated stream
                   const codeMatch = accumulatedAssistantText.match(/```(?:[a-zA-Z0-9_\-]+)?\s*([\s\S]+?)(?:```|$)/);
-                  if (codeMatch && codeMatch[1] && codeMatch[1].trim().length > 10) {
+                  if (codeMatch && codeMatch[1] && codeMatch[1].length > 5) {
                     const agentInfo = getAgentInfo(selectedAgent);
                     useWorkspaceStore.getState().setLiveTyping({
                       active: true,
@@ -504,6 +514,16 @@ export default function WorkPage() {
                       agentRole: agentInfo.role,
                       filePath: 'workspace/generated_code.ts',
                       diffOrContent: codeMatch[1]
+                    });
+                  } else if (data.text && !accumulatedAssistantText.includes('```')) {
+                    // Even before full code block, start live typing with assistant streaming text
+                    const agentInfo = getAgentInfo(selectedAgent);
+                    useWorkspaceStore.getState().setLiveTyping({
+                      active: true,
+                      agentName: agentInfo.name,
+                      agentRole: agentInfo.role,
+                      filePath: 'workspace/agent_plan.md',
+                      diffOrContent: accumulatedAssistantText
                     });
                   }
                 }

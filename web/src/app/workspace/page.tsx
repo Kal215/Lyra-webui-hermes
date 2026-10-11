@@ -322,43 +322,44 @@ function WorkspaceView() {
     }
   };
 
-  // Reactive agent live-coding simulation
+  // Reactive agent live-coding sync
   useEffect(() => {
     if (!liveTyping || !liveTyping.active) return;
     const targetPath = liveTyping.filePath;
     const targetName = targetPath.split(/[\/\\]/).pop() || 'file';
 
-    // If file is already open, simulate streaming typing
+    setSimulatingTyping(true);
     const idx = openFiles.findIndex(f => f.path.toLowerCase() === targetPath.toLowerCase());
     if (idx !== -1) {
       setActiveFileIndex(idx);
       if (liveTyping.diffOrContent) {
-        setSimulatingTyping(true);
-        const incomingText = liveTyping.diffOrContent;
-        let charIndex = 0;
-        const baseContent = openFiles[idx].content ? openFiles[idx].content + '\n' : '';
-        
-        const timer = setInterval(() => {
-          charIndex += 4;
-          if (charIndex >= incomingText.length) {
-            clearInterval(timer);
-            setSimulatingTyping(false);
-            updateContent(baseContent + incomingText);
-          } else {
-            updateContent(baseContent + incomingText.slice(0, charIndex));
-          }
-        }, 30);
-
-        return () => {
-          clearInterval(timer);
-          setSimulatingTyping(false);
-        };
+        updateContent(liveTyping.diffOrContent);
       }
     } else {
-      // Load file into editor tabs first
-      loadFile(targetPath, targetName);
+      // Create or insert live file tab immediately
+      setOpenFiles(prev => {
+        const found = prev.findIndex(f => f.path.toLowerCase() === targetPath.toLowerCase());
+        if (found !== -1) {
+          setActiveFileIndex(found);
+          return prev;
+        }
+        const newFile: OpenFile = {
+          path: targetPath,
+          name: targetName,
+          content: liveTyping.diffOrContent || '',
+          isDirty: false
+        };
+        const next = [...prev, newFile];
+        setActiveFileIndex(next.length - 1);
+        return next;
+      });
     }
-  }, [liveTyping]);
+
+    const timer = setTimeout(() => {
+      setSimulatingTyping(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [liveTyping?.diffOrContent, liveTyping?.filePath, liveTyping?.active]);
 
   const activeFile = activeFileIndex !== -1 ? openFiles[activeFileIndex] : null;
 
