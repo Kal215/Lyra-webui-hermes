@@ -73,10 +73,11 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
   };
 
   useEffect(() => {
-    if (currentWorkspace) {
-      loadWorkspaceFiles(currentWorkspace);
+    // If no workspace selected, default to current app directory rather than empty ROOT
+    if (!currentWorkspace) {
+      loadWorkspaceFiles(process.cwd?.() ? process.cwd().replace(/\\/g, '/') : 'D:/project/LyraWebsite/lyra-stack-opensource');
     } else {
-      loadWorkspaceFiles('ROOT');
+      loadWorkspaceFiles(currentWorkspace);
     }
   }, [currentWorkspace]);
 
@@ -540,6 +541,18 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                 <span className="text-[10px] text-lyra-text-secondary/60 truncate font-mono">({previewContent.path})</span>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    openFileInWorkspace(previewContent.path);
+                    window.location.href = `/workspace?activeAgent=coder`;
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-xs font-mono cursor-pointer flex items-center gap-1.5"
+                  title="Buka di Code Editor penuh"
+                >
+                  <ExternalLink size={12} />
+                  <span>Buka di Editor</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {

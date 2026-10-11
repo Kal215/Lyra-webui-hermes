@@ -10,7 +10,14 @@ export async function GET(req: Request) {
   if (!filePath) return NextResponse.json({ error: 'Missing path parameter' }, { status: 400 });
 
   try {
-    const fullPath = path.resolve(filePath);
+    const fullPath = path.isAbsolute(filePath) ? filePath : path.resolve(getRootDir(), filePath);
+    if (!fs.existsSync(fullPath)) {
+      return NextResponse.json({ error: `File not found: ${filePath}` }, { status: 404 });
+    }
+    const stat = fs.statSync(fullPath);
+    if (stat.isDirectory()) {
+      return NextResponse.json({ error: 'Path is a directory' }, { status: 400 });
+    }
     const content = fs.readFileSync(fullPath, 'utf-8');
     return NextResponse.json({ content });
   } catch (error) {
@@ -25,7 +32,11 @@ export async function POST(req: Request) {
 
   try {
     const { content } = await req.json();
-    const fullPath = path.resolve(filePath);
+    const fullPath = path.isAbsolute(filePath) ? filePath : path.resolve(getRootDir(), filePath);
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(fullPath, content, 'utf-8');
     return NextResponse.json({ success: true });
   } catch (error) {
