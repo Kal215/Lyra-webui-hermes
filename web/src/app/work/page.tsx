@@ -1018,14 +1018,13 @@ Instruksi format respon:
             {/* Top Selector: Agent / Squad Mode */}
             <div className="flex items-center text-xs text-lyra-text-secondary px-1">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
                 <select
                   value={selectedAgent}
                   onChange={(e) => setSelectedAgent(e.target.value)}
                   className="bg-lyra-surface border border-lyra-accent/20 rounded-lg px-2.5 py-1 text-xs text-lyra-text font-medium outline-none cursor-pointer hover:border-lyra-accent transition-colors"
                 >
                   <option value="default">
-                    ✨ Autonomous Swarm
+                    Autonomous Swarm
                   </option>
                   {availableAgents.filter(a => a !== 'default').map((agId) => {
                     const info = getAgentInfo(agId);
