@@ -227,11 +227,11 @@ export default function WorkPage() {
   const toolLogsList = toolOrder.map((id) => toolExecutions[id]).filter(Boolean);
 
   return (
-    <div className="flex h-full bg-lyra-bg text-lyra-text overflow-hidden font-sans">
+    <div className="flex h-full w-full bg-lyra-bg text-lyra-text overflow-hidden font-sans select-none">
       {/* Left Sidebar: Recent Tasks & Specialists */}
-      <div className="w-72 bg-lyra-surface border-r border-lyra-accent/10 flex flex-col shrink-0 hidden md:flex">
+      <div className="w-72 bg-lyra-surface border-r border-lyra-accent/10 flex flex-col shrink-0 h-full overflow-hidden hidden md:flex">
         {/* Top Header */}
-        <div className="p-4 border-b border-lyra-accent/10 flex items-center justify-between">
+        <div className="p-4 border-b border-lyra-accent/10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-lyra-accent/10 flex items-center justify-center text-lyra-accent">
               <Bot size={16} />
@@ -249,7 +249,7 @@ export default function WorkPage() {
         </div>
 
         {/* Specialists Squad Selector */}
-        <div className="p-3 border-b border-lyra-accent/10 bg-lyra-bg/40">
+        <div className="p-3 border-b border-lyra-accent/10 bg-lyra-bg/40 shrink-0">
           <button
             type="button"
             onClick={() => setIsSpecialistsExpanded(!isSpecialistsExpanded)}
@@ -267,14 +267,14 @@ export default function WorkPage() {
           </button>
 
           {isSpecialistsExpanded && (
-            <div className="space-y-2 mt-2 max-h-80 overflow-y-auto pr-1 no-scrollbar">
+            <div className="space-y-1.5 mt-2 max-h-56 overflow-y-auto pr-1 no-scrollbar">
               {availableAgents.map((agId) => {
                 const info = getAgentInfo(agId);
                 const isSelected = selectedAgent === agId;
                 return (
                   <div
                     key={agId}
-                    className={`p-2 rounded-xl border transition-all ${
+                    className={`p-1.5 rounded-xl border transition-all ${
                       isSelected
                         ? 'bg-lyra-accent/15 border-lyra-accent/30 text-lyra-text shadow-sm'
                         : 'bg-lyra-surface/40 border-lyra-accent/10 hover:border-lyra-accent/20 text-lyra-text-secondary'
@@ -285,32 +285,32 @@ export default function WorkPage() {
                       onClick={() => setSelectedAgent(agId)}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-2 h-2 rounded-full bg-lyra-accent shrink-0" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-lyra-accent shrink-0" />
                         <div className="truncate">
                           <div className="text-xs font-semibold text-lyra-text">{info.name}</div>
-                          <div className="text-[10px] text-lyra-text-secondary/70 truncate">{info.role}</div>
+                          <div className="text-[9px] text-lyra-text-secondary/70 truncate">{info.role}</div>
                         </div>
                       </div>
                       {isSelected && <span className="text-[9px] text-lyra-accent font-mono shrink-0">Aktif</span>}
                     </div>
 
                     {/* Direct Deep Links per Specialist */}
-                    <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-lyra-accent/10">
+                    <div className="flex items-center gap-1.5 mt-1.5 pt-1 border-t border-lyra-accent/10">
                       <Link
                         href={`/workspace?activeAgent=${agId}`}
-                        className="flex-1 py-1 px-1.5 rounded-lg bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/10 hover:border-lyra-accent/30 flex items-center justify-center gap-1 text-[10px] font-mono text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer"
+                        className="flex-1 py-0.5 px-1.5 rounded-md bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/10 hover:border-lyra-accent/30 flex items-center justify-center gap-1 text-[9px] font-mono text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer"
                         title={`Buka Editor Workspace Agen ${info.name}`}
                       >
-                        <FileCode2 size={11} className="text-emerald-400" />
+                        <FileCode2 size={10} className="text-emerald-400" />
                         <span>Workspace</span>
                       </Link>
 
                       <Link
                         href={`/world?focusAgent=${agId}`}
-                        className="flex-1 py-1 px-1.5 rounded-lg bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/10 hover:border-lyra-accent/30 flex items-center justify-center gap-1 text-[10px] font-mono text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer"
+                        className="flex-1 py-0.5 px-1.5 rounded-md bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/10 hover:border-lyra-accent/30 flex items-center justify-center gap-1 text-[9px] font-mono text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer"
                         title={`Lihat Karakter ${info.name} di World HQ`}
                       >
-                        <ExternalLink size={11} className="text-sky-400" />
+                        <ExternalLink size={10} className="text-sky-400" />
                         <span>Markas 2D</span>
                       </Link>
                     </div>
@@ -322,11 +322,11 @@ export default function WorkPage() {
         </div>
 
         {/* Recent Work History */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+        <div className="flex-1 flex flex-col min-h-0 p-3 overflow-hidden">
           <button
             type="button"
             onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-            className="flex items-center justify-between w-full py-1 text-[11px] font-mono uppercase tracking-wider text-lyra-text-secondary hover:text-lyra-text transition-colors cursor-pointer"
+            className="flex items-center justify-between w-full py-1 text-[11px] font-mono uppercase tracking-wider text-lyra-text-secondary hover:text-lyra-text transition-colors cursor-pointer shrink-0"
           >
             <span>Riwayat Tugas Terakhir</span>
             <span className="text-xs text-lyra-text-secondary">
@@ -335,16 +335,16 @@ export default function WorkPage() {
           </button>
 
           {isHistoryExpanded && (
-            <div className="space-y-1.5 mt-1">
+            <div className="flex-1 overflow-y-auto space-y-1.5 mt-2 pr-1">
               {loadingTasks ? (
                 <div className="text-center py-6 text-xs text-lyra-text-secondary/60">Memuat riwayat...</div>
               ) : recentTasks.length === 0 ? (
                 <div className="text-center py-6 text-xs text-lyra-text-secondary/60">Belum ada tugas otonom.</div>
               ) : (
-                recentTasks.slice(0, 10).map((t) => (
+                recentTasks.slice(0, 15).map((t) => (
                   <div
                     key={t.id}
-                    className="p-2.5 rounded-xl border border-lyra-accent/10 hover:border-lyra-accent/25 bg-lyra-surface/40 hover:bg-lyra-accent/5 transition-all cursor-pointer group"
+                    className="p-2 rounded-xl border border-lyra-accent/10 hover:border-lyra-accent/25 bg-lyra-surface/40 hover:bg-lyra-accent/5 transition-all cursor-pointer group"
                     onClick={() => router.push(`/work/${t.id}`)}
                   >
                     <div className="flex items-center justify-between gap-1 mb-1">
@@ -371,7 +371,7 @@ export default function WorkPage() {
       </div>
 
       {/* Main Studio Work Area */}
-      <div className="flex-1 flex flex-col relative overflow-hidden">
+      <div className="flex-1 flex flex-col h-full min-w-0 relative overflow-hidden">
         {/* Top Navigation Bar */}
         <div className="p-4 border-b border-lyra-accent/10 bg-lyra-surface/50 backdrop-blur-md flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -406,7 +406,7 @@ export default function WorkPage() {
         </div>
 
         {/* Scrollable Work Feed (Todos, Tool Blocks, Reasoning, Deliverables) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
           {!sessionId ? (
             /* Welcome / Empty State */
             <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -493,7 +493,7 @@ export default function WorkPage() {
         </div>
 
         {/* Bottom Autonomous Dispatch Prompt Bar */}
-        <div className="p-4 border-t border-lyra-accent/10 bg-lyra-surface/80 backdrop-blur-md shrink-0">
+        <div className="p-4 border-t border-lyra-accent/10 bg-lyra-surface/90 backdrop-blur-md shrink-0 z-10 shadow-lg">
           <form onSubmit={handleLaunchAutonomousWork} className="max-w-4xl mx-auto flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs text-lyra-text-secondary px-1">
               <div className="flex items-center gap-2">

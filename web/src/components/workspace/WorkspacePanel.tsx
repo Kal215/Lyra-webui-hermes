@@ -222,7 +222,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile }: WorkspacePan
       {/* Main Drawer */}
       {isOpen && (
         <div 
-          className="w-80 sm:w-96 bg-lyra-surface border-l border-lyra-accent/15 flex flex-col transition-all duration-300 relative z-20 shadow-2xl h-full select-none"
+          className="w-80 sm:w-96 bg-lyra-surface border-l border-lyra-accent/15 flex flex-col h-full min-h-0 overflow-hidden transition-all duration-300 relative z-20 shadow-2xl select-none shrink-0"
           onDragOver={(e) => { e.preventDefault(); setIsWorkspaceDragging(true); }}
           onDragLeave={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -425,7 +425,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile }: WorkspacePan
           )}
 
           {/* Files List View */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-0.5 text-xs font-mono">
+          <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-0.5 text-xs font-mono">
             {workspaceFiles.length === 0 ? (
               <div className="py-12 text-center text-lyra-text-secondary/50 text-[11px]">
                 Direktori kosong atau belum dimuat.

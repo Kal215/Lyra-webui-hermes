@@ -53,7 +53,10 @@ export function LyraShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+      <main className={cn(
+        "flex-1 flex flex-col min-w-0 h-screen",
+        (pathname?.startsWith('/chat') || pathname?.startsWith('/work') || pathname?.startsWith('/workspace')) ? "overflow-hidden" : "overflow-y-auto"
+      )}>
         
         {/* Mobile Header */}
         <header className="md:hidden flex items-center h-14 px-4 bg-lyra-surface/80 backdrop-blur-md sticky top-0 z-30 shadow-sm">
@@ -63,7 +66,7 @@ export function LyraShell({ children }: { children: React.ReactNode }) {
           <span className="font-bold tracking-widest uppercase ml-2 text-lyra-text">LYRA</span>
         </header>
 
-        <div className={cn("flex-1", pathname?.startsWith('/chat') ? "" : "p-4 md:p-8")}>
+        <div className={cn("flex-1", (pathname?.startsWith('/chat') || pathname?.startsWith('/work') || pathname?.startsWith('/workspace')) ? "h-full overflow-hidden p-0 md:p-0" : "p-4 md:p-8")}>
           {children}
         </div>
       </main>
