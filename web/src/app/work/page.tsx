@@ -398,8 +398,8 @@ export default function WorkPage() {
   };
 
   // Autonomous Task Dispatching
-  const handleLaunchAutonomousWork = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLaunchAutonomousWork = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!promptInput.trim() || isSubmitting) return;
 
     const userPrompt = promptInput.trim();
@@ -1533,7 +1533,7 @@ Instruksi format respon:
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-lyra-surface border border-lyra-accent/20 rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <h3 className="text-base font-bold text-lyra-text mb-2 flex items-center gap-2">
-              <LinkIcon size={18} className="text-lyra-accent" /> 
+              <LinkIcon size={18} className="text-lyra-accent" />
               {language === 'id' ? 'Tautkan URL / Dokumentasi' : 'Attach URL / Documentation'}
             </h3>
             <p className="text-xs text-lyra-text-secondary mb-4">
