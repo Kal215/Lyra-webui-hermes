@@ -43,5 +43,5 @@ export const recentActivityFixture = [
   { id: '2', time: '12:45', description: 'Provider recovered' },
   { id: '3', time: '12:41', description: 'QA started review' },
   { id: '4', time: '11:30', description: 'System backup completed' },
-  { id: '5', time: '10:15', description: 'Riskal logged in' },
+  { id: '5', time: '10:15', description: 'Operator logged in' },
 ];

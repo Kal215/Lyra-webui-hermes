@@ -135,7 +135,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
             </div>
             {!collapsed && (
               <div className="flex-1 flex items-center justify-between min-w-0">
-                <span className="font-medium text-sm truncate">Riskal</span>
+                <span className="font-medium text-sm truncate">Operator</span>
                 <div className="w-2 h-2 rounded-full bg-lyra-success shadow-[0_0_8px_var(--color-lyra-success)]"></div>
               </div>
             )}
@@ -144,7 +144,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
           {/* Glassmorphism Profile Popover */}
           {profileOpen && !collapsed && (
             <div className="absolute bottom-full left-3 mb-2 w-[calc(100%-24px)] bg-lyra-glass-bg backdrop-blur-md border border-lyra-glass-border rounded-lyra-lg shadow-xl p-4 z-50">
-              <div className="text-sm font-medium mb-1">Riskal Agent</div>
+              <div className="text-sm font-medium mb-1">Lyra Agent</div>
               <div className="text-xs text-lyra-text-muted mb-4">{t('status.allNormal')}</div>
               
               <div className="flex items-center justify-between text-sm">

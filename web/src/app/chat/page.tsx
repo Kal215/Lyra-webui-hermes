@@ -1808,7 +1808,7 @@ function NativeChatContent() {
 
               {/* Claude Style Greeting */}
               <h1 className="text-3xl md:text-4xl font-serif font-normal text-lyra-text tracking-tight mb-2">
-                {language === 'id' ? `Sesi hari ${currentDayName}, riskal?` : `${currentDayName} session, riskal?`}
+                {language === 'id' ? `Ada yang bisa saya bantu hari ini?` : `How can I help you today?`}
               </h1>
 
               {/* ChatGPT Style Subtitle */}

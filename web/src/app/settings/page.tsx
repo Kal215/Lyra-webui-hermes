@@ -148,15 +148,15 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     id: 'custom',
     label: 'Custom / VPS / Self-Hosted',
-    baseUrl: 'http://100.127.180.57:20128/v1',
-    defaultModel: 'hermes-agent',
+    baseUrl: 'http://localhost:8000/v1',
+    defaultModel: 'custom-model',
     keyEnv: 'LYRA_WEB_KEY',
     keyPlaceholder: 'sk-...',
-    keyHelp: 'Endpoint kompatibel OpenAI v1 (vLLM, LiteLLM, TGI, Hermes)',
+    keyHelp: 'Endpoint kompatibel OpenAI v1 (vLLM, LiteLLM, Ollama, TGI)',
     models: [
-      { id: 'hermes-agent', name: 'Hermes Agent' },
-      { id: 'kat-coder-pro', name: 'Kat Coder Pro' },
-      { id: 'custom-model', name: 'Custom Model' }
+      { id: 'custom-model', name: 'Custom Model' },
+      { id: 'llama-3-8b', name: 'Llama 3 8B' },
+      { id: 'mistral-7b', name: 'Mistral 7B' }
     ]
   }
 ];

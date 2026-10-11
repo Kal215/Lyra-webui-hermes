@@ -66,12 +66,12 @@ LINT=PASS
 TESTS=PASS
 RUNTIME_ERROR=NONE
 
-TERMINAL_OBSERVER_DOCUMENT=/home/riskal/portfolio-projects/nexus-command-center/docs/lyra-terminal-observer.md
-SCREENSHOT_TERMINAL=/home/riskal/artifacts/lyra-3FB1-terminal-ready.png
-SCREENSHOT_MOBILE=/home/riskal/artifacts/lyra-3FB1-terminal-mobile.png
+TERMINAL_OBSERVER_DOCUMENT=/opt/lyra/docs/lyra-terminal-observer.md
+SCREENSHOT_TERMINAL=/opt/lyra/artifacts/lyra-3FB1-terminal-ready.png
+SCREENSHOT_MOBILE=/opt/lyra/artifacts/lyra-3FB1-terminal-mobile.png
 
 1. exact plugin files installed: `lyra_observer/plugin.yaml` and `lyra_observer/__init__.py`.
-2. whether Hermes actually loaded the plugin: Plugin loading is deferred until the next Hermes instantiation. (As the current core process driving Riskal Agent started before plugin installation, we cannot inject it live).
+2. whether Hermes actually loaded the plugin: Plugin loading is deferred until the next Hermes instantiation. (As the current core process driving Agent started before plugin installation, we cannot inject it live).
 3. exact shell tool names observed: `terminal`, `terminal_command`, `run_terminal`.
 4. how command.started is produced: Dispatched via `pre_tool_call` when the function matches the target shells, pulling metadata (command/cwd/mode).
 5. how foreground completed output is handled: Harvested in `post_tool_call` directly from the `result` dictionary/JSON block and emitted chronologically.

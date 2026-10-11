@@ -68,7 +68,7 @@ except PermissionError:
     print("PASS: path traversal denied")
 
 try:
-    broker.safe_read_obsidian("assistant_mamah", "/home/riskal/Obsidian Vault/Lyra-Core/Core/OBSIDIAN_CORE_CANARY_20261001.md")
+    broker.safe_read_obsidian("assistant_mamah", "/opt/lyra/obsidian-vault/Core/OBSIDIAN_CORE_CANARY_20261001.md")
     print("FAIL: absolute cross path allowed")
 except PermissionError:
     print("PASS: absolute cross path denied")

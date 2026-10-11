@@ -5,4 +5,4 @@ To be installed after V1 deployment into each target `~/.hermes/profiles/<profil
 For `global` (default) and `coder`, preserve the existing R1 block and just integrate any new behaviors.
 For specialized profiles (`planner`, `researcher`, `qa`, `qa-kanban`, `security`, `security-kanban`, `synthesizer`, `verifier`), add their self-contained R2 protocol triggered by `[LYRA_REASONING_DIRECTIVE]`.
 
-These patches must be applied manually under Riskal's approval.
+These patches must be applied manually under architect's approval.

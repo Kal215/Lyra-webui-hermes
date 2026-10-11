@@ -44,13 +44,13 @@
 - Environment key: `lyra_core`
 - Collection: `lyra_core_memory_v2`
 - User ID: `lyra_core_system`
-- Obsidian root: `/home/riskal/Obsidian Vault/Lyra-Core/Core`
+- Obsidian root: `/opt/lyra/obsidian-vault/Core`
 
 ### ASSISTANT MAMAH
 - Environment key: `assistant_mamah`
 - Collection: `assistant_mamah_memory_v2`
 - User ID: `assistant_mamah_system`
-- Obsidian root: `/home/riskal/Obsidian Vault/Lyra-Core/Profiles/assistant-mamah`
+- Obsidian root: `/opt/lyra/obsidian-vault/Profiles/assistant-mamah`
 
 These environments are **logically isolated**. Lyra Core cannot read Assistant Mamah memories and vice versa.
 

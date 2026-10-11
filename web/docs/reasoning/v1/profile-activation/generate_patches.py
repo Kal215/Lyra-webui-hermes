@@ -8,7 +8,7 @@ PROFILES = [
 
 def generate():
     for p in PROFILES:
-        with open(f"/home/riskal/portfolio-projects/worktrees/lyra-v1-runtime-final/docs/reasoning/v1/profile-activation/{p}.patch.md", "w") as f:
+        with open(f"./docs/reasoning/v1/profile-activation/{p}.patch.md", "w") as f:
             if p in ["global", "coder"]:
                 f.write(f"<!-- Preserve existing R1 blocks for {p} -->\n")
                 f.write("### LYRA REASONING PROTOCOL (lyra-r1-v1)\n")

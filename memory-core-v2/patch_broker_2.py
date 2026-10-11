@@ -12,7 +12,7 @@ for line in lines:
                 "vector_store": {
                     "provider": "qdrant",
                     "config": {
-                        "path": "/home/riskal/.mem0/qdrant",
+                        "path": "/opt/lyra/.mem0/qdrant",
                         "collection_name": "lyra_memory_v2_shared",
                         "embedding_model_dims": 384
                     }
