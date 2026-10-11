@@ -273,9 +273,13 @@ export default function SettingsPage() {
                 <Cpu size={20} />
               </div>
               <div>
-                <h2 className="text-base font-bold text-lyra-text">AI Engine Connection</h2>
+                <h2 className="text-base font-bold text-lyra-text">
+                  {language === 'id' ? 'Model & API Key' : 'Models & API Keys'}
+                </h2>
                 <p className="text-sm text-lyra-text-muted mt-0.5">
-                  {language === 'id' ? 'Konfigurasi alamat server AI, model, dan autentikasi' : 'Configure AI server address, models, and authentication'}
+                  {language === 'id' 
+                    ? 'Pilih penyedia LLM, model default, dan kelola kredensial API' 
+                    : 'Choose LLM provider, default model, and manage API credentials'}
                 </p>
               </div>
             </div>
@@ -294,13 +298,13 @@ export default function SettingsPage() {
               >
                 <div className="p-6 space-y-8 bg-lyra-surface/50">
                   
-                  {/* Warning Box */}
-                  <div className="flex gap-3 p-4 rounded-lyra-sm bg-amber-500/10 border border-amber-500/20 text-amber-600/90 dark:text-amber-400/90">
-                    <ShieldAlert size={20} className="shrink-0" />
+                  {/* Info Box */}
+                  <div className="flex gap-3 p-4 rounded-lyra-sm bg-lyra-accent/10 border border-lyra-accent/20 text-lyra-text">
+                    <KeyRound size={20} className="shrink-0 text-lyra-accent mt-0.5" />
                     <p className="text-sm">
                       {language === 'id' 
-                        ? 'Pilih penyedia layanan AI. Pengaturan ini akan diterapkan di ruang terisolasi (Lyra Web) dan tidak mengubah JARVIS Utama Anda.' 
-                        : 'Select AI service provider. This configuration applies exclusively to Lyra Web isolation and does not alter your primary JARVIS setup.'}
+                        ? 'Kredensial dan endpoint ini tersimpan aman di environment lokal Anda untuk menangani inferensi model di sesi Chat dan Studio.' 
+                        : 'Credentials and endpoints are securely stored in your local environment for model inference in Chat and Studio sessions.'}
                     </p>
                   </div>
                   
