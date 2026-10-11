@@ -34,7 +34,18 @@ export default function WorkPage() {
   const router = useRouter();
 
   // Specialist Squad List
-  const [availableAgents, setAvailableAgents] = useState<string[]>(['coder', 'researcher', 'planner', 'qa', 'verifier', 'default']);
+  const [availableAgents, setAvailableAgents] = useState<string[]>([
+    'default',
+    'coder',
+    'planner',
+    'researcher',
+    'qa',
+    'qa-kanban',
+    'verifier',
+    'synthesizer',
+    'security',
+    'security-kanban'
+  ]);
   const [selectedAgent, setSelectedAgent] = useState('coder');
 
   // Input Prompt State
@@ -94,14 +105,16 @@ export default function WorkPage() {
 
   const getAgentInfo = (id: string) => {
     const map: Record<string, { name: string; role: string; desc: string; color: string }> = {
+      default: { name: 'Aster', role: 'Coordinator', desc: 'Komando Sentral HQ', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
       coder: { name: 'Forge', role: 'Software Engineer', desc: 'Menulis & menyempurnakan kode', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
-      researcher: { name: 'Scout', role: 'Researcher', desc: 'Riset mendalam & pencarian web', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
       planner: { name: 'Atlas', role: 'System Architect', desc: 'Dekomposisi & rencana kerja', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+      researcher: { name: 'Scout', role: 'Researcher', desc: 'Riset mendalam & pencarian web', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
       qa: { name: 'Iris', role: 'QA & Test', desc: 'Pengujian & penanganan bug', color: 'text-purple-400 bg-purple-500/10 border-purple-500/20' },
+      'qa-kanban': { name: 'Patch', role: 'QA Lead', desc: 'Koordinator tiket pengujian', color: 'text-violet-400 bg-violet-500/10 border-violet-500/20' },
       verifier: { name: 'Nova', role: 'Verifier', desc: 'Validasi deliverable & verifikasi akhir', color: 'text-rose-400 bg-rose-500/10 border-rose-500/20' },
       synthesizer: { name: 'Echo', role: 'Synthesizer', desc: 'Sintesis hasil & penyusunan artefak', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' },
-      security: { name: 'Sentinel', role: 'Security', desc: 'Audit keamanan & integritas', color: 'text-red-400 bg-red-500/10 border-red-500/20' },
-      default: { name: 'Aster', role: 'Coordinator', desc: 'Komando Sentral HQ', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
+      security: { name: 'Sentinel', role: 'Security', desc: 'Audit keamanan & integritas kode', color: 'text-red-400 bg-red-500/10 border-red-500/20' },
+      'security-kanban': { name: 'Cipher', role: 'Security Lead', desc: 'Koordinator audit keamanan', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' },
     };
     return map[id] || { name: id.charAt(0).toUpperCase() + id.slice(1), role: 'Specialist', desc: 'Pekerja otonom', color: 'text-lyra-accent bg-lyra-accent/10 border-lyra-accent/20' };
   };
@@ -225,12 +238,14 @@ export default function WorkPage() {
         </div>
 
         {/* Specialists Squad Selector */}
-        <div className="p-3 border-b border-lyra-accent/10 bg-lyra-bg/40">
-          <label className="block text-[11px] font-mono uppercase tracking-wider text-lyra-text-secondary mb-2">
-            Pilih Pekerja Spesialis
-          </label>
+        <div className="p-3 border-b border-lyra-accent/10 bg-lyra-bg/40 max-h-72 overflow-y-auto">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-lyra-text-secondary">
+              Pekerja Spesialis ({availableAgents.length})
+            </label>
+          </div>
           <div className="space-y-1">
-            {availableAgents.slice(0, 6).map((agId) => {
+            {availableAgents.map((agId) => {
               const info = getAgentInfo(agId);
               const isSelected = selectedAgent === agId;
               return (
@@ -413,11 +428,25 @@ export default function WorkPage() {
         <div className="p-4 border-t border-lyra-accent/10 bg-lyra-surface/80 backdrop-blur-md shrink-0">
           <form onSubmit={handleLaunchAutonomousWork} className="max-w-4xl mx-auto flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs text-lyra-text-secondary px-1">
-              <span className="flex items-center gap-1.5 font-medium">
+              <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                Pekerja Aktif: <strong className="text-lyra-text">{getAgentInfo(selectedAgent).name}</strong> ({getAgentInfo(selectedAgent).role})
-              </span>
-              <span className="font-mono text-[11px] opacity-70">
+                <span className="text-xs">Ditugaskan ke:</span>
+                <select
+                  value={selectedAgent}
+                  onChange={(e) => setSelectedAgent(e.target.value)}
+                  className="bg-lyra-surface border border-lyra-accent/20 rounded-lg px-2 py-0.5 text-xs text-lyra-text font-medium outline-none cursor-pointer hover:border-lyra-accent"
+                >
+                  {availableAgents.map((agId) => {
+                    const info = getAgentInfo(agId);
+                    return (
+                      <option key={agId} value={agId} className="bg-lyra-surface text-lyra-text">
+                        {info.name} — {info.role}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              <span className="font-mono text-[11px] opacity-70 hidden sm:inline">
                 Autonomous Studio • Bertahap & Berhasil Maksimal
               </span>
             </div>
