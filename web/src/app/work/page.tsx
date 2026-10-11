@@ -810,7 +810,15 @@ export default function WorkPage() {
           ) : (
             /* Active Autonomous Execution Feed */
             <div className="space-y-5">
-              {/* 1. Reasoning Accordions (Thought Process) */}
+              {/* 1. Prompt Saya (User Prompt Message) */}
+              {conversationMessages.filter((m) => m.role === 'user').length > 0 && (
+                <AutonomousConversationView 
+                  messages={conversationMessages.filter((m) => m.role === 'user')} 
+                  isStreaming={false} 
+                />
+              )}
+
+              {/* 2. Thought Process (Reasoning Accordions) */}
               {reasoningOrder.map((nodeId) => {
                 const node = reasoningNodes[nodeId];
                 if (!node) return null;
@@ -823,28 +831,28 @@ export default function WorkPage() {
                 );
               })}
 
-              {/* 2. Tool Execution Block (Ran commands, Wrote files) */}
-              {toolLogsList.length > 0 && (
-                <ToolExecutionBlock toolLogs={toolLogsList} defaultExpanded={false} />
-              )}
-
-              {/* 2.5 Live Realtime Coding Viewport (Z.ai / Bolt.new Style In-Stream Coding) */}
-              <LiveCodingStudioBlock />
-
-              {/* 3. Dynamic Todos Card (The Star Component from Z.ai reference) */}
+              {/* 3. Todo (Dynamic Todos Card) */}
               {todos.length > 0 && (
                 <DynamicTodosCard todos={todos} />
               )}
 
-              {/* 4. Autonomous Conversation Stream (Z.ai Style Real Discussion) */}
-              {conversationMessages.length > 0 && (
+              {/* 4. Menjalankan Sistem (Tool Execution Block) */}
+              {toolLogsList.length > 0 && (
+                <ToolExecutionBlock toolLogs={toolLogsList} defaultExpanded={false} />
+              )}
+
+              {/* 5. Terminal / Live Coding Studio Viewport */}
+              <LiveCodingStudioBlock />
+
+              {/* 6. Status Pekerjaan Sedang Berjalan (jika ada) */}
+              {conversationMessages.filter((m) => m.role === 'assistant' && m.content.includes('Status Pekerjaan Sedang Berjalan')).length > 0 && (
                 <AutonomousConversationView 
-                  messages={conversationMessages} 
-                  isStreaming={isSubmitting} 
+                  messages={conversationMessages.filter((m) => m.role === 'assistant' && m.content.includes('Status Pekerjaan Sedang Berjalan'))} 
+                  isStreaming={false} 
                 />
               )}
 
-              {/* 5. Deliverable / Handover Card */}
+              {/* 7. Hasil (Deliverable Card & Assistant Output / Final Responses) */}
               {deliverable && (
                 <DeliverableCard
                   artifact={deliverable}
@@ -859,6 +867,14 @@ export default function WorkPage() {
                   onReject={() => {
                     alert('Permintaan revisi dikirimkan ke agen.');
                   }}
+                />
+              )}
+
+              {/* Final Assistant Result / Conversation Feed (excluding running status message) */}
+              {conversationMessages.filter((m) => m.role === 'assistant' && !m.content.includes('Status Pekerjaan Sedang Berjalan')).length > 0 && (
+                <AutonomousConversationView 
+                  messages={conversationMessages.filter((m) => m.role === 'assistant' && !m.content.includes('Status Pekerjaan Sedang Berjalan'))} 
+                  isStreaming={isSubmitting} 
                 />
               )}
             </div>
