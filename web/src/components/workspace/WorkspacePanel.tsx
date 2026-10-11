@@ -66,10 +66,10 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
     }
   }, [targetPreviewPath]);
 
-  const loadWorkspaceFiles = async (dir: string) => {
-    if (!dir) return;
+  const loadWorkspaceFiles = async (dir?: string) => {
     try {
-      const res = await fetch(`/api/workspace/ls?dir=${encodeURIComponent(dir)}`);
+      const targetQuery = dir ? `?dir=${encodeURIComponent(dir)}` : '';
+      const res = await fetch(`/api/workspace/ls${targetQuery}`);
       const data = await res.json();
       if (data.files) {
         setWorkspaceFiles(data.files);
@@ -85,13 +85,15 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
   };
 
   useEffect(() => {
-    // If no workspace selected, default to current app directory rather than empty ROOT
+    // Only load if drawer is open to prevent freezing initial page compilation
+    if (!isOpen) return;
+
     if (!currentWorkspace) {
-      loadWorkspaceFiles(process.cwd?.() ? process.cwd().replace(/\\/g, '/') : 'D:/project/LyraWebsite/lyra-stack-opensource');
+      loadWorkspaceFiles('');
     } else {
       loadWorkspaceFiles(currentWorkspace);
     }
-  }, [currentWorkspace]);
+  }, [isOpen, currentWorkspace]);
 
   const handleWorkspaceBack = () => {
     if (!currentWorkspace || currentWorkspace === 'ROOT') return;

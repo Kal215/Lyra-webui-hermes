@@ -131,6 +131,14 @@ function SyntaxCodeEditor({
 }
 
 export default function WorkspacePage() {
+  return (
+    <React.Suspense fallback={<div className="h-screen flex items-center justify-center bg-lyra-bg text-lyra-text font-mono text-xs">Memuat Workspace...</div>}>
+      <WorkspaceView />
+    </React.Suspense>
+  );
+}
+
+function WorkspaceView() {
   const searchParams = useSearchParams();
   const activeAgentParam = searchParams ? searchParams.get('activeAgent') : null;
   const { currentWorkspace, setCurrentWorkspace, activeFilePath, liveTyping, setLiveTyping } = useWorkspaceStore();
