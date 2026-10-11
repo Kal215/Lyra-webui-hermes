@@ -419,7 +419,18 @@ export default function WorkPage() {
 
       const streamPayload = {
         executionId: currentExecId,
-        message: `[MODE OTONOM SQUAD WORKSPACE]\nTugas Otonom: ${userPrompt}\nPeran: ${selectedAgent}\n\nEksekusi tugas secara bertahap, berikan pemikiran mendalam terstruktur, gunakan tools, dan selesaikan semua deliverable sampai tuntas.`,
+        message: `[MODE OTONOM SQUAD WORKSPACE]
+Tugas Otonom: ${userPrompt}
+Peran: ${selectedAgent}
+
+Instruksi format respon:
+1. Awali dengan membuat rencana tahapan eksekusi menggunakan Todo List:
+   1. [ ] Analisis dan verifikasi kebutuhan
+   2. [ ] Rancang arsitektur atau implementasi
+   3. [ ] Buat kode dan berkas solusi
+   4. [ ] Pengujian dan validasi hasil
+2. Berikan pemikiran mendalam terstruktur.
+3. Eksekusi tugas dan selesaikan semua deliverable sampai tuntas.`,
         agent: selectedAgent,
         model: selectedModel,
         thinking: true,
@@ -504,6 +515,63 @@ export default function WorkPage() {
                   accumulatedAssistantText += (data.text || '');
                   appendAssistantChunk(data.text, getAgentInfo(selectedAgent).name);
 
+                  // Helper: extract and update REAL dynamic todos from assistant stream text
+                  const extractRealTodos = (text: string) => {
+                    const lines = text.split('\n');
+                    const foundTodos: { id: string; order: number; label: string; state: 'completed' | 'in_progress' | 'pending' }[] = [];
+                    let idx = 1;
+
+                    for (const l of lines) {
+                      const trimmed = l.trim();
+                      // Match: 1. [x] Step or 1. [ ] Step or 1. Step or - [x] Step or - [ ] Step
+                      const checkMatch = trimmed.match(/^(?:(?:\d+\.|\*|\-)\s+)?\[([ xX])\]\s+(.+)$/);
+                      const numMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
+
+                      if (checkMatch) {
+                        const isDone = checkMatch[1].toLowerCase() === 'x';
+                        const label = checkMatch[2].replace(/\*\*/g, '').trim();
+                        if (label.length > 3 && label.length < 120) {
+                          foundTodos.push({
+                            id: `todo-${idx}`,
+                            order: idx,
+                            label,
+                            state: isDone ? 'completed' : 'in_progress'
+                          });
+                          idx++;
+                        }
+                      } else if (numMatch && !trimmed.startsWith('```')) {
+                        const label = numMatch[2].replace(/\*\*/g, '').trim();
+                        if (label.length > 5 && label.length < 120 && !label.includes('http')) {
+                          foundTodos.push({
+                            id: `todo-${idx}`,
+                            order: idx,
+                            label,
+                            state: 'pending'
+                          });
+                          idx++;
+                        }
+                      }
+                    }
+
+                    if (foundTodos.length >= 2) {
+                      // Adjust state dynamically: first is in_progress if none checked
+                      const hasCompleted = foundTodos.some(t => t.state === 'completed');
+                      if (!hasCompleted && foundTodos.length > 0) {
+                        foundTodos[0].state = 'in_progress';
+                      }
+                      return foundTodos.slice(0, 8);
+                    }
+                    return null;
+                  };
+
+                  const parsedTodos = extractRealTodos(accumulatedAssistantText);
+                  if (parsedTodos) {
+                    dispatchAgentEvent({
+                      type: 'TODOS_MUTATED',
+                      payload: { todos: parsedTodos as any }
+                    });
+                  }
+
                   // Extract live code snippets from accumulated stream
                   const codeMatch = accumulatedAssistantText.match(/```(?:[a-zA-Z0-9_\-]+)?\s*([\s\S]+?)(?:```|$)/);
                   if (codeMatch && codeMatch[1] && codeMatch[1].length > 5) {
@@ -542,19 +610,16 @@ export default function WorkPage() {
       }
 
       // Trigger deliverables & complete state
-      dispatchAgentEvent({
-        type: 'TODOS_MUTATED',
-        payload: {
-          todos: [
-            { id: 't-1', order: 1, label: 'Eksplorasi konteks & verifikasi struktur proyek awal', state: 'completed', assignee: 'Scout', assigneeRole: 'Researcher' },
-            { id: 't-2', order: 2, label: 'Perancangan arsitektur sistem & dekomposisi modul', state: 'completed', assignee: 'Atlas', assigneeRole: 'Architect' },
-            { id: 't-3', order: 3, label: 'Implementasi kode, fitur utama & manipulasi berkas', state: 'completed', assignee: 'Forge', assigneeRole: 'Software Engineer' },
-            { id: 't-4', order: 4, label: 'Audit keamanan berkas & pencegahan celah kode', state: 'completed', assignee: 'Sentinel', assigneeRole: 'Security' },
-            { id: 't-5', order: 5, label: 'Pengecekan kualitas, testing & verifikasi runtime', state: 'completed', assignee: 'Iris', assigneeRole: 'QA & Test' },
-            { id: 't-6', order: 6, label: 'Penyusunan artefak deliverable akhir & serah terima tugas', state: 'completed', assignee: 'Nova', assigneeRole: 'Verifier' }
-          ]
-        }
-      });
+      // If real todos were parsed during execution, mark them all completed at finish
+      const currentTodos = useWorkSessionStore.getState().todos;
+      if (currentTodos && currentTodos.length > 0) {
+        dispatchAgentEvent({
+          type: 'TODOS_MUTATED',
+          payload: {
+            todos: currentTodos.map(t => ({ ...t, state: 'completed' as const }))
+          }
+        });
+      }
 
       dispatchAgentEvent({
         type: 'DELIVERABLE_READY',

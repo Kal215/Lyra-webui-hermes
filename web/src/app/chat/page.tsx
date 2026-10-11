@@ -341,7 +341,7 @@ function SidebarSessionItem({ session, isActive, onClick, onDelete, onRename, on
 
 // --- Main Page ---
 
-export default function NativeChatPage() {
+function NativeChatContent() {
   const t = useTranslation();
   const { language } = useI18nStore();
   
@@ -3361,5 +3361,13 @@ export default function NativeChatPage() {
       </AnimatePresence>
 
     </div>
+  );
+}
+
+export default function NativeChatPage() {
+  return (
+    <React.Suspense fallback={<div className="h-full flex items-center justify-center bg-lyra-bg text-lyra-text font-mono text-xs">Memuat Chat...</div>}>
+      <NativeChatContent />
+    </React.Suspense>
   );
 }

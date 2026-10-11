@@ -119,69 +119,9 @@ export const useWorkSessionStore = create<WorkSessionState>((set) => ({
       },
       reasoningOrder: ['r-1'],
       activeReasoningId: null,
-      todos: [
-        {
-          id: 't-1',
-          order: 1,
-          label: 'Eksplorasi konteks & verifikasi struktur proyek awal',
-          description: 'Membaca konfigurasi dan memeriksa dependensi yang tersedia',
-          state: 'in_progress',
-          assignee: 'Scout',
-          assigneeRole: 'Researcher',
-          startedAt: new Date().toISOString()
-        },
-        {
-          id: 't-2',
-          order: 2,
-          label: 'Perancangan arsitektur sistem & dekomposisi modul',
-          state: 'pending',
-          assignee: 'Atlas',
-          assigneeRole: 'Architect'
-        },
-        {
-          id: 't-3',
-          order: 3,
-          label: 'Implementasi kode, fitur utama & manipulasi berkas',
-          state: 'pending',
-          assignee: 'Forge',
-          assigneeRole: 'Software Engineer'
-        },
-        {
-          id: 't-4',
-          order: 4,
-          label: 'Audit keamanan berkas & pencegahan celah kode',
-          state: 'pending',
-          assignee: 'Sentinel',
-          assigneeRole: 'Security'
-        },
-        {
-          id: 't-5',
-          order: 5,
-          label: 'Pengecekan kualitas, testing & verifikasi runtime',
-          state: 'pending',
-          assignee: 'Iris',
-          assigneeRole: 'QA & Test'
-        },
-        {
-          id: 't-6',
-          order: 6,
-          label: 'Penyusunan artefak deliverable akhir & serah terima tugas',
-          state: 'pending',
-          assignee: 'Nova',
-          assigneeRole: 'Verifier'
-        }
-      ],
-      toolExecutions: {
-        'tool-1': {
-          id: 'tool-1',
-          toolName: 'read_file',
-          commandPreview: 'Explored 3 files (layout.tsx, globals.css, package.json)',
-          output: '✓ Read layout.tsx\n✓ Read globals.css\n✓ Read package.json\nAll initial files inspected successfully.',
-          status: 'success',
-          durationMs: 42
-        }
-      },
-      toolOrder: ['tool-1'],
+      todos: [],
+      toolExecutions: {},
+      toolOrder: [],
       deliverable: null,
       terminalBuffer: ['[Lyra Agent Engine] Initialized workspace session for ' + selectedAgent]
     });
