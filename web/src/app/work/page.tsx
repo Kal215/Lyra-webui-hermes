@@ -105,12 +105,78 @@ export default function WorkPage() {
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState('');
   const [thinkingEffort, setThinkingEffort] = useState<'Minimal' | 'Low' | 'Medium' | 'High' | 'Extra High' | 'Max' | 'Ultra'>('Medium');
-  const [isReasoningEnabled, setIsReasoningEnabled] = useState(true);
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const [isDeepResearchEnabled, setIsDeepResearchEnabled] = useState(false);
   const [attachments, setAttachments] = useState<any[]>([]);
+  const [urlModalOpen, setUrlModalOpen] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const captureScreenshot = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.onloadedmetadata = () => {
+        video.play();
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        stream.getTracks().forEach(track => track.stop());
+        
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+          const file = new (window as any).File([blob], `screenshot_${Date.now()}.png`, { type: 'image/png' });
+          const formData = new FormData();
+          formData.append('file', file);
+          try {
+            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.path || data.name) {
+              setAttachments(prev => [...prev, data.path ? data : { name: file.name, path: file.name, type: 'image/png' }]);
+            }
+          } catch (err) {
+            setAttachments(prev => [...prev, { name: file.name, path: file.name, type: 'image/png' }]);
+          }
+        }, 'image/png');
+      };
+    } catch (e: any) {
+      if (e.name !== 'NotAllowedError') {
+        console.error('Screenshot failed', e);
+      }
+    }
+  };
+
+  const handleClipboardPaste = async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        if (item.types.includes('image/png') || item.types.includes('image/jpeg')) {
+          const type = item.types.includes('image/png') ? 'image/png' : 'image/jpeg';
+          const blob = await item.getType(type);
+          const file = new (window as any).File([blob], `clipboard_${Date.now()}.png`, { type });
+          const formData = new FormData();
+          formData.append('file', file);
+          try {
+            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.path || data.name) {
+              setAttachments(prev => [...prev, data.path ? data : { name: file.name, path: file.name, type }]);
+            }
+          } catch (err) {
+            setAttachments(prev => [...prev, { name: file.name, path: file.name, type }]);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Clipboard paste failed', e);
+    }
+  };
 
   const handleStopGeneration = () => {
     if (abortControllerRef.current) {
@@ -305,9 +371,9 @@ export default function WorkPage() {
       // 3. Connect real LLM stream from /api/chat-stream for true autonomous reasoning, conversation & tools
       abortControllerRef.current = new AbortController();
       const streamPayload = {
-        message: `[MODE OTONOM SQUAD WORKSPACE]\nTugas Otonom: ${userPrompt}\nPeran Anda: Aster (Koordinator Autonomous Swarm). Eksekusi instruksi ini secara nyata. Laporkan rencana kerja (Todos), eksekusi aksi, dan berikan evaluasi menyeluruh serta berkas yang dihasilkan.`,
-        model: selectedModel === 'Hermes Agent' ? 'default' : selectedModel,
-        thinking: isReasoningEnabled,
+        message: `[MODE OTONOM SQUAD WORKSPACE]\nTugas Otonom: ${userPrompt}\nPeran: ${selectedAgent}\n\nEksekusi tugas secara bertahap, berikan pemikiran mendalam terstruktur, gunakan tools, dan selesaikan semua deliverable sampai tuntas.`,
+        model: selectedModel,
+        thinking: true,
         effort: thinkingEffort.toLowerCase(),
         webSearch: isWebSearchEnabled,
         deepResearch: isDeepResearchEnabled,
@@ -747,6 +813,29 @@ export default function WorkPage() {
                 }}
               />
 
+              {/* Hidden Folder Input for Folder Attachment */}
+              <input
+                ref={folderInputRef}
+                type="file"
+                // @ts-ignore
+                webkitdirectory=""
+                directory=""
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    const folderName = (e.target.files[0] as any).webkitRelativePath?.split('/')[0] || 'folder';
+                    const newFolder = {
+                      name: `📁 ${folderName} (${e.target.files.length} file)`,
+                      path: folderName,
+                      type: 'directory',
+                      size: Array.from(e.target.files).reduce((acc, f) => acc + f.size, 0)
+                    };
+                    setAttachments(prev => [...prev, newFolder]);
+                  }
+                }}
+              />
+
               {/* Attachments Pills if present */}
               {attachments.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 px-3 pt-2">
@@ -828,7 +917,19 @@ export default function WorkPage() {
                             className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
                           >
                             <FileText size={15} className="text-lyra-text" />
-                            <span className="font-medium text-lyra-text">Unggah file atau dokumen</span>
+                            <span className="font-medium text-lyra-text">Unggah file atau gambar</span>
+                          </button>
+
+                          <button 
+                            type="button" 
+                            onClick={() => { 
+                              folderInputRef.current?.click(); 
+                              setIsAttachMenuOpen(false); 
+                            }} 
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
+                          >
+                            <Folder size={15} className="text-lyra-text" />
+                            <span className="font-medium text-lyra-text">Unggah folder lokal...</span>
                           </button>
                           
                           <button 
@@ -843,34 +944,49 @@ export default function WorkPage() {
                             <span className="font-medium text-lyra-text">Pilih dari Workspace</span>
                           </button>
 
+                          <button 
+                            type="button" 
+                            onClick={() => { 
+                              setIsAttachMenuOpen(false); 
+                              captureScreenshot(); 
+                            }} 
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
+                          >
+                            <Monitor size={15} className="text-lyra-text" />
+                            <span className="font-medium text-lyra-text">Ambil tangkapan layar</span>
+                          </button>
+
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              setIsAttachMenuOpen(false);
+                              handleClipboardPaste();
+                            }} 
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
+                          >
+                            <Clipboard size={15} className="text-lyra-text" />
+                            <span className="font-medium text-lyra-text">Tempel dari clipboard</span>
+                          </button>
+
+                          <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Konteks & Proyek</div>
+
+                          <button 
+                            type="button" 
+                            onClick={() => { 
+                              setUrlModalOpen(true); 
+                              setIsAttachMenuOpen(false); 
+                            }} 
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
+                          >
+                            <LinkIcon size={15} className="text-lyra-text" />
+                            <div className="flex-1">
+                              <div className="font-medium text-lyra-text">Tautkan URL / Dokumentasi</div>
+                            </div>
+                          </button>
+
                           <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
                           <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Mode AI</div>
-
-                          {/* Reasoning Toggle */}
-                          <div 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsReasoningEnabled(prev => !prev);
-                            }} 
-                            className="flex items-center justify-between px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer select-none"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <BrainCircuit size={15} className={isReasoningEnabled ? "text-purple-400" : "text-lyra-text-secondary"} />
-                              <div>
-                                <div className="font-medium text-lyra-text">Pikirkan (Reasoning)</div>
-                                <div className="text-[10px] text-lyra-text-secondary">{isReasoningEnabled ? `Aktif: ${thinkingEffort}` : 'Nonaktif'}</div>
-                              </div>
-                            </div>
-                            <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
-                              isReasoningEnabled ? 'bg-purple-500' : 'bg-zinc-600'
-                            }`}>
-                              <motion.span 
-                                animate={{ x: isReasoningEnabled ? 12 : 0 }}
-                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-                                className="inline-block h-3 w-3 rounded-full bg-white shadow-md pointer-events-none" 
-                              />
-                            </div>
-                          </div>
 
                           {/* Web Search Toggle */}
                           <div 
@@ -992,7 +1108,7 @@ export default function WorkPage() {
                                 >
                                   <span className="truncate pr-2">{m.name}</span>
                                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-white/5 font-mono">
-                                    {isReasoningEnabled ? getEffortBadge(thinkingEffort) : 'Off'}
+                                    {getEffortBadge(thinkingEffort)}
                                   </span>
                                 </button>
                               ))}
@@ -1017,7 +1133,7 @@ export default function WorkPage() {
                           : 'bg-lyra-surface/90 border-lyra-accent/20 text-lyra-text hover:border-lyra-accent/40 hover:bg-lyra-accent/10'
                       }`}
                     >
-                      <span>{isReasoningEnabled ? getEffortBadge(thinkingEffort) : 'Off'}</span>
+                      <span>{getEffortBadge(thinkingEffort)}</span>
                       <ChevronDown size={13} className={`opacity-60 transition-transform ${isEffortMenuOpen ? 'rotate-180' : ''}`} />
                     </button>
 
@@ -1032,33 +1148,6 @@ export default function WorkPage() {
                           className="absolute left-0 bottom-[calc(100%+8px)] w-56 bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-2xl z-50 p-2.5 backdrop-blur-md select-none"
                         >
                           <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-2.5 py-1 uppercase tracking-wider">
-                            OPTIONS
-                          </div>
-
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsReasoningEnabled(prev => !prev);
-                            }}
-                            className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-lyra-accent/10 transition-colors cursor-pointer select-none"
-                          >
-                            <span className="text-xs font-medium text-lyra-text">Thinking</span>
-                            <div 
-                              className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
-                                isReasoningEnabled ? 'bg-[#D97757]' : 'bg-zinc-600'
-                              }`}
-                            >
-                              <motion.span
-                                animate={{ x: isReasoningEnabled ? 12 : 0 }}
-                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-                                className="inline-block h-3 w-3 rounded-full bg-white shadow-md pointer-events-none"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="h-px bg-lyra-accent/10 my-2 mx-1" />
-
-                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-2.5 py-1 uppercase tracking-wider">
                             EFFORT
                           </div>
 
@@ -1069,17 +1158,16 @@ export default function WorkPage() {
                                 type="button"
                                 onClick={() => {
                                   setThinkingEffort(lvl);
-                                  setIsReasoningEnabled(true);
                                   setIsEffortMenuOpen(false);
                                 }}
                                 className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left cursor-pointer ${
-                                  thinkingEffort === lvl && isReasoningEnabled
+                                  thinkingEffort === lvl
                                     ? 'bg-lyra-accent/15 text-lyra-text font-medium'
                                     : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'
                                 }`}
                               >
                                 <span>{lvl}</span>
-                                {thinkingEffort === lvl && isReasoningEnabled && (
+                                {thinkingEffort === lvl && (
                                   <Check size={14} className="text-lyra-accent stroke-[2.5]" />
                                 )}
                               </button>
@@ -1135,6 +1223,58 @@ export default function WorkPage() {
           setPromptInput((prev) => `${prev} @${filePath} `);
         }}
       />
+
+      {/* URL Connector Modal */}
+      {urlModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-lyra-surface border border-lyra-accent/20 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-base font-bold text-lyra-text mb-2 flex items-center gap-2">
+              <LinkIcon size={18} className="text-lyra-accent" /> Tautkan URL / Dokumentasi
+            </h3>
+            <p className="text-xs text-lyra-text-secondary mb-4">
+              Masukkan URL web, dokumentasi library, atau endpoint API untuk dijadikan konteks langsung bagi AI agen.
+            </p>
+            <input
+              type="url"
+              autoFocus
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="https://docs.example.com/api..."
+              className="w-full bg-lyra-bg border border-lyra-accent/20 rounded-xl px-3.5 py-2.5 text-xs text-lyra-text placeholder:text-lyra-text-secondary outline-none focus:border-lyra-accent mb-4"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && urlInput.trim()) {
+                  setAttachments(prev => [...prev, { name: `🔗 ${urlInput.trim()}`, path: urlInput.trim(), type: 'url' }]);
+                  setUrlInput('');
+                  setUrlModalOpen(false);
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => { setUrlModalOpen(false); setUrlInput(''); }}
+                className="px-3.5 py-2 rounded-xl bg-lyra-accent/10 hover:bg-lyra-accent/20 text-lyra-text cursor-pointer transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={!urlInput.trim()}
+                onClick={() => {
+                  if (urlInput.trim()) {
+                    setAttachments(prev => [...prev, { name: `🔗 ${urlInput.trim()}`, path: urlInput.trim(), type: 'url' }]);
+                    setUrlInput('');
+                    setUrlModalOpen(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-lyra-accent hover:bg-lyra-accent/90 text-white font-medium disabled:opacity-50 cursor-pointer transition-colors shadow-md"
+              >
+                Tambahkan Tautan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
