@@ -16,7 +16,7 @@ print("Loading SentenceTransformer...")
 model = SentenceTransformer("all-MiniLM-L6-v2")
 print("Loading QdrantClient...")
 qc = QdrantClient(path="/opt/hermes-stack/memory-core-v2/qdrant_db")
-for c in ["lyra_core_memory_v2", "assistant_mamah_memory_v2"]:
+for c in ["lyra_core_memory_v2", "worker_agent_memory_v2"]:
     try:
         qc.get_collection(c)
     except Exception:
@@ -29,10 +29,10 @@ ENV_CONFIGS = {
         "user_id": "lyra_core_system",
         "obsidian_root": os.getenv("OBSIDIAN_ROOT_CORE", "./obsidian_core")
     },
-    "assistant_mamah": {
-        "collection": "assistant_mamah_memory_v2",
-        "user_id": "assistant_mamah_system",
-        "obsidian_root": os.getenv("OBSIDIAN_ROOT_MAMAH", "./obsidian_mamah")
+    "worker_agent": {
+        "collection": "worker_agent_memory_v2",
+        "user_id": "worker_agent_system",
+        "obsidian_root": os.getenv("OBSIDIAN_ROOT_WORKER", "./obsidian_worker")
     }
 }
 

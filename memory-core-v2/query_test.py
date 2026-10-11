@@ -3,12 +3,12 @@ import json
 from broker import broker
 
 print("\n=== PHASE 12: INDEPENDENT NEGATIVE QUERY ===")
-res_mamah = broker.search_mem0("assistant_mamah", "RAHASIA_CORE")
-print("assistant_mamah searching for core secret:")
-print(json.dumps(res_mamah, indent=2))
+res_worker = broker.search_mem0("worker_agent", "RAHASIA_CORE")
+print("worker_agent searching for core secret:")
+print(json.dumps(res_worker, indent=2))
 
-res_core = broker.search_mem0("lyra_core", "STOK_MAMAH")
-print("\nlyra_core searching for mamah secret:")
+res_core = broker.search_mem0("lyra_core", "STOK_WORKER")
+print("\nlyra_core searching for worker secret:")
 print(json.dumps(res_core, indent=2))
 
 try:

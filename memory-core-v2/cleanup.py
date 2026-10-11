@@ -2,7 +2,7 @@ from broker import broker
 
 print("=== PHASE 12: CLEANUP ===")
 
-for env, term in [("lyra_core", "RAHASIA_CORE_9182"), ("assistant_mamah", "STOK_MAMAH_4417")]:
+for env, term in [("lyra_core", "RAHASIA_CORE_9182"), ("worker_agent", "STOK_WORKER_4417")]:
     res = broker.search_mem0(env, term)
     deleted = 0
     for r in res:

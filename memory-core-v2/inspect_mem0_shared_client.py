@@ -24,7 +24,7 @@ config2 = {
         "provider": "qdrant",
         "config": {
             "client": shared_client,
-            "collection_name": "assistant_mamah_memory_v2",
+            "collection_name": "worker_agent_memory_v2",
             "embedding_model_dims": 384
         }
     },

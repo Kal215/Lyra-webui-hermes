@@ -33,7 +33,7 @@
 - NOT primary long-term memory
 
 ### NeonDB
-- Role: **Application database** (Nay's Cake products, orders, users, stock)
+- Role: **Application database** (Store products, orders, users, inventory)
 - **NOT used as Hermes/Lyra AI memory backend**
 
 ---
@@ -46,13 +46,13 @@
 - User ID: `lyra_core_system`
 - Obsidian root: `/opt/lyra/obsidian-vault/Core`
 
-### ASSISTANT MAMAH
-- Environment key: `assistant_mamah`
-- Collection: `assistant_mamah_memory_v2`
-- User ID: `assistant_mamah_system`
-- Obsidian root: `/opt/lyra/obsidian-vault/Profiles/assistant-mamah`
+### WORKER AGENT
+- Environment key: `worker_agent`
+- Collection: `worker_agent_memory_v2`
+- User ID: `worker_agent_system`
+- Obsidian root: `/opt/lyra/obsidian-vault/Profiles/worker-agent`
 
-These environments are **logically isolated**. Lyra Core cannot read Assistant Mamah memories and vice versa.
+These environments are **logically isolated**. Lyra Core cannot read Worker Agent memories and vice versa.
 
 ---
 

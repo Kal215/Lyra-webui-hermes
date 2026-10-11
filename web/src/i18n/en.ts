@@ -31,7 +31,7 @@ export const en = {
         previewBack: 'Back to Work',
         projects: {
             none: 'No project',
-            naysCake: "Nay's Cake",
+            naysCake: "Demo Store",
             lyra: 'Lyra',
             internalApi: 'Internal API'
         },

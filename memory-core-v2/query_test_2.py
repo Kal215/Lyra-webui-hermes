@@ -5,16 +5,16 @@ from broker import broker
 print("\n=== PHASE 12: INDEPENDENT NEGATIVE QUERY (WITH INJECTION) ===")
 # Inject
 broker.add_mem0("lyra_core", "RAHASIA_CORE_555: Super secret lyra password is XYZ")
-broker.add_mem0("assistant_mamah", "STOK_MAMAH_777: Mamah stock is 500 apples")
+broker.add_mem0("worker_agent", "STOK_WORKER_777: Worker stock is 500 apples")
 
-# Search Mamah for Core
-res_mamah = broker.search_mem0("assistant_mamah", "RAHASIA_CORE_555")
-print("assistant_mamah searching for core secret:")
-print(json.dumps(res_mamah, indent=2))
+# Search Worker for Core
+res_worker = broker.search_mem0("worker_agent", "RAHASIA_CORE_555")
+print("worker_agent searching for core secret:")
+print(json.dumps(res_worker, indent=2))
 
-# Search Core for Mamah
-res_core = broker.search_mem0("lyra_core", "STOK_MAMAH_777")
-print("\nlyra_core searching for mamah secret:")
+# Search Core for Worker
+res_core = broker.search_mem0("lyra_core", "STOK_WORKER_777")
+print("\nlyra_core searching for worker secret:")
 print(json.dumps(res_core, indent=2))
 
 # Search Core for Core (should work)
@@ -22,7 +22,7 @@ res_core_true = broker.search_mem0("lyra_core", "RAHASIA_CORE_555")
 print("\nlyra_core searching for core secret:")
 print(json.dumps([r['memory'] for r in res_core_true], indent=2))
 
-# Search Mamah for Mamah (should work)
-res_mamah_true = broker.search_mem0("assistant_mamah", "STOK_MAMAH_777")
-print("\nassistant_mamah searching for mamah secret:")
-print(json.dumps([r['memory'] for r in res_mamah_true], indent=2))
+# Search Worker for Worker (should work)
+res_worker_true = broker.search_mem0("worker_agent", "STOK_WORKER_777")
+print("\nworker_agent searching for worker secret:")
+print(json.dumps([r['memory'] for r in res_worker_true], indent=2))

@@ -31,7 +31,7 @@ export const id = {
         previewBack: 'Kembali ke Pekerjaan',
         projects: {
             none: 'Tidak ada proyek',
-            naysCake: "Nay's Cake",
+            naysCake: "Demo Store",
             lyra: 'Lyra',
             internalApi: 'Internal API'
         },
