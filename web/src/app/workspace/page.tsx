@@ -279,14 +279,20 @@ function WorkspaceView() {
     fetchFiles(currentWorkspace || '');
   }, [currentWorkspace]);
 
+  const loadedFilesRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (activeFilePath) {
+      if (loadedFilesRef.current === activeFilePath) return;
+      loadedFilesRef.current = activeFilePath;
       const name = activeFilePath.split(/[\/\\]/).pop() || 'file';
       loadFile(activeFilePath, name);
     } else if (activeAgentParam && files.length > 0) {
-      // Auto-open first project file when arrived from agent deep link
+      // Auto-open first project file once when arrived from agent deep link
+      if (loadedFilesRef.current) return;
       const firstFile = files.find(f => !f.isDirectory);
       if (firstFile) {
+        loadedFilesRef.current = firstFile.path;
         loadFile(firstFile.path, firstFile.name);
       }
     }

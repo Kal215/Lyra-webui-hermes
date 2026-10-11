@@ -71,6 +71,7 @@ export function Sidebar({ collapsed, onToggle, onMobileClose }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               onClick={handleLinkClick}
               onPointerDown={() => playPress()}
               className={cn(

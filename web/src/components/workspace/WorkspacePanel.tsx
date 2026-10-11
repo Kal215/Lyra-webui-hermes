@@ -19,7 +19,10 @@ import {
   Copy, 
   Code, 
   Check,
-  Eye
+  Eye,
+  Terminal,
+  Activity,
+  Bot
 } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspace';
 
@@ -50,7 +53,6 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
   useEffect(() => {
     if (liveTyping && liveTyping.active && liveTyping.filePath) {
       const fileName = liveTyping.filePath.split(/[\/\\]/).pop() || 'file';
-      // Auto switch preview and trigger live typing visual in the drawer
       setPreviewContent({
         path: liveTyping.filePath,
         name: fileName,

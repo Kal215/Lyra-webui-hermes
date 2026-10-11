@@ -54,6 +54,12 @@ export default function WorkPage() {
   const { language } = useI18nStore();
   const router = useRouter();
 
+  // Prefetch adjacent routes to avoid compile latency when user navigates
+  useEffect(() => {
+    router.prefetch('/workspace');
+    router.prefetch('/world');
+  }, [router]);
+
   // Specialist Squad List
   const [availableAgents, setAvailableAgents] = useState<string[]>([
     'default',
