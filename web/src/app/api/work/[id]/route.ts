@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import fs from 'fs';
 import { getHermesEnv } from '@/lib/hermesEnv';
 
 const execFileAsync = promisify(execFile);
@@ -25,7 +26,27 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const resolvedParams = await params;
     const { id } = resolvedParams;
-    await execFileAsync('hermes', ['kanban', 'archive', id], { env: getHermesEnv() });
+    const env = getHermesEnv();
+    const kanbanDb = env.HERMES_HOME ? `${env.HERMES_HOME}/kanban.db` : null;
+
+    if (kanbanDb && fs.existsSync(kanbanDb)) {
+      try {
+        const Database = require('better-sqlite3');
+        const db = new Database(kanbanDb);
+        db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+        db.prepare('DELETE FROM task_links WHERE parent_id = ? OR child_id = ?').run(id, id);
+        db.prepare('DELETE FROM task_comments WHERE task_id = ?').run(id);
+        db.prepare('DELETE FROM task_events WHERE task_id = ?').run(id);
+        db.prepare('DELETE FROM task_runs WHERE task_id = ?').run(id);
+        db.close();
+      } catch (sqlErr) {
+        // Fallback to python sqlite3 query
+        await execFileAsync('python', ['-c', `import sqlite3; con = sqlite3.connect(r'${kanbanDb}'); con.execute('DELETE FROM tasks WHERE id = ?', ('${id}',)); con.commit(); con.close()`]);
+      }
+    } else {
+      await execFileAsync('hermes', ['kanban', 'archive', id], { env });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error(`Failed to delete work:`, error);

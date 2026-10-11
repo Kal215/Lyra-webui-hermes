@@ -84,7 +84,7 @@ export async function GET() {
     await ensureSpecialistProfiles();
     const { stdout } = await execFileAsync(
       'hermes',
-      ['kanban', 'list', '--archived', '--json'],
+      ['kanban', 'list', '--json'],
       { env: getHermesEnv() }
     );
 

@@ -186,11 +186,24 @@ export default function WorkPage() {
     }
   };
 
-  const handleStopGeneration = () => {
+  const handleStopGeneration = async () => {
+    // 1. Client-side abort
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    // 2. Server-side kill request
+    try {
+      const activeExecId = localStorage.getItem('lyra_active_execution_id');
+      await fetch('/api/work/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ executionId: activeExecId || undefined })
+      });
+      localStorage.removeItem('lyra_active_execution_id');
+      localStorage.removeItem('lyra_is_submitting_work');
+    } catch (e) {}
+
     setIsSubmitting(false);
   };
 
@@ -322,6 +335,15 @@ export default function WorkPage() {
 
   useEffect(() => {
     loadData();
+
+    // Check if there was an active execution prior to page refresh
+    if (typeof window !== 'undefined') {
+      const activeExec = localStorage.getItem('lyra_active_execution_id');
+      const isSubmittingStored = localStorage.getItem('lyra_is_submitting_work');
+      if (activeExec || isSubmittingStored === 'true') {
+        setIsSubmitting(true);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -378,7 +400,12 @@ export default function WorkPage() {
 
       // 3. Connect real LLM stream from /api/chat-stream for true autonomous reasoning, conversation & tools
       abortControllerRef.current = new AbortController();
+      const currentExecId = 'exec_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+      localStorage.setItem('lyra_active_execution_id', currentExecId);
+      localStorage.setItem('lyra_is_submitting_work', 'true');
+
       const streamPayload = {
+        executionId: currentExecId,
         message: `[MODE OTONOM SQUAD WORKSPACE]\nTugas Otonom: ${userPrompt}\nPeran: ${selectedAgent}\n\nEksekusi tugas secara bertahap, berikan pemikiran mendalam terstruktur, gunakan tools, dan selesaikan semua deliverable sampai tuntas.`,
         agent: selectedAgent,
         model: selectedModel,
@@ -529,6 +556,8 @@ export default function WorkPage() {
       );
     } finally {
       setIsSubmitting(false);
+      localStorage.removeItem('lyra_is_submitting_work');
+      localStorage.removeItem('lyra_active_execution_id');
       loadData();
     }
   };

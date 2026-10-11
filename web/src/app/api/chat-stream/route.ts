@@ -1,12 +1,17 @@
 import { NextRequest } from 'next/server';
-import { spawn } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 import readline from 'readline';
 import { getHermesEnv } from '@/lib/hermesEnv';
 
 export const dynamic = 'force-dynamic';
 
+// Global map tracking active child CLI processes across server requests
+export const activeChildProcesses = new Map<string, ChildProcess>();
+
 export async function POST(req: NextRequest) {
-  let { message, session_id, workspace, attachments, systemPrompt, model, thinking, effort, webSearch, deepResearch, agent, profile } = await req.json();
+  let { message, session_id, workspace, attachments, systemPrompt, model, thinking, effort, webSearch, deepResearch, agent, profile, executionId } = await req.json();
+
+  const currentExecId = executionId || session_id || ('exec_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6));
 
   if (!message) {
     return new Response(JSON.stringify({ error: 'Message is required' }), {
@@ -96,6 +101,18 @@ export async function POST(req: NextRequest) {
     env: getHermesEnv()
   });
 
+  activeChildProcesses.set(currentExecId, child);
+
+  // Hook request cancellation signal (e.g. browser refreshed or aborted)
+  if (req.signal) {
+    req.signal.addEventListener('abort', () => {
+      try {
+        child.kill('SIGTERM');
+      } catch (e) {}
+      activeChildProcesses.delete(currentExecId);
+    });
+  }
+
   const rl = readline.createInterface({
     input: child.stdout,
     terminal: false
@@ -115,6 +132,8 @@ export async function POST(req: NextRequest) {
 
       // Pad to force proxy flush
       safeEnqueue(':' + ' '.repeat(2048) + '\n\n');
+      // Announce executionId to client
+      safeEnqueue(`data: ${JSON.stringify({ type: 'execution_id', executionId: currentExecId })}\n\n`);
       
       rl.on('line', (line) => {
         if (isClosed) return;
@@ -140,19 +159,22 @@ export async function POST(req: NextRequest) {
       });
 
       child.on('close', () => {
+        activeChildProcesses.delete(currentExecId);
         if (isClosed) return;
         safeEnqueue(`data: {"type": "done"}\n\n`);
         try { controller.close(); } catch(e) {}
       });
       
       child.on('error', (err) => {
+        activeChildProcesses.delete(currentExecId);
         if (isClosed) return;
         safeEnqueue(`data: {"type": "error", "message": "Failed to start Hermes CLI"}\n\n`);
         try { controller.close(); } catch(e) {}
       });
     },
     cancel() {
-      child.kill();
+      activeChildProcesses.delete(currentExecId);
+      try { child.kill('SIGTERM'); } catch (e) {}
     }
   });
 
