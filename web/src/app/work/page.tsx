@@ -27,6 +27,8 @@ import { DynamicTodosCard } from '@/components/work/DynamicTodosCard';
 import { ReasoningAccordion } from '@/components/work/ReasoningAccordion';
 import { ToolExecutionBlock } from '@/components/work/ToolExecutionBlock';
 import { DeliverableCard } from '@/components/work/DeliverableCard';
+import { WorkspacePanel } from '@/components/workspace/WorkspacePanel';
+import Link from 'next/link';
 
 export default function WorkPage() {
   const t = useTranslation();
@@ -55,6 +57,13 @@ export default function WorkPage() {
   // Recent Completed Tasks (From Hermes Backend)
   const [recentTasks, setRecentTasks] = useState<any[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
+
+  // Accordion UI State for Left Sidebar (v and ^)
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
+  const [isSpecialistsExpanded, setIsSpecialistsExpanded] = useState(true);
+
+  // Right Workspace Drawer State (< and >)
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(true);
 
   // Store bindings
   const sessionId = useWorkSessionStore((s) => s.sessionId);
@@ -240,74 +249,123 @@ export default function WorkPage() {
         </div>
 
         {/* Specialists Squad Selector */}
-        <div className="p-3 border-b border-lyra-accent/10 bg-lyra-bg/40 max-h-72 overflow-y-auto">
-          <div className="flex items-center justify-between mb-2 px-1">
-            <label className="text-[11px] font-mono uppercase tracking-wider text-lyra-text-secondary">
-              Pekerja Spesialis ({availableAgents.length})
-            </label>
-          </div>
-          <div className="space-y-1">
-            {availableAgents.map((agId) => {
-              const info = getAgentInfo(agId);
-              const isSelected = selectedAgent === agId;
-              return (
-                <button
-                  key={agId}
-                  type="button"
-                  onClick={() => setSelectedAgent(agId)}
-                  className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-lyra-accent/15 border border-lyra-accent/30 text-lyra-text font-semibold shadow-sm'
-                      : 'hover:bg-lyra-accent/5 text-lyra-text-secondary hover:text-lyra-text'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-2 h-2 rounded-full bg-lyra-accent shrink-0" />
-                    <div className="truncate">
-                      <div className="text-xs font-medium text-lyra-text">{info.name}</div>
-                      <div className="text-[10px] text-lyra-text-secondary/70 truncate">{info.role}</div>
+        <div className="p-3 border-b border-lyra-accent/10 bg-lyra-bg/40">
+          <button
+            type="button"
+            onClick={() => setIsSpecialistsExpanded(!isSpecialistsExpanded)}
+            className="flex items-center justify-between w-full py-1 text-[11px] font-mono uppercase tracking-wider text-lyra-text-secondary hover:text-lyra-text transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-1.5">
+              <span>Pekerja Spesialis</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-lyra-surface text-lyra-accent font-mono border border-lyra-accent/20">
+                {availableAgents.length}
+              </span>
+            </div>
+            <span className="text-xs text-lyra-text-secondary">
+              {isSpecialistsExpanded ? '▲' : '▼'}
+            </span>
+          </button>
+
+          {isSpecialistsExpanded && (
+            <div className="space-y-2 mt-2 max-h-80 overflow-y-auto pr-1 no-scrollbar">
+              {availableAgents.map((agId) => {
+                const info = getAgentInfo(agId);
+                const isSelected = selectedAgent === agId;
+                return (
+                  <div
+                    key={agId}
+                    className={`p-2 rounded-xl border transition-all ${
+                      isSelected
+                        ? 'bg-lyra-accent/15 border-lyra-accent/30 text-lyra-text shadow-sm'
+                        : 'bg-lyra-surface/40 border-lyra-accent/10 hover:border-lyra-accent/20 text-lyra-text-secondary'
+                    }`}
+                  >
+                    <div 
+                      className="flex items-center justify-between cursor-pointer"
+                      onClick={() => setSelectedAgent(agId)}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-lyra-accent shrink-0" />
+                        <div className="truncate">
+                          <div className="text-xs font-semibold text-lyra-text">{info.name}</div>
+                          <div className="text-[10px] text-lyra-text-secondary/70 truncate">{info.role}</div>
+                        </div>
+                      </div>
+                      {isSelected && <span className="text-[9px] text-lyra-accent font-mono shrink-0">Aktif</span>}
+                    </div>
+
+                    {/* Direct Deep Links per Specialist */}
+                    <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-lyra-accent/10">
+                      <Link
+                        href={`/agents/${agId}?liveSource=hermes-live`}
+                        className="flex-1 py-1 px-1.5 rounded-lg bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/10 hover:border-lyra-accent/30 flex items-center justify-center gap-1 text-[10px] font-mono text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer"
+                        title={`Lihat Live Terminal ${info.name}`}
+                      >
+                        <Terminal size={11} className="text-emerald-400" />
+                        <span>Terminal</span>
+                      </Link>
+
+                      <Link
+                        href={`/world?focusAgent=${agId}`}
+                        className="flex-1 py-1 px-1.5 rounded-lg bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/10 hover:border-lyra-accent/30 flex items-center justify-center gap-1 text-[10px] font-mono text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer"
+                        title={`Lihat Karakter ${info.name} di World HQ`}
+                      >
+                        <ExternalLink size={11} className="text-sky-400" />
+                        <span>Markas 2D</span>
+                      </Link>
                     </div>
                   </div>
-                  {isSelected && <span className="text-[10px] text-lyra-accent font-mono shrink-0">Aktif</span>}
-                </button>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Recent Work History */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-lyra-text-secondary mb-2 px-1">
-            Riwayat Tugas Terakhir
-          </div>
-          {loadingTasks ? (
-            <div className="text-center py-6 text-xs text-lyra-text-secondary/60">Memuat riwayat...</div>
-          ) : recentTasks.length === 0 ? (
-            <div className="text-center py-6 text-xs text-lyra-text-secondary/60">Belum ada tugas otonom.</div>
-          ) : (
-            recentTasks.slice(0, 10).map((t) => (
-              <div
-                key={t.id}
-                className="p-2.5 rounded-xl border border-lyra-accent/10 hover:border-lyra-accent/25 bg-lyra-surface/40 hover:bg-lyra-accent/5 transition-all cursor-pointer group"
-                onClick={() => router.push(`/work/${t.id}`)}
-              >
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="text-xs font-medium text-lyra-text truncate group-hover:text-lyra-accent transition-colors">
-                    {t.title}
-                  </span>
-                  <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded-full font-mono ${
-                    t.status === 'done' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'
-                  }`}>
-                    {t.status}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-[10px] text-lyra-text-secondary/60 font-mono">
-                  <span>@{t.assignee}</span>
-                  <span>•</span>
-                  <span>{t.id}</span>
-                </div>
-              </div>
-            ))
+          <button
+            type="button"
+            onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+            className="flex items-center justify-between w-full py-1 text-[11px] font-mono uppercase tracking-wider text-lyra-text-secondary hover:text-lyra-text transition-colors cursor-pointer"
+          >
+            <span>Riwayat Tugas Terakhir</span>
+            <span className="text-xs text-lyra-text-secondary">
+              {isHistoryExpanded ? '▲' : '▼'}
+            </span>
+          </button>
+
+          {isHistoryExpanded && (
+            <div className="space-y-1.5 mt-1">
+              {loadingTasks ? (
+                <div className="text-center py-6 text-xs text-lyra-text-secondary/60">Memuat riwayat...</div>
+              ) : recentTasks.length === 0 ? (
+                <div className="text-center py-6 text-xs text-lyra-text-secondary/60">Belum ada tugas otonom.</div>
+              ) : (
+                recentTasks.slice(0, 10).map((t) => (
+                  <div
+                    key={t.id}
+                    className="p-2.5 rounded-xl border border-lyra-accent/10 hover:border-lyra-accent/25 bg-lyra-surface/40 hover:bg-lyra-accent/5 transition-all cursor-pointer group"
+                    onClick={() => router.push(`/work/${t.id}`)}
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="text-xs font-medium text-lyra-text truncate group-hover:text-lyra-accent transition-colors">
+                        {t.title}
+                      </span>
+                      <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded-full font-mono ${
+                        t.status === 'done' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'
+                      }`}>
+                        {t.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-lyra-text-secondary/60 font-mono">
+                      <span>@{t.assignee}</span>
+                      <span>•</span>
+                      <span>{t.id}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -328,6 +386,14 @@ export default function WorkPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsWorkspaceOpen(!isWorkspaceOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/15 text-xs text-lyra-text font-medium transition-colors cursor-pointer"
+            >
+              <FolderTree size={13} className="text-lyra-accent" />
+              <span>{isWorkspaceOpen ? 'Tutup Workspace' : 'Buka Workspace'}</span>
+            </button>
             <button
               type="button"
               onClick={() => router.push('/world')}
@@ -483,6 +549,15 @@ export default function WorkPage() {
           </form>
         </div>
       </div>
+
+      {/* Right Workspace Explorer Panel with Minimal Edge Toggle */}
+      <WorkspacePanel
+        isOpen={isWorkspaceOpen}
+        onToggle={() => setIsWorkspaceOpen(!isWorkspaceOpen)}
+        onMentionFile={(filePath) => {
+          setPromptInput((prev) => `${prev} @${filePath} `);
+        }}
+      />
     </div>
   );
 }
