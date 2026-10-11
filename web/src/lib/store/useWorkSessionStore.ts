@@ -87,34 +87,52 @@ export const useWorkSessionStore = create<WorkSessionState>((set) => ({
         {
           id: 't-1',
           order: 1,
-          label: 'Eksplorasi struktur proyek & verifikasi berkas awal',
+          label: 'Eksplorasi konteks & verifikasi struktur proyek awal',
           description: 'Membaca konfigurasi dan memeriksa dependensi yang tersedia',
           state: 'in_progress',
+          assignee: 'Scout',
+          assigneeRole: 'Researcher',
           startedAt: new Date().toISOString()
         },
         {
           id: 't-2',
           order: 2,
-          label: 'Inisialisasi arsitektur data & dependensi baru',
-          state: 'pending'
+          label: 'Perancangan arsitektur sistem & dekomposisi modul',
+          state: 'pending',
+          assignee: 'Atlas',
+          assigneeRole: 'Architect'
         },
         {
           id: 't-3',
           order: 3,
-          label: 'Implementasi komponen utama & konfigurasi gaya',
-          state: 'pending'
+          label: 'Implementasi kode, fitur utama & manipulasi berkas',
+          state: 'pending',
+          assignee: 'Forge',
+          assigneeRole: 'Software Engineer'
         },
         {
           id: 't-4',
           order: 4,
-          label: 'Pengecekan konsistensi kode & verifikasi runtime',
-          state: 'pending'
+          label: 'Audit keamanan berkas & pencegahan celah kode',
+          state: 'pending',
+          assignee: 'Sentinel',
+          assigneeRole: 'Security'
         },
         {
           id: 't-5',
           order: 5,
-          label: 'Penyusunan artefak deliverable & rekomendasi langkah lanjutan',
-          state: 'pending'
+          label: 'Pengecekan kualitas, testing & verifikasi runtime',
+          state: 'pending',
+          assignee: 'Iris',
+          assigneeRole: 'QA & Test'
+        },
+        {
+          id: 't-6',
+          order: 6,
+          label: 'Penyusunan artefak deliverable akhir & serah terima tugas',
+          state: 'pending',
+          assignee: 'Nova',
+          assigneeRole: 'Verifier'
         }
       ],
       toolExecutions: {

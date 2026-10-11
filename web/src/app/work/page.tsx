@@ -46,7 +46,7 @@ export default function WorkPage() {
     'security',
     'security-kanban'
   ]);
-  const [selectedAgent, setSelectedAgent] = useState('coder');
+  const [selectedAgent, setSelectedAgent] = useState('default');
 
   // Input Prompt State
   const [promptInput, setPromptInput] = useState('');
@@ -147,17 +147,18 @@ export default function WorkPage() {
 
       const json = await res.json();
       if (json.success && json.taskId) {
-        // Step progression matching Z.ai reference
+        // Step progression matching Z.ai reference with Swarm handover
         setTimeout(() => {
           dispatchAgentEvent({
             type: 'TODOS_MUTATED',
             payload: {
               todos: [
-                { id: 't-1', order: 1, label: 'Eksplorasi struktur proyek & verifikasi berkas awal', state: 'completed' },
-                { id: 't-2', order: 2, label: 'Inisialisasi arsitektur data & dependensi baru', state: 'in_progress', description: 'Memasang dependensi yang dibutuhkan' },
-                { id: 't-3', order: 3, label: 'Implementasi komponen utama & konfigurasi gaya', state: 'pending' },
-                { id: 't-4', order: 4, label: 'Pengecekan konsistensi kode & verifikasi runtime', state: 'pending' },
-                { id: 't-5', order: 5, label: 'Penyusunan artefak deliverable & rekomendasi langkah lanjutan', state: 'pending' }
+                { id: 't-1', order: 1, label: 'Eksplorasi konteks & verifikasi struktur proyek awal', state: 'completed', assignee: 'Scout', assigneeRole: 'Researcher' },
+                { id: 't-2', order: 2, label: 'Perancangan arsitektur sistem & dekomposisi modul', state: 'completed', assignee: 'Atlas', assigneeRole: 'Architect' },
+                { id: 't-3', order: 3, label: 'Implementasi kode, fitur utama & manipulasi berkas', state: 'in_progress', assignee: 'Forge', assigneeRole: 'Software Engineer', description: 'Menulis berkas implementasi dan script' },
+                { id: 't-4', order: 4, label: 'Audit keamanan berkas & pencegahan celah kode', state: 'pending', assignee: 'Sentinel', assigneeRole: 'Security' },
+                { id: 't-5', order: 5, label: 'Pengecekan kualitas, testing & verifikasi runtime', state: 'pending', assignee: 'Iris', assigneeRole: 'QA & Test' },
+                { id: 't-6', order: 6, label: 'Penyusunan artefak deliverable akhir & serah terima tugas', state: 'pending', assignee: 'Nova', assigneeRole: 'Verifier' }
               ]
             }
           });
@@ -179,11 +180,12 @@ export default function WorkPage() {
             type: 'TODOS_MUTATED',
             payload: {
               todos: [
-                { id: 't-1', order: 1, label: 'Eksplorasi struktur proyek & verifikasi berkas awal', state: 'completed' },
-                { id: 't-2', order: 2, label: 'Inisialisasi arsitektur data & dependensi baru', state: 'completed' },
-                { id: 't-3', order: 3, label: 'Implementasi komponen utama & konfigurasi gaya', state: 'completed' },
-                { id: 't-4', order: 4, label: 'Pengecekan konsistensi kode & verifikasi runtime', state: 'completed' },
-                { id: 't-5', order: 5, label: 'Penyusunan artefak deliverable & rekomendasi langkah lanjutan', state: 'completed' }
+                { id: 't-1', order: 1, label: 'Eksplorasi konteks & verifikasi struktur proyek awal', state: 'completed', assignee: 'Scout', assigneeRole: 'Researcher' },
+                { id: 't-2', order: 2, label: 'Perancangan arsitektur sistem & dekomposisi modul', state: 'completed', assignee: 'Atlas', assigneeRole: 'Architect' },
+                { id: 't-3', order: 3, label: 'Implementasi kode, fitur utama & manipulasi berkas', state: 'completed', assignee: 'Forge', assigneeRole: 'Software Engineer' },
+                { id: 't-4', order: 4, label: 'Audit keamanan berkas & pencegahan celah kode', state: 'completed', assignee: 'Sentinel', assigneeRole: 'Security' },
+                { id: 't-5', order: 5, label: 'Pengecekan kualitas, testing & verifikasi runtime', state: 'completed', assignee: 'Iris', assigneeRole: 'QA & Test' },
+                { id: 't-6', order: 6, label: 'Penyusunan artefak deliverable akhir & serah terima tugas', state: 'completed', assignee: 'Nova', assigneeRole: 'Verifier' }
               ]
             }
           });
@@ -191,7 +193,7 @@ export default function WorkPage() {
             type: 'DELIVERABLE_READY',
             payload: {
               title: `Tugas Selesai: ${taskTitle}`,
-              summary: `Agen ${getAgentInfo(selectedAgent).name} telah menyelesaikan tahapan pengerjaan tugas secara bertahap dan terverifikasi di workspace. Semua rencana kerja telah dicentang sukses.`,
+              summary: `Swarm Agen (Scout, Atlas, Forge, Sentinel, Iris, Nova) di bawah koordinasi Aster telah menuntaskan seluruh rencana kerja secara bertahap dan terverifikasi.`,
               changedFiles: [
                 { path: 'workspace/output_result.txt', action: 'created' },
                 { path: 'workspace/worklog.md', action: 'created' }
@@ -430,17 +432,18 @@ export default function WorkPage() {
             <div className="flex items-center justify-between text-xs text-lyra-text-secondary px-1">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span className="text-xs">Ditugaskan ke:</span>
+                <span className="text-xs">Mode Pengerjaan:</span>
                 <select
                   value={selectedAgent}
                   onChange={(e) => setSelectedAgent(e.target.value)}
                   className="bg-lyra-surface border border-lyra-accent/20 rounded-lg px-2 py-0.5 text-xs text-lyra-text font-medium outline-none cursor-pointer hover:border-lyra-accent"
                 >
-                  {availableAgents.map((agId) => {
+                  <option value="default">✨ Full Autonomous Swarm (Semua Spesialis Bekerja Sama)</option>
+                  {availableAgents.filter(a => a !== 'default').map((agId) => {
                     const info = getAgentInfo(agId);
                     return (
                       <option key={agId} value={agId} className="bg-lyra-surface text-lyra-text">
-                        {info.name} — {info.role}
+                        Spesifik: {info.name} ({info.role})
                       </option>
                     );
                   })}

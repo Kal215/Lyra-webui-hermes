@@ -8,6 +8,8 @@ export interface AgentTodoItem {
   label: string;
   description?: string;
   state: TodoState;
+  assignee?: string;
+  assigneeRole?: string;
   startedAt?: string;
   completedAt?: string;
 }

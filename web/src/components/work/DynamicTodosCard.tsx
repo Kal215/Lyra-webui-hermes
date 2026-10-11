@@ -85,17 +85,30 @@ export const DynamicTodosCard: React.FC<DynamicTodosCardProps> = ({ todos, class
 
               {/* Label & Description */}
               <div className="flex-1 min-w-0">
-                <p
-                  className={`text-xs transition-colors duration-150 ${
-                    todo.state === 'completed'
-                      ? 'text-lyra-text-secondary/60 line-through'
-                      : todo.state === 'in_progress'
-                      ? 'font-bold text-lyra-text'
-                      : 'text-lyra-text-secondary'
-                  }`}
-                >
-                  {todo.label}
-                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p
+                    className={`text-xs transition-colors duration-150 ${
+                      todo.state === 'completed'
+                        ? 'text-lyra-text-secondary/60 line-through'
+                        : todo.state === 'in_progress'
+                        ? 'font-bold text-lyra-text'
+                        : 'text-lyra-text-secondary'
+                    }`}
+                  >
+                    {todo.label}
+                  </p>
+                  {todo.assignee && (
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono border transition-all ${
+                      todo.state === 'completed'
+                        ? 'bg-emerald-500/10 text-emerald-400/80 border-emerald-500/20'
+                        : todo.state === 'in_progress'
+                        ? 'bg-lyra-accent/20 text-lyra-accent border-lyra-accent/40 font-bold shadow-sm'
+                        : 'bg-lyra-surface text-lyra-text-secondary/60 border-lyra-accent/10'
+                    }`}>
+                      @{todo.assignee} {todo.assigneeRole ? `(${todo.assigneeRole})` : ''}
+                    </span>
+                  )}
+                </div>
                 {todo.description && (
                   <p className={`mt-0.5 text-[11px] ${todo.state === 'in_progress' ? 'text-lyra-accent/90 font-medium' : 'text-lyra-text-secondary/60'}`}>
                     {todo.description}
