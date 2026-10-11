@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Code2, Bot, ExternalLink, ChevronDown, Check, Sparkles } from 'lucide-react';
+import { Code2, Bot, ExternalLink, ChevronDown, Check, Sparkles, X } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspace';
 import Link from 'next/link';
 
@@ -18,12 +18,17 @@ export function LiveCodingStudioBlock() {
     }
 
     const fullContent = liveTyping.diffOrContent || '// Menginisialisasi modifikasi berkas...';
+    // If text already received or short, update immediately without jarring reset
+    if (fullContent.length < 50) {
+      setDisplayedText(fullContent);
+      return;
+    }
+
     setIsTyping(true);
-    let currentIdx = 0;
-    setDisplayedText('');
+    let currentIdx = Math.max(0, displayedText.length);
 
     const interval = setInterval(() => {
-      currentIdx += 6;
+      currentIdx += 12;
       if (currentIdx >= fullContent.length) {
         setDisplayedText(fullContent);
         setIsTyping(false);
@@ -31,13 +36,13 @@ export function LiveCodingStudioBlock() {
       } else {
         setDisplayedText(fullContent.slice(0, currentIdx));
       }
-    }, 25);
+    }, 20);
 
     return () => {
       clearInterval(interval);
       setIsTyping(false);
     };
-  }, [liveTyping]);
+  }, [liveTyping?.diffOrContent, liveTyping?.active]);
 
   if (!liveTyping) return null;
 
@@ -80,9 +85,19 @@ export function LiveCodingStudioBlock() {
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-white/5 transition-colors"
+            className="p-1 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-white/5 transition-colors cursor-pointer"
+            title={isExpanded ? 'Ciutkan' : 'Perluas'}
           >
             <ChevronDown size={14} className={isExpanded ? 'rotate-180 transition-transform' : 'transition-transform'} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => useWorkspaceStore.getState().setLiveTyping(null)}
+            className="p-1 rounded-lg text-lyra-text-secondary hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+            title="Tutup jendela live coding"
+          >
+            <X size={14} />
           </button>
         </div>
       </div>

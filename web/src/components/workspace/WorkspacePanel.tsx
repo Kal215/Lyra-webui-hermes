@@ -51,17 +51,6 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (liveTyping && liveTyping.active && liveTyping.filePath) {
-      const fileName = liveTyping.filePath.split(/[\/\\]/).pop() || 'file';
-      setPreviewContent({
-        path: liveTyping.filePath,
-        name: fileName,
-        content: liveTyping.diffOrContent || '// Menulis kode secara live...'
-      });
-    }
-  }, [liveTyping]);
-
-  useEffect(() => {
     if (targetPreviewPath) {
       const fileName = targetPreviewPath.split(/[\/\\]/).pop() || 'file';
       handlePreviewFile({ path: targetPreviewPath, name: fileName, isDirectory: false });

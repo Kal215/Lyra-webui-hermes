@@ -433,6 +433,7 @@ export default function WorkPage() {
       let done = false;
       let buffer = '';
       let receivedAnyChunk = false;
+      let accumulatedAssistantText = '';
 
       while (!done) {
         const { value, done: doneReading } = await reader.read();
@@ -490,18 +491,19 @@ export default function WorkPage() {
                   });
                 } else if (data.type === 'text') {
                   receivedAnyChunk = true;
+                  accumulatedAssistantText += (data.text || '');
                   appendAssistantChunk(data.text, getAgentInfo(selectedAgent).name);
 
-                  // Extract live code snippets if agent writes markdown code blocks
-                  const codeMatch = data.text.match(/```(?:[a-zA-Z0-9_\-]+)?\s*([\s\S]+?)```/);
-                  if (codeMatch && codeMatch[1]) {
+                  // Extract live code snippets from accumulated stream
+                  const codeMatch = accumulatedAssistantText.match(/```(?:[a-zA-Z0-9_\-]+)?\s*([\s\S]+?)(?:```|$)/);
+                  if (codeMatch && codeMatch[1] && codeMatch[1].trim().length > 10) {
                     const agentInfo = getAgentInfo(selectedAgent);
                     useWorkspaceStore.getState().setLiveTyping({
                       active: true,
                       agentName: agentInfo.name,
                       agentRole: agentInfo.role,
-                      filePath: 'generated_output.ts',
-                      diffOrContent: codeMatch[1].trim()
+                      filePath: 'workspace/generated_code.ts',
+                      diffOrContent: codeMatch[1]
                     });
                   }
                 }
