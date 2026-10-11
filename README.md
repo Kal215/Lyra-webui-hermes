@@ -2,7 +2,9 @@
 
 A modern web interface and multi-agent workspace for autonomous AI development.
 
-[Features](#features) • [Quick Start](#quick-start) • [Agent Architecture](#agent-architecture) • [Configuration](#configuration) • [Bahasa Indonesia](README.id.md)
+![Autonomous Studio Preview](docs/assets/preview-work.png)
+
+[Features](#features) • [Quick Start](#quick-start) • [Agent Architecture](#agent-architecture) • [Screenshots](#screenshots) • [Configuration](#configuration) • [Bahasa Indonesia](README.id.md)
 
 ---
 
@@ -12,6 +14,18 @@ Lyra Studio is an open-source developer workspace designed for interacting with 
 
 1. **Direct Chat (`/chat`)**: Direct HTTP Server-Sent Events (SSE) streaming to any OpenAI-compatible endpoint (OpenRouter, DeepSeek, Anthropic, OpenAI, Groq, Ollama). Requires no local runtime or CLI dependencies.
 2. **Autonomous Studio (`/work`)**: Agent-driven workspace supporting real-time file tree modifications, tool execution tracking, reasoning visibility, and task coordination.
+
+---
+
+## Screenshots
+
+| Autonomous Studio (`/work`) | Direct Chat (`/chat`) |
+| :---: | :---: |
+| ![Studio View](docs/assets/preview-work.png) | ![Chat View](docs/assets/preview-chat.png) |
+
+| Model & Provider Settings (`/settings`) |
+| :---: |
+| ![Settings View](docs/assets/preview-settings.png) |
 
 ---
 

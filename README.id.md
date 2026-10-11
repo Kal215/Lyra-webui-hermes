@@ -2,7 +2,9 @@
 
 Antarmuka web modern dan ruang kerja multi-agen untuk pengembangan AI otonom.
 
-[Fitur](#fitur) • [Panduan Cepat](#panduan-cepat) • [Arsitektur Agen](#arsitektur-agen) • [Konfigurasi](#konfigurasi) • [English](README.md)
+![Tampilan Autonomous Studio](docs/assets/preview-work.png)
+
+[Fitur](#fitur) • [Panduan Cepat](#panduan-cepat) • [Arsitektur Agen](#arsitektur-agen) • [Tangkapan Layar](#tangkapan-layar) • [Konfigurasi](#konfigurasi) • [English](README.md)
 
 ---
 
@@ -12,6 +14,18 @@ Lyra Studio adalah ruang kerja pengembang open-source yang dirancang untuk berin
 
 1. **Direct Chat (`/chat`)**: Streaming HTTP Server-Sent Events (SSE) langsung ke endpoint yang kompatibel dengan format OpenAI (OpenRouter, DeepSeek, Anthropic, OpenAI, Groq, Ollama). Tidak memerlukan runtime lokal atau dependensi CLI.
 2. **Autonomous Studio (`/work`)**: Ruang kerja berbasis agen yang mendukung modifikasi berkas workspace, pemantauan eksekusi perkakas (tools), inspeksi penalaran (reasoning), dan koordinasi tugas secara real-time.
+
+---
+
+## Tangkapan Layar
+
+| Autonomous Studio (`/work`) | Direct Chat (`/chat`) |
+| :---: | :---: |
+| ![Studio View](docs/assets/preview-work.png) | ![Chat View](docs/assets/preview-chat.png) |
+
+| Pengaturan Model & Provider (`/settings`) |
+| :---: |
+| ![Settings View](docs/assets/preview-settings.png) |
 
 ---
 
