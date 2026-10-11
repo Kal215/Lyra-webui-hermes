@@ -31,7 +31,7 @@ interface WorkspacePanelProps {
 }
 
 export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewPath }: WorkspacePanelProps) {
-  const { currentWorkspace, setCurrentWorkspace, openFileInWorkspace } = useWorkspaceStore();
+  const { currentWorkspace, setCurrentWorkspace, openFileInWorkspace, liveTyping } = useWorkspaceStore();
   const [workspaceFiles, setWorkspaceFiles] = useState<any[]>([]);
   const [workspaceInput, setWorkspaceInput] = useState(currentWorkspace || '');
   const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState('');
@@ -46,6 +46,18 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (liveTyping && liveTyping.active && liveTyping.filePath) {
+      const fileName = liveTyping.filePath.split(/[\/\\]/).pop() || 'file';
+      // Auto switch preview and trigger live typing visual in the drawer
+      setPreviewContent({
+        path: liveTyping.filePath,
+        name: fileName,
+        content: liveTyping.diffOrContent || '// Menulis kode secara live...'
+      });
+    }
+  }, [liveTyping]);
 
   useEffect(() => {
     if (targetPreviewPath) {
@@ -539,6 +551,11 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                 <Code size={16} className="text-lyra-accent shrink-0" />
                 <span className="font-mono text-xs text-lyra-text font-semibold truncate">{previewContent.name}</span>
                 <span className="text-[10px] text-lyra-text-secondary/60 truncate font-mono">({previewContent.path})</span>
+                {liveTyping && liveTyping.active && liveTyping.filePath === previewContent.path && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-mono animate-pulse">
+                    @{liveTyping.agentName} live writing
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <button
