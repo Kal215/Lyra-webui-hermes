@@ -35,15 +35,23 @@ export async function POST(req: NextRequest) {
   // Prepend file context references to the prompt message
   if (attachments && Array.isArray(attachments)) {
     let contextPrefix = '';
+    const workspaceTargetFiles: string[] = [];
+
     for (const file of attachments) {
       if (file.isWorkspaceRef) {
-        contextPrefix += `[Attached ${file.isDirectory ? 'Directory' : 'File'} Context: ${file.path}]\n`;
+        contextPrefix += `[TARGET EXCLUSIVE CONTEXT - ${file.isDirectory ? 'DIREKTORI' : 'BERKAS'}: ${file.path}]\n`;
+        workspaceTargetFiles.push(file.path);
       } else if (file.isUrl) {
         contextPrefix += `[Attached URL Context: ${file.url || file.path}]\n`;
       } else if (file.type && !file.type.startsWith('image/')) {
         contextPrefix += `[Attached Document/File: ${file.path}]\n`;
       }
     }
+
+    if (workspaceTargetFiles.length > 0) {
+      contextPrefix += `[STRICT DIRECTIVE: Pengguna secara spesifik menunjuk berkas/direktori target: ${workspaceTargetFiles.map(f => `\`${f}\``).join(', ')}. Fokus dan eksekusi HANYA berkas atau folder target ini. JANGAN memodifikasi atau menyentuh berkas di luar target yang ditunjuk tersebut kecuali jika secara eksplisit diinstruksikan.]\n`;
+    }
+
     if (contextPrefix) {
       message = `${contextPrefix}\n${message}`;
     }

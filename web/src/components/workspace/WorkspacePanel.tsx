@@ -22,7 +22,8 @@ import {
   Eye,
   Terminal,
   Activity,
-  Bot
+  Bot,
+  MessageSquare
 } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspace';
 
@@ -454,7 +455,16 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                   return (
                     <div
                       key={idx}
-                      className="group relative flex items-center justify-between p-1.5 rounded-lg hover:bg-lyra-accent/10 transition-colors cursor-pointer"
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/lyra-workspace', JSON.stringify({
+                          name: f.name,
+                          path: f.path,
+                          isDirectory: f.isDirectory
+                        }));
+                        e.dataTransfer.effectAllowed = 'copy';
+                      }}
+                      className="group relative flex items-center justify-between p-1.5 rounded-lg hover:bg-lyra-accent/10 transition-colors cursor-pointer select-none"
                       onClick={() => {
                         if (isDir) {
                           loadWorkspaceFiles(f.path);
@@ -464,6 +474,9 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                       }}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity -ml-0.5 text-lyra-text-secondary/40 cursor-grab active:cursor-grabbing text-[10px] select-none">
+                          ⋮⋮
+                        </div>
                         {isDir ? (
                           <Folder size={14} className="text-amber-400 shrink-0" />
                         ) : (
@@ -476,6 +489,19 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
 
                       {/* Action buttons on hover */}
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        {onMentionFile && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onMentionFile(f.path);
+                            }}
+                            className="p-1 rounded text-lyra-text-secondary hover:text-lyra-accent hover:bg-lyra-accent/20 cursor-pointer"
+                            title="Sebutkan di input pesan"
+                          >
+                            <MessageSquare size={12} />
+                          </button>
+                        )}
                         {!isDir && (
                           <button
                             type="button"

@@ -34,7 +34,8 @@ import {
   BrainCircuit,
   Globe,
   X,
-  History
+  History,
+  File as FileIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -116,6 +117,7 @@ export default function WorkPage() {
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const [isDeepResearchEnabled, setIsDeepResearchEnabled] = useState(false);
   const [attachments, setAttachments] = useState<any[]>([]);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -370,6 +372,39 @@ export default function WorkPage() {
   };
 
   // Autonomous Task Dispatching
+  const handleDropOnComposer = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+
+    const lyraData = e.dataTransfer.getData('application/lyra-workspace');
+    if (lyraData) {
+      try {
+        const parsed = JSON.parse(lyraData);
+        setAttachments(prev => {
+          if (prev.some(a => a.path === parsed.path)) return prev;
+          return [...prev, {
+            name: parsed.name,
+            path: parsed.path,
+            isWorkspaceRef: true,
+            isDirectory: parsed.isDirectory
+          }];
+        });
+      } catch (err) {}
+      return;
+    }
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files).map(f => ({
+        name: f.name,
+        path: (f as any).path || f.name,
+        type: f.type,
+        size: f.size
+      }));
+      setAttachments(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  // Autonomous Task Dispatching
   const handleLaunchAutonomousWork = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!promptInput.trim() || isSubmitting) return;
@@ -378,6 +413,7 @@ export default function WorkPage() {
     const taskTitle = userPrompt.slice(0, 80);
     setIsSubmitting(true);
     setPromptInput('');
+    setAttachments([]);
 
     // 1. Initialize local reactive studio session & append user message
     initDemoSession(taskTitle, selectedAgent);
@@ -985,7 +1021,21 @@ Instruksi format respon:
             </div>
 
             {/* Input Box Container */}
-            <div className="relative rounded-2xl border border-lyra-accent/20 bg-lyra-surface/80 focus-within:border-lyra-accent/50 focus-within:ring-2 focus-within:ring-lyra-accent/20 shadow-sm transition-all overflow-visible">
+            <div 
+              className={`relative rounded-2xl border border-lyra-accent/20 bg-lyra-surface/80 focus-within:border-lyra-accent/50 focus-within:ring-2 focus-within:ring-lyra-accent/20 shadow-sm transition-all overflow-visible ${
+                isDraggingOver ? 'ring-2 ring-lyra-accent ring-inset bg-lyra-accent/10 border-lyra-accent' : ''
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
+              onDragLeave={() => setIsDraggingOver(false)}
+              onDrop={handleDropOnComposer}
+            >
+              {isDraggingOver && (
+                <div className="absolute inset-0 z-30 flex items-center justify-center bg-lyra-surface/90 backdrop-blur-sm rounded-2xl pointer-events-none border-2 border-dashed border-lyra-accent">
+                  <div className="text-lyra-accent font-bold flex items-center gap-2 text-sm">
+                    <Plus size={18} /> Lepaskan file atau folder di sini
+                  </div>
+                </div>
+              )}
               
               {/* Hidden File Input for Attachment */}
               <input
@@ -1037,8 +1087,16 @@ Instruksi format respon:
                       key={idx}
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lyra-accent/10 border border-lyra-accent/20 text-xs text-lyra-text font-mono"
                     >
-                      <FileText size={12} className="text-lyra-accent" />
-                      <span className="truncate max-w-[120px]">{file.name}</span>
+                      {file.isWorkspaceRef ? (
+                        file.isDirectory ? <Folder size={12} className="text-amber-400" /> : <FileIcon size={12} className="text-sky-400" />
+                      ) : file.type === 'directory' ? (
+                        <Folder size={12} className="text-amber-400" />
+                      ) : (
+                        <FileText size={12} className="text-lyra-accent" />
+                      )}
+                      <span className="truncate max-w-[150px]">
+                        {file.isWorkspaceRef ? `@${file.name}` : file.name}
+                      </span>
                       <button
                         type="button"
                         onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
@@ -1413,7 +1471,16 @@ Instruksi format respon:
         onToggle={() => setIsWorkspaceOpen(!isWorkspaceOpen)}
         targetPreviewPath={previewWorkspaceFile}
         onMentionFile={(filePath) => {
-          setPromptInput((prev) => `${prev} @${filePath} `);
+          const fileName = filePath.split(/[\/\\]/).pop() || filePath;
+          setAttachments((prev) => {
+            if (prev.some(a => a.path === filePath)) return prev;
+            return [...prev, {
+              name: fileName,
+              path: filePath,
+              isWorkspaceRef: true,
+              isDirectory: false
+            }];
+          });
         }}
       />
 
