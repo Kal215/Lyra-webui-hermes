@@ -1306,31 +1306,37 @@ export default function NativeChatPage() {
           )}
 
           {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
+            <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} group`}>
               <div className={`max-w-[85%] rounded-3xl p-5 relative transition-all ${
                 m.role === 'user' 
                   ? 'bg-lyra-accent text-white shadow-md shadow-lyra-accent/10' 
                   : 'bg-lyra-surface border border-white/5 text-lyra-text shadow-sm'
               }`}>
                 {/* Header & Quick Action Buttons */}
-                <div className="flex items-center justify-between gap-4 mb-3">
+                <div className="flex items-center justify-between gap-4 mb-2">
                   <div className="text-sm font-semibold opacity-60 uppercase tracking-wider">
                     {m.role === 'user' ? (language === 'id' ? 'Anda' : 'You') : 'Hermes'}
                   </div>
 
-                  {/* Actions for User Message: Copy & Edit */}
+                  {/* Header Actions for User Message: Copy & Edit (Always Visible) */}
                   {m.role === 'user' && editingMessageIndex !== i && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    <div className="flex items-center gap-1.5 opacity-80 hover:opacity-100 transition-opacity">
                       <button
                         type="button"
                         onClick={() => handleCopyMessage(i, m.content)}
-                        className="p-1 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer"
-                        title={copiedMessageIndex === i ? (language === 'id' ? 'Tersalin!' : 'Copied!') : (language === 'id' ? 'Salin' : 'Copy')}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-all text-xs cursor-pointer shadow-xs"
+                        title={copiedMessageIndex === i ? (language === 'id' ? 'Tersalin!' : 'Copied!') : (language === 'id' ? 'Salin pesan' : 'Copy message')}
                       >
                         {copiedMessageIndex === i ? (
-                          <Check size={14} className="text-emerald-300 stroke-[2.5]" />
+                          <>
+                            <Check size={13} className="text-emerald-300 stroke-[2.5]" />
+                            <span className="text-[11px] font-medium text-emerald-200">{language === 'id' ? 'Tersalin' : 'Copied'}</span>
+                          </>
                         ) : (
-                          <Clipboard size={14} />
+                          <>
+                            <Clipboard size={13} />
+                            <span className="text-[11px] font-medium">{language === 'id' ? 'Salin' : 'Copy'}</span>
+                          </>
                         )}
                       </button>
                       <button
@@ -1340,27 +1346,34 @@ export default function NativeChatPage() {
                           setEditMessageText(m.content || '');
                         }}
                         disabled={isLoading}
-                        className="p-1 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer disabled:opacity-40"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-all text-xs cursor-pointer disabled:opacity-40 shadow-xs"
                         title={language === 'id' ? 'Edit pesan' : 'Edit message'}
                       >
-                        <Edit2 size={14} />
+                        <Edit2 size={13} />
+                        <span className="text-[11px] font-medium">{language === 'id' ? 'Edit' : 'Edit'}</span>
                       </button>
                     </div>
                   )}
 
                   {/* Copy Action for Assistant Message */}
                   {m.role === 'assistant' && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                    <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
                       <button
                         type="button"
                         onClick={() => handleCopyMessage(i, m.content)}
-                        className="p-1 rounded-lg hover:bg-lyra-accent/10 text-lyra-text-secondary hover:text-lyra-text transition-colors cursor-pointer"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-lyra-accent/10 hover:bg-lyra-accent/20 text-lyra-text-secondary hover:text-lyra-text transition-colors text-xs cursor-pointer"
                         title={copiedMessageIndex === i ? (language === 'id' ? 'Tersalin!' : 'Copied!') : (language === 'id' ? 'Salin' : 'Copy')}
                       >
                         {copiedMessageIndex === i ? (
-                          <Check size={14} className="text-emerald-400 stroke-[2.5]" />
+                          <>
+                            <Check size={13} className="text-emerald-400 stroke-[2.5]" />
+                            <span className="text-[11px] text-emerald-400">{language === 'id' ? 'Tersalin' : 'Copied'}</span>
+                          </>
                         ) : (
-                          <Clipboard size={14} />
+                          <>
+                            <Clipboard size={13} />
+                            <span className="text-[11px]">{language === 'id' ? 'Salin' : 'Copy'}</span>
+                          </>
                         )}
                       </button>
                     </div>
@@ -1395,7 +1408,7 @@ export default function NativeChatPage() {
 
                 {/* User Edit Mode vs Normal Markdown Content */}
                 {m.role === 'user' && editingMessageIndex === i ? (
-                  <div className="flex flex-col gap-3 min-w-[280px] sm:min-w-[440px]">
+                  <div className="flex flex-col gap-3 min-w-[280px] sm:min-w-[460px] pt-1">
                     <textarea
                       value={editMessageText}
                       onChange={(e) => setEditMessageText(e.target.value)}
@@ -1407,14 +1420,14 @@ export default function NativeChatPage() {
                           handleCancelEdit();
                         }
                       }}
-                      className="w-full bg-black/25 text-white placeholder:text-white/50 border border-white/20 rounded-2xl p-3.5 text-sm focus:outline-none focus:border-white/60 resize-y min-h-[90px] max-h-60"
+                      className="w-full bg-black/30 text-white placeholder:text-white/50 border border-white/30 rounded-2xl p-4 text-sm focus:outline-none focus:border-white resize-y min-h-[100px] max-h-72 shadow-inner"
                       autoFocus
                     />
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-2.5">
                       <button
                         type="button"
                         onClick={handleCancelEdit}
-                        className="px-3.5 py-1.5 rounded-xl text-xs font-medium bg-black/20 hover:bg-black/35 text-white/90 hover:text-white transition-colors cursor-pointer"
+                        className="px-4 py-2 rounded-xl text-xs font-medium bg-black/30 hover:bg-black/50 text-white transition-colors cursor-pointer border border-white/10"
                       >
                         {language === 'id' ? 'Batal' : 'Cancel'}
                       </button>
@@ -1422,10 +1435,10 @@ export default function NativeChatPage() {
                         type="button"
                         onClick={() => handleSaveAndSendEdit(i)}
                         disabled={isLoading || !editMessageText.trim()}
-                        className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-white text-zinc-900 hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                        className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-900 hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all shadow-md cursor-pointer flex items-center gap-1.5"
                       >
                         <span>{language === 'id' ? 'Kirim' : 'Send'}</span>
-                        <Send size={12} />
+                        <Send size={13} />
                       </button>
                     </div>
                   </div>
@@ -1437,6 +1450,43 @@ export default function NativeChatPage() {
                       </ReactMarkdown>
                     </div>
                   )
+                )}
+
+                {/* Bottom Footer Actions (Explicitly visible on every sent user message!) */}
+                {m.role === 'user' && editingMessageIndex !== i && (
+                  <div className="flex items-center justify-end gap-2 mt-3 pt-2 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyMessage(i, m.content)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/20 hover:bg-black/35 text-white/90 hover:text-white transition-colors text-xs cursor-pointer shadow-xs"
+                      title={language === 'id' ? 'Salin pesan ini' : 'Copy this message'}
+                    >
+                      {copiedMessageIndex === i ? (
+                        <>
+                          <Check size={12} className="text-emerald-300 stroke-[2.5]" />
+                          <span className="text-[11px] font-medium text-emerald-200">{language === 'id' ? 'Tersalin' : 'Copied'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clipboard size={12} />
+                          <span className="text-[11px] font-medium">{language === 'id' ? 'Salin' : 'Copy'}</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingMessageIndex(i);
+                        setEditMessageText(m.content || '');
+                      }}
+                      disabled={isLoading}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/20 hover:bg-black/35 text-white/90 hover:text-white transition-colors text-xs cursor-pointer disabled:opacity-40 shadow-xs"
+                      title={language === 'id' ? 'Edit pesan ini' : 'Edit this message'}
+                    >
+                      <Edit2 size={12} />
+                      <span className="text-[11px] font-medium">{language === 'id' ? 'Edit' : 'Edit'}</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
