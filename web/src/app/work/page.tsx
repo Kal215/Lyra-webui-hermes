@@ -187,11 +187,14 @@ export default function WorkPage() {
   };
 
   const handleStopGeneration = async () => {
-    // 1. Client-side abort
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+    // 1. Client-side abort (with graceful try/catch and reason)
+    try {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort('User stopped generation');
+        abortControllerRef.current = null;
+      }
+    } catch (e) {}
+
     // 2. Server-side kill request
     try {
       const activeExecId = localStorage.getItem('lyra_active_execution_id');
@@ -200,10 +203,10 @@ export default function WorkPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ executionId: activeExecId || undefined })
       });
-      localStorage.removeItem('lyra_active_execution_id');
-      localStorage.removeItem('lyra_is_submitting_work');
     } catch (e) {}
 
+    localStorage.removeItem('lyra_active_execution_id');
+    localStorage.removeItem('lyra_is_submitting_work');
     setIsSubmitting(false);
   };
 
@@ -549,11 +552,19 @@ export default function WorkPage() {
       });
 
     } catch (err: any) {
-      console.error('Launch failed:', err);
-      appendAssistantChunk(
-        `Terjadi kendala saat menghubungkan ke engine: ${err.message || 'Error koneksi'}. Tugas tetap didaftarkan ke antrian sistem.`,
-        getAgentInfo(selectedAgent).name
-      );
+      // Don't show connection error banner if user deliberately aborted/stopped
+      if (err.name === 'AbortError' || err.message?.includes('aborted') || err.message?.includes('user')) {
+        appendAssistantChunk(
+          `*Generasi tugas dihentikan oleh pengguna.*`,
+          getAgentInfo(selectedAgent).name
+        );
+      } else {
+        console.error('Launch failed:', err);
+        appendAssistantChunk(
+          `Terjadi kendala saat menghubungkan ke engine: ${err.message || 'Error koneksi'}. Tugas tetap didaftarkan ke antrian sistem.`,
+          getAgentInfo(selectedAgent).name
+        );
+      }
     } finally {
       setIsSubmitting(false);
       localStorage.removeItem('lyra_is_submitting_work');
