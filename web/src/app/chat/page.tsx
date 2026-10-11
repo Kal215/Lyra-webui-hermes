@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation, useI18nStore } from '@/i18n';
-import { MessageSquare, Plus, Send, Menu, Terminal, Globe, FileText, Wrench, ChevronDown, ChevronRight, CheckCircle2, CircleDashed, BrainCircuit, MoreVertical, Edit2, Trash2, Check, X, Pin, DownloadCloud, PinOff, Paperclip, Folder, File, ImageIcon, XCircle, Columns, Monitor, Settings, Zap, Database, FolderTree, Clipboard, PenTool, Link, Search, ImagePlus, GitBranch, Library, Command, Sparkles, Code, FileEdit, Lightbulb, Coffee, RefreshCw, Square, ArrowUp, Share2, ThumbsDown, Volume2, RotateCw, MoreHorizontal } from 'lucide-react';
+import { MessageSquare, Plus, Send, Menu, Terminal, Globe, FileText, Wrench, ChevronDown, ChevronRight, ChevronLeft, ArrowDown, CheckCircle2, CircleDashed, BrainCircuit, MoreVertical, Edit2, Trash2, Check, X, Pin, DownloadCloud, PinOff, Paperclip, Folder, File, ImageIcon, XCircle, Columns, Monitor, Settings, Zap, Database, FolderTree, Clipboard, PenTool, Link, Search, ImagePlus, GitBranch, Library, Command, Sparkles, Code, FileEdit, Lightbulb, Coffee, RefreshCw, Square, ArrowUp, Share2, ThumbsDown, Volume2, RotateCw, MoreHorizontal } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -93,7 +93,7 @@ function ToolCallCard({ tool }: { tool: any }) {
 
 function ReasoningCard({ reasoning }: { reasoning: any }) {
   const isRunning = !reasoning.endTime;
-  const duration = reasoning.endTime ? ((reasoning.endTime - reasoning.startTime) / 1000).toFixed(1) + 's' : null;
+  const duration = reasoning.endTime ? ((reasoning.endTime - reasoning.startTime) / 1000).toFixed(1) + ' detik' : null;
   const hasText = reasoning.text && reasoning.text.trim().length > 0;
   const [expanded, setExpanded] = useState(isRunning);
 
@@ -115,12 +115,14 @@ function ReasoningCard({ reasoning }: { reasoning: any }) {
         <div className="flex items-center">
           <BrainCircuit size={16} className={`text-lyra-accent mr-3 ${isRunning ? 'animate-pulse' : ''}`} />
           <span className="font-medium text-lyra-accent/90">
-            {isRunning ? 'Berpikir...' : (duration ? `Berpikir selama ${duration}` : 'Proses Berpikir')}
+            {isRunning ? 'Berpikir...' : (duration ? `Telah berpikir selama ${duration}` : 'Proses Berpikir')}
           </span>
           {isRunning && <LiveTicker isRunning={true} startTime={reasoning.startTime} />}
         </div>
         {hasText && (
-          expanded ? <ChevronDown size={16} className="text-lyra-accent/70" /> : <ChevronRight size={16} className="text-lyra-accent/70" />
+          <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.15 }}>
+            <ChevronDown size={16} className="text-lyra-accent/70" />
+          </motion.div>
         )}
       </button>
 
@@ -138,6 +140,67 @@ function ReasoningCard({ reasoning }: { reasoning: any }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function CodeBlock({ inline, className, children, ...props }: any) {
+  const [copied, setCopied] = useState(false);
+  const match = /language-(\w+)/.exec(className || '');
+  const languageName = match ? match[1] : '';
+  const codeString = String(children).replace(/\n$/, '');
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      navigator.clipboard.writeText(codeString);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (inline) {
+    return (
+      <code className="px-1.5 py-0.5 rounded-md bg-black/20 dark:bg-white/10 text-lyra-accent font-mono text-[13px] border border-lyra-accent/20" {...props}>
+        {children}
+      </code>
+    );
+  }
+
+  return (
+    <div className="relative my-3 rounded-2xl overflow-hidden border border-white/10 bg-zinc-950/95 shadow-xl text-sm group">
+      {/* Code Header Bar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900/90 border-b border-white/5 text-xs text-zinc-400 font-mono select-none">
+        <span className="font-semibold text-zinc-300 lowercase">{languageName || 'code'}</span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white transition-all cursor-pointer text-xs"
+        >
+          {copied ? (
+            <>
+              <Check size={12} className="text-emerald-400 stroke-[2.5]" />
+              <span className="text-emerald-400 font-medium">Tersalin</span>
+            </>
+          ) : (
+            <>
+              <Clipboard size={12} />
+              <span>Salin kode</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Code Content */}
+      <div className="p-4 overflow-x-auto text-[13px] font-mono leading-relaxed text-zinc-200">
+        <pre className="!bg-transparent !p-0 !m-0 !border-none font-mono">
+          <code className={className} {...props}>
+            {children}
+          </code>
+        </pre>
+      </div>
     </div>
   );
 }
@@ -199,6 +262,11 @@ function SidebarSessionItem({ session, isActive, onClick, onDelete, onRename, on
         <>
           <button onClick={onClick} className="flex-1 flex items-center p-2 truncate text-sm text-left">
             <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${isActive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-gray-400/50'}`}></div>
+            {(session.parent_session_id || session.title?.includes('(Branch)')) && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium shrink-0 flex items-center gap-0.5 mr-1" title="Percakapan bercabang">
+                <GitBranch size={10} />
+              </span>
+            )}
             <span className="truncate flex-1">{session.title || session.id}</span>
             {timeLabel && <span className="text-[10px] opacity-50 ml-2 shrink-0">{timeLabel}</span>}
           </button>
@@ -270,6 +338,16 @@ export default function NativeChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const currentActiveSession = sessions.find(s => s.id === activeSessionId) || null;
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const isFarFromBottom = scrollHeight - scrollTop - clientHeight > 180;
+    setShowScrollBottom(isFarFromBottom);
+  };
   
   // Workspace Global Store
   const { currentWorkspace, setCurrentWorkspace, openFileInWorkspace } = useWorkspaceStore();
@@ -952,13 +1030,75 @@ export default function NativeChatPage() {
     window.speechSynthesis.speak(utter);
   };
 
+  const handleSwitchVariant = (msgIndex: number, targetVariantIndex: number) => {
+    setMessages(prev => {
+      const updated = [...prev];
+      const m = updated[msgIndex];
+      if (!m || !m.variants || targetVariantIndex < 0 || targetVariantIndex >= m.variants.length) return prev;
+      updated[msgIndex] = {
+        ...m,
+        content: m.variants[targetVariantIndex],
+        variantIndex: targetVariantIndex
+      };
+      return updated;
+    });
+  };
+
+  const handleExportToMarkdown = () => {
+    if (messages.length === 0) return;
+    const sessionTitle = currentActiveSession?.title || 'Lyra_Chat';
+    const cleanTitle = sessionTitle.replace(/[\\/:*?"<>|]/g, '_');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    
+    let md = `# ${sessionTitle}\n\n`;
+    md += `*Tanggal Ekspor: ${new Date().toLocaleString('id-ID')}*\n`;
+    if (currentActiveSession?.parent_session_id) {
+      md += `*Bercabang dari sesi: ${currentActiveSession.parent_session_id}*\n`;
+    }
+    md += `\n---\n\n`;
+
+    for (const m of messages) {
+      const roleName = m.role === 'user' ? '👤 Pengguna' : '🤖 Hermes';
+      const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('id-ID') : '';
+      md += `### ${roleName} ${timeStr ? `(${timeStr})` : ''}\n\n`;
+      
+      if (m.reasoning?.text) {
+        md += `> **Proses Berpikir:**\n> \n`;
+        md += m.reasoning.text.split('\n').map((line: string) => `> ${line}`).join('\n') + `\n\n`;
+      }
+
+      md += `${m.content || ''}\n\n`;
+      md += `---\n\n`;
+    }
+
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${cleanTitle}_${dateStr}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    setBranchNotification(language === 'id' ? 'Obrolan berhasil diekspor ke Markdown (.md)' : 'Chat exported to Markdown (.md)');
+    setTimeout(() => setBranchNotification(null), 3000);
+  };
+
   const handleRegenerateFrom = async (index: number) => {
     if (isLoading) return;
     const priorUserMsgIdx = index - 1;
     if (priorUserMsgIdx < 0 || messages[priorUserMsgIdx]?.role !== 'user') return;
     const userPrompt = messages[priorUserMsgIdx].content;
+    const userMsg = messages[priorUserMsgIdx];
+    const existingAttachments = userMsg.attachments || [];
     const priorMessages = messages.slice(0, priorUserMsgIdx);
-    await sendChatMessage(userPrompt, priorMessages);
+    
+    // Save previous assistant response into variants
+    const currentAssistantMsg = messages[index];
+    const prevAssistantVariants = currentAssistantMsg?.variants || (currentAssistantMsg?.content ? [currentAssistantMsg.content] : []);
+    
+    await sendChatMessage(userPrompt, priorMessages, existingAttachments, userMsg.variants, prevAssistantVariants);
   };
 
   const handleBranchSession = async (messageIndex: number) => {
@@ -1011,22 +1151,33 @@ export default function NativeChatPage() {
     setEditMessageText('');
   };
 
-  const sendChatMessage = async (userText: string, priorMessages?: any[], messageAttachments?: any[]) => {
+  const sendChatMessage = async (
+    userText: string, 
+    priorMessages?: any[], 
+    messageAttachments?: any[],
+    userVariants?: string[],
+    prevAssistantVariants?: string[]
+  ) => {
     if (!userText.trim()) return;
 
     const currentAttachments = messageAttachments !== undefined ? messageAttachments : attachments;
+    const userVars = userVariants || [userText];
     const newMessage = { 
       role: 'user', 
       content: userText, 
       tools: [], 
       reasoning: null, 
       attachments: [...currentAttachments],
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      variants: userVars,
+      variantIndex: userVars.length - 1
     };
 
     const initialMessages = priorMessages 
       ? [...priorMessages, newMessage] 
       : [...messages, newMessage];
+
+    const assistantVariants = prevAssistantVariants ? [...prevAssistantVariants, ''] : [''];
 
     setMessages([
       ...initialMessages,
@@ -1036,7 +1187,9 @@ export default function NativeChatPage() {
         rawContent: '',
         tools: [], 
         reasoning: { startTime: Date.now(), endTime: null, text: '' },
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        variants: assistantVariants,
+        variantIndex: assistantVariants.length - 1
       }
     ]);
     setIsLoading(true);
@@ -1151,6 +1304,10 @@ export default function NativeChatPage() {
                       const extracted = extractInlineThinking(lastMsg.rawContent, true);
                       
                       lastMsg.content = extracted.content;
+                      if (lastMsg.variants && lastMsg.variants.length > 0) {
+                        lastMsg.variants = [...lastMsg.variants];
+                        lastMsg.variants[lastMsg.variants.length - 1] = extracted.content;
+                      }
                       
                       if (extracted.reasoning) {
                         lastMsg.reasoning = { 
@@ -1225,11 +1382,14 @@ export default function NativeChatPage() {
   const handleSaveAndSendEdit = async (index: number) => {
     if (!editMessageText.trim() || isLoading) return;
     const userText = editMessageText;
+    const currentMsg = messages[index];
+    const prevVariants = currentMsg?.variants || (currentMsg?.content ? [currentMsg.content] : []);
+    const newVariants = [...prevVariants, userText];
     const priorMessages = messages.slice(0, index);
-    const existingAttachments = messages[index]?.attachments || [];
+    const existingAttachments = currentMsg?.attachments || [];
     setEditingMessageIndex(null);
     setEditMessageText('');
-    await sendChatMessage(userText, priorMessages, existingAttachments);
+    await sendChatMessage(userText, priorMessages, existingAttachments, newVariants);
   };
 
   // Filter by search query
@@ -1319,23 +1479,61 @@ export default function NativeChatPage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col relative">
         <div className="p-4 flex items-center gap-3 border-b border-white/5 bg-lyra-surface/50 backdrop-blur-md sticky top-0 z-10 justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/10 rounded-md text-lyra-text-secondary transition-colors">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/10 rounded-md text-lyra-text-secondary transition-colors shrink-0">
               <Menu size={20} />
             </button>
-            <span className="font-medium text-lg">{language === 'id' ? 'Percakapan AI' : 'AI Conversation'}</span>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2 truncate">
+                <span className="font-semibold text-base sm:text-lg truncate">
+                  {currentActiveSession?.title || (language === 'id' ? 'Percakapan AI' : 'AI Conversation')}
+                </span>
+                {(currentActiveSession?.parent_session_id || currentActiveSession?.title?.includes('(Branch)')) && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shrink-0">
+                    <GitBranch size={10} />
+                    Branch
+                  </span>
+                )}
+              </div>
+              {currentActiveSession?.parent_session_id && (
+                <button
+                  type="button"
+                  onClick={() => setActiveSessionId(currentActiveSession.parent_session_id)}
+                  className="text-[11px] text-lyra-accent/80 hover:text-lyra-accent hover:underline flex items-center gap-1 text-left cursor-pointer truncate"
+                  title="Kembali ke obrolan sumber"
+                >
+                  <GitBranch size={11} className="text-emerald-400 shrink-0" />
+                  <span className="truncate">← {language === 'id' ? 'Kembali ke sesi induk' : 'Back to parent session'}</span>
+                </button>
+              )}
+            </div>
           </div>
-          <button 
-            onClick={() => setIsRightPanelOpen(!isRightPanelOpen)} 
-            className={`p-2 rounded-md transition-colors ${isRightPanelOpen ? 'bg-lyra-accent/20 text-lyra-accent' : 'hover:bg-white/10 text-lyra-text-secondary'}`}
-            title="Toggle Workspace Panel"
-          >
-            <Columns size={20} />
-          </button>
+          
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Export to Markdown Button */}
+            <button
+              type="button"
+              onClick={handleExportToMarkdown}
+              disabled={messages.length === 0}
+              className="p-2 rounded-lg hover:bg-white/10 text-lyra-text-secondary hover:text-lyra-text transition-colors flex items-center gap-1.5 text-xs font-medium cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed border border-white/5"
+              title={language === 'id' ? 'Ekspor obrolan ke Markdown (.md)' : 'Export chat to Markdown (.md)'}
+            >
+              <DownloadCloud size={16} />
+              <span className="hidden sm:inline">{language === 'id' ? 'Ekspor .md' : 'Export .md'}</span>
+            </button>
+
+            <button 
+              onClick={() => setIsRightPanelOpen(!isRightPanelOpen)} 
+              className={`p-2 rounded-md transition-colors ${isRightPanelOpen ? 'bg-lyra-accent/20 text-lyra-accent' : 'hover:bg-white/10 text-lyra-text-secondary'}`}
+              title="Toggle Workspace Panel"
+            >
+              <Columns size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+        <div ref={chatContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
           {activeProject && messages.length === 0 && (
             <div className="w-full text-center py-10 opacity-70">
               <div className="w-16 h-16 bg-lyra-accent/10 rounded-2xl mx-auto flex items-center justify-center mb-4">
@@ -1506,7 +1704,7 @@ export default function NativeChatPage() {
                     ) : (
                       m.content && (
                         <div className="prose prose-p:leading-relaxed prose-pre:bg-lyra-bg prose-pre:border prose-pre:border-lyra-accent/10 prose-headings:text-white prose-p:text-white prose-a:text-white/90 prose-strong:text-white prose-code:text-white prose-ul:text-white prose-ol:text-white prose-li:text-white prose-table:text-white max-w-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock }}>
                             {m.content}
                           </ReactMarkdown>
                         </div>
@@ -1515,9 +1713,36 @@ export default function NativeChatPage() {
                   </div>
                 </div>
 
-                {/* Actions below User Message (Gambar 1): Salin, Bagikan, Edit */}
+                {/* Actions below User Message (Gambar 1): Salin, Bagikan, Edit, & Version Switcher */}
                 {editingMessageIndex !== i && (
                   <div className="flex items-center gap-1 mt-1.5 mr-2">
+                    {/* Version Switcher if variants > 1 */}
+                    {m.variants && m.variants.length > 1 && (
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-black/20 text-white/90 text-xs select-none font-medium mr-1 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchVariant(i, (m.variantIndex ?? m.variants.length - 1) - 1)}
+                          disabled={(m.variantIndex ?? m.variants.length - 1) <= 0}
+                          className="p-0.5 rounded hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                          title={language === 'id' ? 'Versi sebelumnya' : 'Previous version'}
+                        >
+                          <ChevronLeft size={13} />
+                        </button>
+                        <span className="text-[11px] font-mono px-1">
+                          {((m.variantIndex ?? m.variants.length - 1) + 1)} / {m.variants.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchVariant(i, (m.variantIndex ?? m.variants.length - 1) + 1)}
+                          disabled={(m.variantIndex ?? m.variants.length - 1) >= m.variants.length - 1}
+                          className="p-0.5 rounded hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                          title={language === 'id' ? 'Versi berikutnya' : 'Next version'}
+                        >
+                          <ChevronRight size={13} />
+                        </button>
+                      </div>
+                    )}
+
                     {/* Salin */}
                     <button
                       type="button"
@@ -1578,10 +1803,10 @@ export default function NativeChatPage() {
                       )}
                     </div>
 
-                    {/* Markdown Content */}
+                    {/* Markdown Content with CodeBlock */}
                     {m.content && (
-                      <div className="prose prose-p:leading-relaxed prose-pre:bg-lyra-bg prose-pre:border prose-pre:border-lyra-accent/10 prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-lyra-accent prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <div className="prose prose-p:leading-relaxed prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-none prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-lyra-accent prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock }}>
                           {m.content}
                         </ReactMarkdown>
                       </div>
@@ -1599,6 +1824,33 @@ export default function NativeChatPage() {
                 {/* Actions below Assistant Message (Gambar 2): Salin, Tidak Suka, Bagikan, Baca Keras, Kirim Ulang, ... */}
                 {m.content && (
                   <div className="flex items-center gap-1 mt-1.5 ml-2 relative">
+                    {/* Version Switcher if variants > 1 */}
+                    {m.variants && m.variants.length > 1 && (
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-lyra-accent/10 text-lyra-text-secondary text-xs select-none font-medium mr-1">
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchVariant(i, (m.variantIndex ?? m.variants.length - 1) - 1)}
+                          disabled={(m.variantIndex ?? m.variants.length - 1) <= 0}
+                          className="p-0.5 rounded hover:bg-lyra-accent/20 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                          title={language === 'id' ? 'Versi sebelumnya' : 'Previous version'}
+                        >
+                          <ChevronLeft size={13} />
+                        </button>
+                        <span className="text-[11px] font-mono px-1">
+                          {((m.variantIndex ?? m.variants.length - 1) + 1)} / {m.variants.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchVariant(i, (m.variantIndex ?? m.variants.length - 1) + 1)}
+                          disabled={(m.variantIndex ?? m.variants.length - 1) >= m.variants.length - 1}
+                          className="p-0.5 rounded hover:bg-lyra-accent/20 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                          title={language === 'id' ? 'Versi berikutnya' : 'Next version'}
+                        >
+                          <ChevronRight size={13} />
+                        </button>
+                      </div>
+                    )}
+
                     {/* Salin */}
                     <button
                       type="button"
@@ -1717,7 +1969,24 @@ export default function NativeChatPage() {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 bg-lyra-bg border-t border-white/5">
+        <div className="p-4 bg-lyra-bg border-t border-white/5 relative">
+          {/* Floating Scroll to Bottom button */}
+          <AnimatePresence>
+            {showScrollBottom && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                type="button"
+                onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                className="absolute right-8 -top-12 z-30 p-2.5 rounded-full bg-lyra-surface border border-lyra-accent/30 text-lyra-accent shadow-2xl hover:bg-lyra-accent/10 active:scale-90 transition-all cursor-pointer backdrop-blur-md flex items-center justify-center"
+                title={language === 'id' ? 'Scroll ke paling bawah' : 'Scroll to bottom'}
+              >
+                <ArrowDown size={18} />
+              </motion.button>
+            )}
+          </AnimatePresence>
+
           <div className="max-w-4xl mx-auto relative flex flex-col gap-2">
 
             {/* Backdrop for open popovers */}
