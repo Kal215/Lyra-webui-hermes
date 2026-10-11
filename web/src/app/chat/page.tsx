@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation, useI18nStore } from '@/i18n';
-import { MessageSquare, Plus, Send, Menu, Terminal, Globe, FileText, Wrench, ChevronDown, ChevronRight, CheckCircle2, CircleDashed, BrainCircuit, MoreVertical, Edit2, Trash2, Check, X, Pin, DownloadCloud, PinOff, Paperclip, Folder, File, ImageIcon, XCircle, Columns, Monitor, Settings, Zap, Database, FolderTree, Clipboard, PenTool, Link, Search, ImagePlus, GitBranch, Library, Command, Sparkles, Code, FileEdit, Lightbulb, Coffee, RefreshCw, Square, ArrowUp } from 'lucide-react';
+import { MessageSquare, Plus, Send, Menu, Terminal, Globe, FileText, Wrench, ChevronDown, ChevronRight, CheckCircle2, CircleDashed, BrainCircuit, MoreVertical, Edit2, Trash2, Check, X, Pin, DownloadCloud, PinOff, Paperclip, Folder, File, ImageIcon, XCircle, Columns, Monitor, Settings, Zap, Database, FolderTree, Clipboard, PenTool, Link, Search, ImagePlus, GitBranch, Library, Command, Sparkles, Code, FileEdit, Lightbulb, Coffee, RefreshCw, Square, ArrowUp, Share2, ThumbsDown, Volume2, RotateCw, MoreHorizontal } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -888,6 +888,114 @@ export default function NativeChatPage() {
   const [editMessageText, setEditMessageText] = useState('');
   const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
 
+  // Action & Branch states (Matching Screenshots 1 & 2)
+  const [openMoreMenuIndex, setOpenMoreMenuIndex] = useState<number | null>(null);
+  const [dislikedMessageIndices, setDislikedMessageIndices] = useState<number[]>([]);
+  const [speakingMessageIndex, setSpeakingMessageIndex] = useState<number | null>(null);
+  const [isBranching, setIsBranching] = useState(false);
+  const [branchNotification, setBranchNotification] = useState<string | null>(null);
+
+  const formatMessageTime = (ts?: number) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  const formatDetailTime = (ts?: number) => {
+    if (!ts) return language === 'id' ? 'hari ini' : 'today';
+    const d = new Date(ts);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    if (isToday) {
+      return language === 'id' ? `hari ini, ${timeStr}` : `today, ${timeStr}`;
+    }
+    return `${d.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'short' })}, ${timeStr}`;
+  };
+
+  const handleShareMessage = async (content: string) => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ text: content, title: 'Lyra Chat' });
+        return;
+      } catch (e) {}
+    }
+    if (typeof navigator !== 'undefined') {
+      navigator.clipboard.writeText(content);
+      setBranchNotification(language === 'id' ? 'Teks berhasil disalin untuk dibagikan' : 'Text copied to share');
+      setTimeout(() => setBranchNotification(null), 2500);
+    }
+  };
+
+  const handleToggleDislike = (index: number) => {
+    setDislikedMessageIndices(prev => 
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  };
+
+  const handleSpeakMessage = (index: number, content: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (speakingMessageIndex === index) {
+      window.speechSynthesis.cancel();
+      setSpeakingMessageIndex(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const cleanText = content.replace(/[*#`_~[\]()]/g, '');
+    const utter = new SpeechSynthesisUtterance(cleanText);
+    utter.lang = language === 'id' ? 'id-ID' : 'en-US';
+    utter.onend = () => setSpeakingMessageIndex(null);
+    utter.onerror = () => setSpeakingMessageIndex(null);
+    setSpeakingMessageIndex(index);
+    window.speechSynthesis.speak(utter);
+  };
+
+  const handleRegenerateFrom = async (index: number) => {
+    if (isLoading) return;
+    const priorUserMsgIdx = index - 1;
+    if (priorUserMsgIdx < 0 || messages[priorUserMsgIdx]?.role !== 'user') return;
+    const userPrompt = messages[priorUserMsgIdx].content;
+    const priorMessages = messages.slice(0, priorUserMsgIdx);
+    await sendChatMessage(userPrompt, priorMessages);
+  };
+
+  const handleBranchSession = async (messageIndex: number) => {
+    setIsBranching(true);
+    setOpenMoreMenuIndex(null);
+    try {
+      const res = await fetch('/api/sessions/branch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_session_id: activeSessionId,
+          message_index: messageIndex
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.session_id) {
+        const branchedMessages = messages.slice(0, messageIndex + 1);
+        setMessages(branchedMessages);
+        setActiveSessionId(data.session_id);
+        updateUrlWithSession(data.session_id);
+        try {
+          localStorage.setItem('lyra_chat_active_session', data.session_id);
+        } catch (e) {}
+        fetchSessions();
+        setBranchNotification(language === 'id' ? 'Obrolan berhasil dicabangkan ke obrolan baru' : 'Chat branched to a new conversation');
+        setTimeout(() => setBranchNotification(null), 3500);
+      } else {
+        alert(data.error || 'Gagal membuat branch obrolan');
+      }
+    } catch (e: any) {
+      console.error('Failed to branch session', e);
+      alert(e.message || 'Gagal membuat branch obrolan');
+    } finally {
+      setIsBranching(false);
+    }
+  };
+
   const handleCopyMessage = (index: number, content: string) => {
     try {
       navigator.clipboard.writeText(content);
@@ -912,7 +1020,8 @@ export default function NativeChatPage() {
       content: userText, 
       tools: [], 
       reasoning: null, 
-      attachments: [...currentAttachments] 
+      attachments: [...currentAttachments],
+      timestamp: Date.now()
     };
 
     const initialMessages = priorMessages 
@@ -926,7 +1035,8 @@ export default function NativeChatPage() {
         content: '', 
         rawContent: '',
         tools: [], 
-        reasoning: { startTime: Date.now(), endTime: null, text: '' }
+        reasoning: { startTime: Date.now(), endTime: null, text: '' },
+        timestamp: Date.now()
       }
     ]);
     setIsLoading(true);
@@ -1305,174 +1415,134 @@ export default function NativeChatPage() {
             </div>
           )}
 
+          {/* Toast / Alert Notification for Branch or Share */}
+          <AnimatePresence>
+            {branchNotification && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-lyra-surface/95 border border-lyra-accent/40 text-lyra-text shadow-2xl flex items-center gap-2.5 text-xs font-medium backdrop-blur-md"
+              >
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+                <span>{branchNotification}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {messages.map((m, i) => (
-            <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} group`}>
-              <div className={`max-w-[85%] rounded-3xl p-5 relative transition-all ${
-                m.role === 'user' 
-                  ? 'bg-lyra-accent text-white shadow-md shadow-lyra-accent/10' 
-                  : 'bg-lyra-surface border border-white/5 text-lyra-text shadow-sm'
-              }`}>
-                {/* Header & Quick Action Buttons */}
-                <div className="flex items-center justify-between gap-4 mb-2">
-                  <div className="text-sm font-semibold opacity-60 uppercase tracking-wider">
-                    {m.role === 'user' ? (language === 'id' ? 'Anda' : 'You') : 'Hermes'}
-                  </div>
-
-                  {/* Header Actions for User Message: Copy & Edit (Always Visible) */}
-                  {m.role === 'user' && editingMessageIndex !== i && (
-                    <div className="flex items-center gap-1.5 opacity-80 hover:opacity-100 transition-opacity">
-                      <button
-                        type="button"
-                        onClick={() => handleCopyMessage(i, m.content)}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-all text-xs cursor-pointer shadow-xs"
-                        title={copiedMessageIndex === i ? (language === 'id' ? 'Tersalin!' : 'Copied!') : (language === 'id' ? 'Salin pesan' : 'Copy message')}
-                      >
-                        {copiedMessageIndex === i ? (
-                          <>
-                            <Check size={13} className="text-emerald-300 stroke-[2.5]" />
-                            <span className="text-[11px] font-medium text-emerald-200">{language === 'id' ? 'Tersalin' : 'Copied'}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Clipboard size={13} />
-                            <span className="text-[11px] font-medium">{language === 'id' ? 'Salin' : 'Copy'}</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingMessageIndex(i);
-                          setEditMessageText(m.content || '');
-                        }}
-                        disabled={isLoading}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/20 hover:bg-black/40 text-white/90 hover:text-white transition-all text-xs cursor-pointer disabled:opacity-40 shadow-xs"
-                        title={language === 'id' ? 'Edit pesan' : 'Edit message'}
-                      >
-                        <Edit2 size={13} />
-                        <span className="text-[11px] font-medium">{language === 'id' ? 'Edit' : 'Edit'}</span>
-                      </button>
-                    </div>
+            m.role === 'user' ? (
+              /* User Message Row (Matching Gambar 1) */
+              <div key={i} className="flex flex-col items-end group w-full mb-3">
+                <div className="flex items-end justify-end max-w-[85%] sm:max-w-[75%] gap-2 w-full">
+                  {/* Jam di samping kiri user */}
+                  {m.timestamp && (
+                    <span className="text-[11px] text-lyra-text-secondary/60 select-none pb-2 font-mono shrink-0">
+                      {formatMessageTime(m.timestamp)}
+                    </span>
                   )}
 
-                  {/* Copy Action for Assistant Message */}
-                  {m.role === 'assistant' && (
-                    <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
-                      <button
-                        type="button"
-                        onClick={() => handleCopyMessage(i, m.content)}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-lyra-accent/10 hover:bg-lyra-accent/20 text-lyra-text-secondary hover:text-lyra-text transition-colors text-xs cursor-pointer"
-                        title={copiedMessageIndex === i ? (language === 'id' ? 'Tersalin!' : 'Copied!') : (language === 'id' ? 'Salin' : 'Copy')}
-                      >
-                        {copiedMessageIndex === i ? (
-                          <>
-                            <Check size={13} className="text-emerald-400 stroke-[2.5]" />
-                            <span className="text-[11px] text-emerald-400">{language === 'id' ? 'Tersalin' : 'Copied'}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Clipboard size={13} />
-                            <span className="text-[11px]">{language === 'id' ? 'Salin' : 'Copy'}</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {m.attachments && m.attachments.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {m.attachments.map((att: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg text-xs shadow-sm">
-                        {att.isWorkspaceRef ? (att.isDirectory ? <Folder size={14} className="text-lyra-accent" /> : <File size={14} className="text-lyra-accent" />) : att.isUrl ? <Link size={14} className="text-purple-400" /> : att.type?.startsWith('image/') ? <ImageIcon size={14}/> : <File size={14}/>}
-                        <span className="truncate max-w-[200px]">{att.isWorkspaceRef ? `@${att.isDirectory ? 'folder' : 'file'}:${att.name}` : att.name}</span>
+                  {/* User Message Bubble */}
+                  <div className={`rounded-3xl p-5 relative transition-all max-w-full ${
+                    editingMessageIndex === i 
+                      ? 'w-full bg-lyra-accent text-white shadow-lg' 
+                      : 'bg-lyra-accent text-white shadow-md shadow-lyra-accent/10'
+                  }`}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between gap-4 mb-2">
+                      <div className="text-sm font-semibold opacity-70 uppercase tracking-wider">
+                        {language === 'id' ? 'Anda' : 'You'}
                       </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Reasoning & Tools Execution Pipeline */}
-                {m.role === 'assistant' && (
-                  <div className="mb-2">
-                    {/* Render completed tools */}
-                    {m.tools?.map((tool: any, idx: number) => (
-                      <ToolCallCard key={idx} tool={tool} />
-                    ))}
-                    
-                    {/* Render active reasoning if it hasn't ended */}
-                    {m.reasoning && !m.reasoning.endTime && (
-                      <ReasoningCard reasoning={m.reasoning} />
+                    </div>
+
+                    {/* Attachments if any */}
+                    {m.attachments && m.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {m.attachments.map((att: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg text-xs shadow-sm">
+                            {att.isWorkspaceRef ? (att.isDirectory ? <Folder size={14} className="text-lyra-accent" /> : <File size={14} className="text-lyra-accent" />) : att.isUrl ? <Link size={14} className="text-purple-400" /> : att.type?.startsWith('image/') ? <ImageIcon size={14}/> : <File size={14}/>}
+                            <span className="truncate max-w-[200px]">{att.isWorkspaceRef ? `@${att.isDirectory ? 'folder' : 'file'}:${att.name}` : att.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* User Edit Mode vs Normal Markdown Content */}
+                    {editingMessageIndex === i ? (
+                      <div className="flex flex-col gap-3 min-w-[280px] sm:min-w-[460px] pt-1">
+                        <textarea
+                          value={editMessageText}
+                          onChange={(e) => setEditMessageText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSaveAndSendEdit(i);
+                            } else if (e.key === 'Escape') {
+                              handleCancelEdit();
+                            }
+                          }}
+                          className="w-full bg-black/30 text-white placeholder:text-white/50 border border-white/30 rounded-2xl p-4 text-sm focus:outline-none focus:border-white resize-y min-h-[100px] max-h-72 shadow-inner"
+                          autoFocus
+                        />
+                        <div className="flex items-center justify-end gap-2.5">
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            className="px-4 py-2 rounded-xl text-xs font-medium bg-black/30 hover:bg-black/50 text-white transition-colors cursor-pointer border border-white/10"
+                          >
+                            {language === 'id' ? 'Batal' : 'Cancel'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveAndSendEdit(i)}
+                            disabled={isLoading || !editMessageText.trim()}
+                            className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-900 hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                          >
+                            <span>{language === 'id' ? 'Kirim' : 'Send'}</span>
+                            <Send size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      m.content && (
+                        <div className="prose prose-p:leading-relaxed prose-pre:bg-lyra-bg prose-pre:border prose-pre:border-lyra-accent/10 prose-headings:text-white prose-p:text-white prose-a:text-white/90 prose-strong:text-white prose-code:text-white prose-ul:text-white prose-ol:text-white prose-li:text-white prose-table:text-white max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {m.content}
+                          </ReactMarkdown>
+                        </div>
+                      )
                     )}
                   </div>
-                )}
+                </div>
 
-                {/* User Edit Mode vs Normal Markdown Content */}
-                {m.role === 'user' && editingMessageIndex === i ? (
-                  <div className="flex flex-col gap-3 min-w-[280px] sm:min-w-[460px] pt-1">
-                    <textarea
-                      value={editMessageText}
-                      onChange={(e) => setEditMessageText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSaveAndSendEdit(i);
-                        } else if (e.key === 'Escape') {
-                          handleCancelEdit();
-                        }
-                      }}
-                      className="w-full bg-black/30 text-white placeholder:text-white/50 border border-white/30 rounded-2xl p-4 text-sm focus:outline-none focus:border-white resize-y min-h-[100px] max-h-72 shadow-inner"
-                      autoFocus
-                    />
-                    <div className="flex items-center justify-end gap-2.5">
-                      <button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="px-4 py-2 rounded-xl text-xs font-medium bg-black/30 hover:bg-black/50 text-white transition-colors cursor-pointer border border-white/10"
-                      >
-                        {language === 'id' ? 'Batal' : 'Cancel'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSaveAndSendEdit(i)}
-                        disabled={isLoading || !editMessageText.trim()}
-                        className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-zinc-900 hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all shadow-md cursor-pointer flex items-center gap-1.5"
-                      >
-                        <span>{language === 'id' ? 'Kirim' : 'Send'}</span>
-                        <Send size={13} />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  m.content && (
-                    <div className="prose prose-p:leading-relaxed prose-pre:bg-lyra-bg prose-pre:border prose-pre:border-lyra-accent/10 prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-lyra-accent prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {m.content}
-                      </ReactMarkdown>
-                    </div>
-                  )
-                )}
-
-                {/* Bottom Footer Actions (Explicitly visible on every sent user message!) */}
-                {m.role === 'user' && editingMessageIndex !== i && (
-                  <div className="flex items-center justify-end gap-2 mt-3 pt-2 border-t border-white/10">
+                {/* Actions below User Message (Gambar 1): Salin, Bagikan, Edit */}
+                {editingMessageIndex !== i && (
+                  <div className="flex items-center gap-1 mt-1.5 mr-2">
+                    {/* Salin */}
                     <button
                       type="button"
                       onClick={() => handleCopyMessage(i, m.content)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/20 hover:bg-black/35 text-white/90 hover:text-white transition-colors text-xs cursor-pointer shadow-xs"
-                      title={language === 'id' ? 'Salin pesan ini' : 'Copy this message'}
+                      className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer"
+                      title={copiedMessageIndex === i ? (language === 'id' ? 'Tersalin!' : 'Copied!') : (language === 'id' ? 'Salin pesan' : 'Copy message')}
                     >
                       {copiedMessageIndex === i ? (
-                        <>
-                          <Check size={12} className="text-emerald-300 stroke-[2.5]" />
-                          <span className="text-[11px] font-medium text-emerald-200">{language === 'id' ? 'Tersalin' : 'Copied'}</span>
-                        </>
+                        <Check size={14} className="text-emerald-400 stroke-[2.5]" />
                       ) : (
-                        <>
-                          <Clipboard size={12} />
-                          <span className="text-[11px] font-medium">{language === 'id' ? 'Salin' : 'Copy'}</span>
-                        </>
+                        <Clipboard size={14} />
                       )}
                     </button>
+
+                    {/* Bagikan */}
+                    <button
+                      type="button"
+                      onClick={() => handleShareMessage(m.content)}
+                      className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer"
+                      title={language === 'id' ? 'Bagikan' : 'Share'}
+                    >
+                      <Share2 size={14} />
+                    </button>
+
+                    {/* Edit */}
                     <button
                       type="button"
                       onClick={() => {
@@ -1480,16 +1550,168 @@ export default function NativeChatPage() {
                         setEditMessageText(m.content || '');
                       }}
                       disabled={isLoading}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/20 hover:bg-black/35 text-white/90 hover:text-white transition-colors text-xs cursor-pointer disabled:opacity-40 shadow-xs"
-                      title={language === 'id' ? 'Edit pesan ini' : 'Edit this message'}
+                      className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer disabled:opacity-40"
+                      title={language === 'id' ? 'Edit pesan' : 'Edit message'}
                     >
-                      <Edit2 size={12} />
-                      <span className="text-[11px] font-medium">{language === 'id' ? 'Edit' : 'Edit'}</span>
+                      <Edit2 size={14} />
                     </button>
                   </div>
                 )}
               </div>
-            </div>
+            ) : (
+              /* Assistant Message Row (Matching Gambar 2) */
+              <div key={i} className="flex flex-col items-start group w-full mb-3">
+                <div className="flex items-end justify-start max-w-[85%] sm:max-w-[75%] gap-2 w-full">
+                  {/* Assistant Bubble */}
+                  <div className="rounded-3xl p-5 bg-lyra-surface border border-white/5 text-lyra-text shadow-sm transition-all max-w-full">
+                    <div className="text-sm font-semibold opacity-60 uppercase tracking-wider mb-2">
+                      Hermes
+                    </div>
+
+                    {/* Reasoning & Tools Execution Pipeline */}
+                    <div className="mb-2">
+                      {m.tools?.map((tool: any, idx: number) => (
+                        <ToolCallCard key={idx} tool={tool} />
+                      ))}
+                      {m.reasoning && !m.reasoning.endTime && (
+                        <ReasoningCard reasoning={m.reasoning} />
+                      )}
+                    </div>
+
+                    {/* Markdown Content */}
+                    {m.content && (
+                      <div className="prose prose-p:leading-relaxed prose-pre:bg-lyra-bg prose-pre:border prose-pre:border-lyra-accent/10 prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-lyra-accent prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {m.content}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Jam di samping kanan jawaban ai */}
+                  {m.timestamp && (
+                    <span className="text-[11px] text-lyra-text-secondary/60 select-none pb-2 font-mono shrink-0">
+                      {formatMessageTime(m.timestamp)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Actions below Assistant Message (Gambar 2): Salin, Tidak Suka, Bagikan, Baca Keras, Kirim Ulang, ... */}
+                {m.content && (
+                  <div className="flex items-center gap-1 mt-1.5 ml-2 relative">
+                    {/* Salin */}
+                    <button
+                      type="button"
+                      onClick={() => handleCopyMessage(i, m.content)}
+                      className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer"
+                      title={copiedMessageIndex === i ? (language === 'id' ? 'Tersalin!' : 'Copied!') : (language === 'id' ? 'Salin' : 'Copy')}
+                    >
+                      {copiedMessageIndex === i ? (
+                        <Check size={14} className="text-emerald-400 stroke-[2.5]" />
+                      ) : (
+                        <Clipboard size={14} />
+                      )}
+                    </button>
+
+                    {/* Tidak Suka */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleDislike(i)}
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                        dislikedMessageIndices.includes(i) ? 'text-rose-400 bg-rose-500/10' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'
+                      }`}
+                      title={language === 'id' ? 'Tidak suka' : 'Dislike'}
+                    >
+                      <ThumbsDown size={14} />
+                    </button>
+
+                    {/* Bagikan */}
+                    <button
+                      type="button"
+                      onClick={() => handleShareMessage(m.content)}
+                      className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer"
+                      title={language === 'id' ? 'Bagikan' : 'Share'}
+                    >
+                      <Share2 size={14} />
+                    </button>
+
+                    {/* Baca Keras */}
+                    <button
+                      type="button"
+                      onClick={() => handleSpeakMessage(i, m.content)}
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                        speakingMessageIndex === i ? 'text-lyra-accent bg-lyra-accent/10 animate-pulse' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'
+                      }`}
+                      title={speakingMessageIndex === i ? (language === 'id' ? 'Hentikan suara' : 'Stop voice') : (language === 'id' ? 'Baca keras' : 'Read aloud')}
+                    >
+                      <Volume2 size={14} />
+                    </button>
+
+                    {/* Kirim Ulang */}
+                    <button
+                      type="button"
+                      onClick={() => handleRegenerateFrom(i)}
+                      disabled={isLoading}
+                      className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer disabled:opacity-40"
+                      title={language === 'id' ? 'Kirim ulang jawaban' : 'Regenerate response'}
+                    >
+                      <RotateCw size={14} />
+                    </button>
+
+                    {/* More options button (...) */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setOpenMoreMenuIndex(openMoreMenuIndex === i ? null : i)}
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          openMoreMenuIndex === i ? 'bg-lyra-accent/20 text-lyra-accent' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'
+                        }`}
+                        title={language === 'id' ? 'Opsi lainnya' : 'More options'}
+                      >
+                        <MoreHorizontal size={14} />
+                      </button>
+
+                      {/* Context Popover Card matching Gambar 2! */}
+                      <AnimatePresence>
+                        {openMoreMenuIndex === i && (
+                          <>
+                            {/* Backdrop */}
+                            <div 
+                              className="fixed inset-0 z-40" 
+                              onClick={() => setOpenMoreMenuIndex(null)} 
+                            />
+                            
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                              transition={{ duration: 0.12 }}
+                              className="absolute left-0 top-[calc(100%+6px)] z-50 w-56 bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-2xl p-2 backdrop-blur-md"
+                            >
+                              {/* Timestamp Header in Popover */}
+                              <div className="text-[11px] text-lyra-text-secondary/70 px-3 py-1.5 font-medium border-b border-lyra-accent/10 mb-1">
+                                {formatDetailTime(m.timestamp)}
+                              </div>
+
+                              {/* Branch Action Item */}
+                              <button
+                                type="button"
+                                onClick={() => handleBranchSession(i)}
+                                disabled={isBranching}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-lyra-text hover:bg-lyra-accent/15 hover:text-lyra-accent transition-colors text-left cursor-pointer"
+                              >
+                                <GitBranch size={15} className="text-lyra-accent shrink-0" />
+                                <span>{language === 'id' ? 'Cabangkan ke obrolan baru' : 'Branch to new chat'}</span>
+                              </button>
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
           ))}
           <div ref={messagesEndRef} />
         </div>

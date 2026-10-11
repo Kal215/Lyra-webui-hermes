@@ -5,8 +5,9 @@ export function buildRichMessages(rawMessages: any[]) {
   let currentAssistant: any = null;
 
   for (const m of rawMessages) {
+    const rawTs = m.timestamp ? (m.timestamp > 1e11 ? m.timestamp : m.timestamp * 1000) : Date.now();
     if (m.role === 'user') {
-      richMsgs.push({ role: 'user', content: m.content });
+      richMsgs.push({ role: 'user', content: m.content, timestamp: rawTs });
       currentAssistant = null;
     } else if (m.role === 'assistant') {
       const extracted = extractInlineThinking(m.content || '', false);
@@ -23,7 +24,7 @@ export function buildRichMessages(rawMessages: any[]) {
 
       if (m.tool_calls && m.tool_calls.length > 0) {
         if (!currentAssistant) {
-          currentAssistant = { role: 'assistant', content: displayContent, rawContent: m.content || '', tools: [], reasoning: reasoningObj };
+          currentAssistant = { role: 'assistant', content: displayContent, rawContent: m.content || '', tools: [], reasoning: reasoningObj, timestamp: rawTs };
           richMsgs.push(currentAssistant);
         } else {
           if (m.content) {
@@ -47,7 +48,7 @@ export function buildRichMessages(rawMessages: any[]) {
         }
       } else {
         if (!currentAssistant) {
-          currentAssistant = { role: 'assistant', content: displayContent, rawContent: m.content || '', tools: [], reasoning: reasoningObj };
+          currentAssistant = { role: 'assistant', content: displayContent, rawContent: m.content || '', tools: [], reasoning: reasoningObj, timestamp: rawTs };
           richMsgs.push(currentAssistant);
         } else {
           if (m.content) {
