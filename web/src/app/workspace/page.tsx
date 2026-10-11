@@ -133,7 +133,7 @@ function SyntaxCodeEditor({
 export default function WorkspacePage() {
   const searchParams = useSearchParams();
   const activeAgentParam = searchParams ? searchParams.get('activeAgent') : null;
-  const { currentWorkspace, setCurrentWorkspace, activeFilePath } = useWorkspaceStore();
+  const { currentWorkspace, setCurrentWorkspace, activeFilePath, liveTyping, setLiveTyping } = useWorkspaceStore();
 
   const [files, setFiles] = useState<FileNode[]>([]);
   const [currentDir, setCurrentDir] = useState<string>(currentWorkspace || '');
@@ -296,6 +296,44 @@ export default function WorkspacePage() {
     }
   };
 
+  // Reactive agent live-coding simulation
+  useEffect(() => {
+    if (!liveTyping || !liveTyping.active) return;
+    const targetPath = liveTyping.filePath;
+    const targetName = targetPath.split(/[\/\\]/).pop() || 'file';
+
+    // If file is already open, simulate streaming typing
+    const idx = openFiles.findIndex(f => f.path.toLowerCase() === targetPath.toLowerCase());
+    if (idx !== -1) {
+      setActiveFileIndex(idx);
+      if (liveTyping.diffOrContent) {
+        setSimulatingTyping(true);
+        const incomingText = liveTyping.diffOrContent;
+        let charIndex = 0;
+        const baseContent = openFiles[idx].content ? openFiles[idx].content + '\n' : '';
+        
+        const timer = setInterval(() => {
+          charIndex += 4;
+          if (charIndex >= incomingText.length) {
+            clearInterval(timer);
+            setSimulatingTyping(false);
+            updateContent(baseContent + incomingText);
+          } else {
+            updateContent(baseContent + incomingText.slice(0, charIndex));
+          }
+        }, 30);
+
+        return () => {
+          clearInterval(timer);
+          setSimulatingTyping(false);
+        };
+      }
+    } else {
+      // Load file into editor tabs first
+      loadFile(targetPath, targetName);
+    }
+  }, [liveTyping]);
+
   const activeFile = activeFileIndex !== -1 ? openFiles[activeFileIndex] : null;
 
   return (
@@ -378,13 +416,18 @@ export default function WorkspacePage() {
             {/* Top Bar - Path indicator & Agent Presence Badge */}
             <div className="h-9 border-b border-lyra-editor-border bg-lyra-editor-header/40 flex items-center justify-between px-4 shrink-0 text-xs text-lyra-editor-muted">
               <span className="truncate">{activeFile.path}</span>
-              {currentAgent && (
+              {simulatingTyping && liveTyping ? (
+                <div className="flex items-center gap-2 px-3 py-0.5 rounded-full border border-blue-500/40 bg-blue-500/20 text-blue-400 font-mono text-[11px] shadow-sm animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
+                  <span>@{liveTyping.agentName} sedang menulis kode secara realtime...</span>
+                </div>
+              ) : currentAgent ? (
                 <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-mono ${currentAgent.color} shadow-sm shrink-0`}>
                   <Bot size={13} className="text-lyra-accent" />
                   <span className="font-semibold">{currentAgent.name}</span>
                   <span className="opacity-60">({currentAgent.role})</span>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Core Syntax Highlighted Editor */}

@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useWorkspaceStore } from '@/store/workspace';
 import { useWorkSessionStore } from '@/lib/store/useWorkSessionStore';
 import { DynamicTodosCard } from '@/components/work/DynamicTodosCard';
 import { ReasoningAccordion } from '@/components/work/ReasoningAccordion';
@@ -411,12 +412,31 @@ export default function WorkPage() {
 
                 if (data.type === 'tool_use') {
                   const toolId = 'tool_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+                  const toolName = data.name || 'system_call';
+                  const toolInput = data.input || {};
+
+                  // If agent is modifying/writing/patching files, broadcast live typing to Workspace!
+                  if (toolName === 'write_file' || toolName === 'patch' || toolName === 'create_file' || toolInput.path || toolInput.file) {
+                    const targetFile = toolInput.path || toolInput.file || toolInput.file_path || '';
+                    if (targetFile) {
+                      const agentInfo = getAgentInfo(selectedAgent);
+                      useWorkspaceStore.getState().openFileInWorkspace(targetFile);
+                      useWorkspaceStore.getState().setLiveTyping({
+                        active: true,
+                        agentName: agentInfo.name,
+                        agentRole: agentInfo.role,
+                        filePath: targetFile,
+                        diffOrContent: toolInput.content || toolInput.new_string || toolInput.code || ''
+                      });
+                    }
+                  }
+
                   dispatchAgentEvent({
                     type: 'TOOL_SPAWNED',
                     payload: {
                       id: toolId,
-                      toolName: data.name || 'system_call',
-                      commandPreview: JSON.stringify(data.input || {}).slice(0, 80),
+                      toolName: toolName,
+                      commandPreview: JSON.stringify(toolInput).slice(0, 80),
                       output: 'Menjalankan operasi otonom...',
                       status: 'running'
                     }
