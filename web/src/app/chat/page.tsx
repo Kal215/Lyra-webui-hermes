@@ -883,27 +883,56 @@ export default function NativeChatPage() {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-    
-    const userText = inputMessage;
-    setInputMessage('');
+  // User Message Edit & Copy states
+  const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
+  const [editMessageText, setEditMessageText] = useState('');
+  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
+
+  const handleCopyMessage = (index: number, content: string) => {
     try {
-      const draftKey = activeSessionId ? `lyra_chat_draft_${activeSessionId}` : 'lyra_chat_draft_new';
-      localStorage.removeItem(draftKey);
-    } catch (e) {}
-    
-    const newMessage = { role: 'user', content: userText, tools: [], reasoning: null, attachments: [...attachments] };
-    setMessages(prev => [...prev, newMessage, { 
-      role: 'assistant', 
-      content: '', 
-      rawContent: '',
+      navigator.clipboard.writeText(content);
+      setCopiedMessageIndex(index);
+      setTimeout(() => setCopiedMessageIndex(null), 2000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageIndex(null);
+    setEditMessageText('');
+  };
+
+  const sendChatMessage = async (userText: string, priorMessages?: any[], messageAttachments?: any[]) => {
+    if (!userText.trim()) return;
+
+    const currentAttachments = messageAttachments !== undefined ? messageAttachments : attachments;
+    const newMessage = { 
+      role: 'user', 
+      content: userText, 
       tools: [], 
-      reasoning: { startTime: Date.now(), endTime: null, text: '' }
-    }]);
+      reasoning: null, 
+      attachments: [...currentAttachments] 
+    };
+
+    const initialMessages = priorMessages 
+      ? [...priorMessages, newMessage] 
+      : [...messages, newMessage];
+
+    setMessages([
+      ...initialMessages,
+      { 
+        role: 'assistant', 
+        content: '', 
+        rawContent: '',
+        tools: [], 
+        reasoning: { startTime: Date.now(), endTime: null, text: '' }
+      }
+    ]);
     setIsLoading(true);
     isStreamingRef.current = true;
-    
+    setEditingMessageIndex(null);
+
     let currentSessionId = activeSessionId;
 
     // Send payload
@@ -911,7 +940,7 @@ export default function NativeChatPage() {
       message: userText,
       session_id: activeSessionId,
       workspace: currentWorkspace || undefined,
-      attachments: attachments.length > 0 ? attachments : undefined,
+      attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
       systemPrompt: activeProject?.systemPrompt || undefined,
       model: selectedModel,
       thinking: isReasoningEnabled,
@@ -920,8 +949,9 @@ export default function NativeChatPage() {
       deepResearch: isDeepResearchEnabled
     };
     
-    // Clear attachments after sending
-    setAttachments([]);
+    if (messageAttachments === undefined) {
+      setAttachments([]);
+    }
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -1067,6 +1097,29 @@ export default function NativeChatPage() {
       isStreamingRef.current = false;
       abortControllerRef.current = null;
     }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
+    
+    const userText = inputMessage;
+    setInputMessage('');
+    try {
+      const draftKey = activeSessionId ? `lyra_chat_draft_${activeSessionId}` : 'lyra_chat_draft_new';
+      localStorage.removeItem(draftKey);
+    } catch (e) {}
+
+    await sendChatMessage(userText);
+  };
+
+  const handleSaveAndSendEdit = async (index: number) => {
+    if (!editMessageText.trim() || isLoading) return;
+    const userText = editMessageText;
+    const priorMessages = messages.slice(0, index);
+    const existingAttachments = messages[index]?.attachments || [];
+    setEditingMessageIndex(null);
+    setEditMessageText('');
+    await sendChatMessage(userText, priorMessages, existingAttachments);
   };
 
   // Filter by search query
@@ -1253,14 +1306,65 @@ export default function NativeChatPage() {
           )}
 
           {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-3xl p-5 ${
+            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} group`}>
+              <div className={`max-w-[85%] rounded-3xl p-5 relative transition-all ${
                 m.role === 'user' 
-                  ? 'bg-lyra-accent text-white' 
-                  : 'bg-lyra-surface border border-white/5 text-lyra-text'
+                  ? 'bg-lyra-accent text-white shadow-md shadow-lyra-accent/10' 
+                  : 'bg-lyra-surface border border-white/5 text-lyra-text shadow-sm'
               }`}>
-                <div className="text-sm font-semibold mb-3 opacity-60 uppercase tracking-wider">
-                  {m.role === 'user' ? (language === 'id' ? 'Anda' : 'You') : 'Hermes'}
+                {/* Header & Quick Action Buttons */}
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <div className="text-sm font-semibold opacity-60 uppercase tracking-wider">
+                    {m.role === 'user' ? (language === 'id' ? 'Anda' : 'You') : 'Hermes'}
+                  </div>
+
+                  {/* Actions for User Message: Copy & Edit */}
+                  {m.role === 'user' && editingMessageIndex !== i && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyMessage(i, m.content)}
+                        className="p-1 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer"
+                        title={copiedMessageIndex === i ? (language === 'id' ? 'Tersalin!' : 'Copied!') : (language === 'id' ? 'Salin' : 'Copy')}
+                      >
+                        {copiedMessageIndex === i ? (
+                          <Check size={14} className="text-emerald-300 stroke-[2.5]" />
+                        ) : (
+                          <Clipboard size={14} />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingMessageIndex(i);
+                          setEditMessageText(m.content || '');
+                        }}
+                        disabled={isLoading}
+                        className="p-1 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer disabled:opacity-40"
+                        title={language === 'id' ? 'Edit pesan' : 'Edit message'}
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Copy Action for Assistant Message */}
+                  {m.role === 'assistant' && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyMessage(i, m.content)}
+                        className="p-1 rounded-lg hover:bg-lyra-accent/10 text-lyra-text-secondary hover:text-lyra-text transition-colors cursor-pointer"
+                        title={copiedMessageIndex === i ? (language === 'id' ? 'Tersalin!' : 'Copied!') : (language === 'id' ? 'Salin' : 'Copy')}
+                      >
+                        {copiedMessageIndex === i ? (
+                          <Check size={14} className="text-emerald-400 stroke-[2.5]" />
+                        ) : (
+                          <Clipboard size={14} />
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {m.attachments && m.attachments.length > 0 && (
@@ -1289,13 +1393,50 @@ export default function NativeChatPage() {
                   </div>
                 )}
 
-                {/* Final Markdown Content */}
-                {m.content && (
-                  <div className="prose prose-p:leading-relaxed prose-pre:bg-lyra-bg prose-pre:border prose-pre:border-lyra-accent/10 prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-lyra-accent prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {m.content}
-                    </ReactMarkdown>
+                {/* User Edit Mode vs Normal Markdown Content */}
+                {m.role === 'user' && editingMessageIndex === i ? (
+                  <div className="flex flex-col gap-3 min-w-[280px] sm:min-w-[440px]">
+                    <textarea
+                      value={editMessageText}
+                      onChange={(e) => setEditMessageText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSaveAndSendEdit(i);
+                        } else if (e.key === 'Escape') {
+                          handleCancelEdit();
+                        }
+                      }}
+                      className="w-full bg-black/25 text-white placeholder:text-white/50 border border-white/20 rounded-2xl p-3.5 text-sm focus:outline-none focus:border-white/60 resize-y min-h-[90px] max-h-60"
+                      autoFocus
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-medium bg-black/20 hover:bg-black/35 text-white/90 hover:text-white transition-colors cursor-pointer"
+                      >
+                        {language === 'id' ? 'Batal' : 'Cancel'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveAndSendEdit(i)}
+                        disabled={isLoading || !editMessageText.trim()}
+                        className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-white text-zinc-900 hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>{language === 'id' ? 'Kirim' : 'Send'}</span>
+                        <Send size={12} />
+                      </button>
+                    </div>
                   </div>
+                ) : (
+                  m.content && (
+                    <div className="prose prose-p:leading-relaxed prose-pre:bg-lyra-bg prose-pre:border prose-pre:border-lyra-accent/10 prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-lyra-accent prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
+                  )
                 )}
               </div>
             </div>
