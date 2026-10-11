@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Code2, Bot, ExternalLink, ChevronDown, Check, Sparkles, X } from 'lucide-react';
+import { Code2, ExternalLink, ChevronDown, Check, Sparkles, X } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useI18nStore } from '@/i18n';
 import Link from 'next/link';

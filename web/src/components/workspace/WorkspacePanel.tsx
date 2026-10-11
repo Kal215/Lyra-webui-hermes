@@ -20,9 +20,7 @@ import {
   Code, 
   Check,
   Eye,
-  Terminal,
   Activity,
-  Bot,
   MessageSquare
 } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspace';
