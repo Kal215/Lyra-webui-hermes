@@ -205,6 +205,24 @@ function CodeBlock({ inline, className, children, ...props }: any) {
   );
 }
 
+const markdownComponents = {
+  code: CodeBlock,
+  pre: ({ children }: any) => <>{children}</>,
+  p: ({ children }: any) => {
+    // If paragraph contains a block code element, render a div to prevent HTML hydration errors (div/pre inside p)
+    const hasBlock = React.Children.toArray(children).some((child: any) => {
+      return (
+        React.isValidElement(child) &&
+        (child.type === CodeBlock || (child.props as any)?.className?.includes('language-'))
+      );
+    });
+    if (hasBlock) {
+      return <div className="leading-relaxed my-2">{children}</div>;
+    }
+    return <p className="leading-relaxed my-2">{children}</p>;
+  }
+};
+
 const formatTimeLabel = (updated_at: number) => {
   if (!updated_at) return '';
   const diffMins = Math.floor((Date.now() - updated_at) / (1000 * 60));
@@ -1915,7 +1933,7 @@ export default function NativeChatPage() {
                     ) : (
                       m.content && (
                         <div className="prose prose-p:leading-relaxed prose-pre:bg-lyra-bg prose-pre:border prose-pre:border-lyra-accent/10 prose-headings:text-white prose-p:text-white prose-a:text-white/90 prose-strong:text-white prose-code:text-white prose-ul:text-white prose-ol:text-white prose-li:text-white prose-table:text-white max-w-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock }}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                             {m.content}
                           </ReactMarkdown>
                         </div>
@@ -2017,7 +2035,7 @@ export default function NativeChatPage() {
                     {/* Markdown Content with CodeBlock */}
                     {m.content && (
                       <div className="prose prose-p:leading-relaxed prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-none prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-lyra-accent prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ code: CodeBlock }}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                           {m.content}
                         </ReactMarkdown>
                       </div>

@@ -27,10 +27,11 @@ interface WorkspacePanelProps {
   isOpen: boolean;
   onToggle: () => void;
   onMentionFile?: (path: string) => void;
+  targetPreviewPath?: string | null;
 }
 
-export function WorkspacePanel({ isOpen, onToggle, onMentionFile }: WorkspacePanelProps) {
-  const { currentWorkspace, setCurrentWorkspace } = useWorkspaceStore();
+export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewPath }: WorkspacePanelProps) {
+  const { currentWorkspace, setCurrentWorkspace, openFileInWorkspace } = useWorkspaceStore();
   const [workspaceFiles, setWorkspaceFiles] = useState<any[]>([]);
   const [workspaceInput, setWorkspaceInput] = useState(currentWorkspace || '');
   const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState('');
@@ -45,6 +46,13 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile }: WorkspacePan
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (targetPreviewPath) {
+      const fileName = targetPreviewPath.split(/[\/\\]/).pop() || 'file';
+      handlePreviewFile({ path: targetPreviewPath, name: fileName, isDirectory: false });
+    }
+  }, [targetPreviewPath]);
 
   const loadWorkspaceFiles = async (dir: string) => {
     if (!dir) return;
@@ -178,10 +186,10 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile }: WorkspacePan
     if (f.isDirectory) return;
     setLoadingPreview(true);
     try {
-      const res = await fetch(`/api/workspace/read?path=${encodeURIComponent(f.path)}`);
+      const res = await fetch(`/api/workspace/file?path=${encodeURIComponent(f.path)}`);
       if (res.ok) {
-        const text = await res.text();
-        setPreviewContent({ path: f.path, name: f.name, content: text });
+        const data = await res.json();
+        setPreviewContent({ path: f.path, name: f.name, content: data.content ?? data.error ?? '' });
       } else {
         setPreviewContent({ path: f.path, name: f.name, content: '// Tidak dapat membaca berkas biner atau izin ditolak.' });
       }

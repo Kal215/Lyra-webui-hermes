@@ -8,12 +8,14 @@ interface DeliverableCardProps {
   artifact: DeliverableArtifact;
   onApprove?: () => void;
   onReject?: () => void;
+  onSelectFile?: (path: string) => void;
 }
 
 export const DeliverableCard: React.FC<DeliverableCardProps> = ({ 
   artifact,
   onApprove,
-  onReject 
+  onReject,
+  onSelectFile
 }) => {
   return (
     <div className="mt-6 overflow-hidden rounded-2xl border border-emerald-500/20 bg-lyra-surface/90 p-6 shadow-xl backdrop-blur-md">
@@ -42,14 +44,17 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
           </span>
           <div className="mt-2 flex flex-wrap gap-2">
             {artifact.changedFiles.map((file) => (
-              <div
+              <button
                 key={file.path}
-                className="flex items-center gap-1.5 rounded-lg border border-lyra-accent/15 bg-lyra-bg/70 px-2.5 py-1 font-mono text-[11px] text-lyra-text"
+                type="button"
+                onClick={() => onSelectFile?.(file.path)}
+                className="flex items-center gap-1.5 rounded-lg border border-lyra-accent/20 bg-lyra-bg/80 hover:bg-lyra-accent/15 hover:border-lyra-accent/40 px-2.5 py-1 font-mono text-[11px] text-lyra-text transition-all cursor-pointer group"
+                title="Buka berkas di workspace"
               >
-                <FileCheck className="h-3 w-3 text-emerald-400" />
-                <span>{file.path}</span>
+                <FileCheck className="h-3 w-3 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="group-hover:text-lyra-accent transition-colors">{file.path}</span>
                 <span className="text-[9px] uppercase text-lyra-text-secondary">({file.action})</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>

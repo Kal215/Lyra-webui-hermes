@@ -10,6 +10,14 @@ import {
   HQSimulationAgentState
 } from '@/types/agent-studio';
 
+export interface AutonomousMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp?: string;
+  agentName?: string;
+}
+
 export interface WorkSessionState {
   sessionId: string | null;
   agentId: string;
@@ -23,12 +31,15 @@ export interface WorkSessionState {
   deliverable: DeliverableArtifact | null;
   terminalBuffer: string[];
   hqAgentState: HQSimulationAgentState;
+  conversationMessages: AutonomousMessage[];
 
   // Actions
   setSessionId: (id: string) => void;
   setAgentId: (id: string) => void;
   dispatchAgentEvent: (event: AgentStreamEvent) => void;
   dispatchAgentEventsBatch: (events: AgentStreamEvent[]) => void;
+  addConversationMessage: (msg: AutonomousMessage) => void;
+  appendAssistantChunk: (chunk: string, agentName?: string) => void;
   initDemoSession: (prompt: string, selectedAgent?: string) => void;
   resetSession: () => void;
 }
@@ -48,9 +59,34 @@ export const useWorkSessionStore = create<WorkSessionState>((set) => ({
   deliverable: null,
   terminalBuffer: [],
   hqAgentState: 'idle',
+  conversationMessages: [],
 
   setSessionId: (id: string) => set({ sessionId: id }),
   setAgentId: (id: string) => set({ agentId: id }),
+
+  addConversationMessage: (msg: AutonomousMessage) => set((state) => ({
+    conversationMessages: [...state.conversationMessages, msg]
+  })),
+
+  appendAssistantChunk: (chunk: string, agentName?: string) => set((state) => {
+    const msgs = [...state.conversationMessages];
+    const lastMsg = msgs[msgs.length - 1];
+    if (lastMsg && lastMsg.role === 'assistant') {
+      msgs[msgs.length - 1] = {
+        ...lastMsg,
+        content: lastMsg.content + chunk
+      };
+      return { conversationMessages: msgs };
+    }
+    const newMsg: AutonomousMessage = {
+      id: 'asst_' + Date.now().toString(36),
+      role: 'assistant',
+      content: chunk,
+      agentName: agentName || 'Aster',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    return { conversationMessages: [...msgs, newMsg] };
+  }),
 
   dispatchAgentEvent: (event: AgentStreamEvent) => {
     set((state) => applySingleEvent(state, event));
@@ -163,6 +199,7 @@ export const useWorkSessionStore = create<WorkSessionState>((set) => ({
     deliverable: null,
     terminalBuffer: [],
     hqAgentState: 'idle',
+    conversationMessages: [],
   }),
 }));
 
