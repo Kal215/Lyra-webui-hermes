@@ -1015,36 +1015,28 @@ Instruksi format respon:
         <div className="p-4 border-t border-lyra-accent/10 bg-lyra-surface/90 backdrop-blur-md shrink-0 z-10 shadow-lg">
           <form onSubmit={handleLaunchAutonomousWork} className="max-w-4xl mx-auto flex flex-col gap-2">
             
-            {/* Top Selector: Mode Pengerjaan Squad / Spesialis */}
-            <div className="flex items-center justify-between text-xs text-lyra-text-secondary px-1">
+            {/* Top Selector: Agent / Squad Mode */}
+            <div className="flex items-center text-xs text-lyra-text-secondary px-1">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span className="text-xs">Penanggung Jawab:</span>
                 <select
                   value={selectedAgent}
                   onChange={(e) => setSelectedAgent(e.target.value)}
-                  className="bg-lyra-surface border border-lyra-accent/20 rounded-lg px-2 py-0.5 text-xs text-lyra-text font-medium outline-none cursor-pointer hover:border-lyra-accent"
+                  className="bg-lyra-surface border border-lyra-accent/20 rounded-lg px-2.5 py-1 text-xs text-lyra-text font-medium outline-none cursor-pointer hover:border-lyra-accent transition-colors"
                 >
                   <option value="default">
-                    {language === 'id' 
-                      ? '✨ Full Autonomous Swarm (Semua Spesialis Bekerja Sama)' 
-                      : '✨ Full Autonomous Swarm (All Specialists Working Together)'}
+                    ✨ Autonomous Swarm
                   </option>
                   {availableAgents.filter(a => a !== 'default').map((agId) => {
                     const info = getAgentInfo(agId);
                     return (
                       <option key={agId} value={agId} className="bg-lyra-surface text-lyra-text">
-                        {language === 'id' ? 'Spesifik:' : 'Specific:'} {info.name} ({info.role})
+                        @{info.name} ({info.role})
                       </option>
                     );
                   })}
                 </select>
               </div>
-              <span className="font-mono text-[11px] opacity-70 hidden sm:inline">
-                {language === 'id' 
-                  ? 'Studio Otonom • Bertahap & Berhasil Maksimal' 
-                  : 'Autonomous Studio • Step-by-Step & Verified'}
-              </span>
             </div>
 
             {/* Input Box Container */}
