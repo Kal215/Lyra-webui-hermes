@@ -104,19 +104,15 @@ export async function POST(req: NextRequest) {
       effectiveModel = 'deepseek/deepseek-r1';
     }
   } else if (effectiveBaseUrl.includes('groq.com')) {
-    // Groq requires bare un-namespaced IDs
-    if (effectiveModel === 'meta-llama/llama-3.1-8b-instruct' || effectiveModel === 'llama-3.1-8b') {
-      effectiveModel = 'llama-3.1-8b-instant';
-    } else if (effectiveModel === 'meta-llama/llama-3.3-70b-instruct' || effectiveModel === 'llama-3.3-70b') {
-      effectiveModel = 'llama-3.3-70b-versatile';
-    } else if (effectiveModel?.includes('deepseek-r1')) {
-      effectiveModel = 'deepseek-r1-distill-llama-70b';
+    // If the model was decommissioned on Groq (e.g. DeepSeek R1), fallback to active Groq model
+    if (effectiveModel?.includes('deepseek-r1') || effectiveModel === 'deepseek-r1-distill-llama-70b') {
+      effectiveModel = 'openai/gpt-oss-120b';
     }
   }
 
   if (!effectiveModel || isHermesAlias) {
     if (effectiveBaseUrl.includes('groq.com')) {
-      effectiveModel = 'llama-3.3-70b-versatile';
+      effectiveModel = 'openai/gpt-oss-120b';
     } else if (effectiveBaseUrl.includes('openai.com')) {
       effectiveModel = 'gpt-4o';
     } else {

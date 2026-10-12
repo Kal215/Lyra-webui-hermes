@@ -49,16 +49,18 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   },
   {
     id: 'groq',
-    label: 'Groq (Ultra-Fast)',
+    label: 'Groq (Ultra-Fast LPU)',
     baseUrl: 'https://api.groq.com/openai/v1',
-    defaultModel: 'llama-3.3-70b-versatile',
+    defaultModel: 'openai/gpt-oss-120b',
     keyEnv: 'GROQ_API_KEY',
     keyPlaceholder: 'gsk_...',
-    keyHelp: 'console.groq.com/keys (Gratis & Ultra-cepat)',
+    keyHelp: 'console.groq.com/keys (Gratis & Ultra-cepat pada hardware Groq LPU)',
     models: [
-      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', badge: 'Versatile' },
-      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', badge: 'Instant' },
-      { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 70B', badge: 'Reasoning' }
+      { id: 'openai/gpt-oss-120b', name: 'GPT-OSS 120B (Groq)', badge: '500 tps' },
+      { id: 'openai/gpt-oss-20b', name: 'GPT-OSS 20B (Groq)', badge: '1000 tps' },
+      { id: 'qwen/qwen3.8-27b', name: 'Qwen 3.8 27B (Groq)', badge: '450 tps' },
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Enterprise)', badge: 'Ent' },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Enterprise)', badge: 'Ent' }
     ]
   },
   {
