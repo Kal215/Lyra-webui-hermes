@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { getHermesEnv } from '@/lib/hermesEnv';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const env = getHermesEnv();
@@ -32,6 +34,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+    if (isServerless) {
+      return NextResponse.json({ success: false, error: 'Memory persistence to disk is unavailable in read-only cloud mode' }, { status: 400 });
+    }
+
     const env = getHermesEnv();
     const memoriesPath = path.join(env.HERMES_HOME, 'memories');
     

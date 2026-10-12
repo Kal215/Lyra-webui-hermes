@@ -20,6 +20,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  if (isServerless) {
+    return NextResponse.json({ success: false, error: 'Profiles cannot be modified in read-only cloud environment' }, { status: 400 });
+  }
+
   const env = getHermesEnv();
   const body = await req.json();
   const { name, prompt } = body;

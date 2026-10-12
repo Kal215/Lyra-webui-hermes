@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { getHermesEnv } from '@/lib/hermesEnv';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const env = getHermesEnv();

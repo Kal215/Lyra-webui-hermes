@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-const DB_PATH = path.join(process.cwd(), '.lyra', 'projects.json');
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const DB_PATH = isServerless
+  ? path.join('/tmp', '.lyra', 'projects.json')
+  : path.join(process.cwd(), '.lyra', 'projects.json');
+
+export const dynamic = 'force-dynamic';
 
 const readDB = () => {
   try {

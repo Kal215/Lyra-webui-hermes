@@ -7,6 +7,8 @@ import { ensureSpecialistProfiles } from '@/lib/bootstrapProfiles';
 
 const execFileAsync = promisify(execFile);
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const env = getHermesEnv();

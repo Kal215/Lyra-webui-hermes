@@ -4,7 +4,10 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
-const CONFIG_DIR = path.join(process.cwd(), '.hermes-backend');
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const CONFIG_DIR = isServerless 
+  ? path.join('/tmp', '.hermes-backend')
+  : path.join(process.cwd(), '.hermes-backend');
 const AI_CONFIG_PATH = path.join(CONFIG_DIR, 'ai-config.json');
 
 interface AiConfig {

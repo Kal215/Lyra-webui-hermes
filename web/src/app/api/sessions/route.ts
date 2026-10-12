@@ -5,6 +5,8 @@ import { getHermesEnv } from '@/lib/hermesEnv';
 
 const execAsync = promisify(exec);
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const opts = { maxBuffer: 1024 * 1024 * 100, env: getHermesEnv() };
