@@ -88,15 +88,35 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
   }, [isOpen, currentWorkspace]);
 
   const handleWorkspaceBack = () => {
-    if (!currentWorkspace || currentWorkspace === 'ROOT') return;
-    const norm = currentWorkspace.replace(/\\/g, '/').replace(/\/$/, '');
+    if (!currentWorkspace || currentWorkspace === 'ROOT' || currentWorkspace === '/') return;
+    const norm = currentWorkspace.replace(/\\/g, '/').replace(/\/+$/, '');
+
+    // Windows drive root check: e.g. "C:" or "D:"
+    if (/^[a-zA-Z]:$/.test(norm)) {
+      loadWorkspaceFiles('ROOT');
+      return;
+    }
+
+    // Unix / Linux / Vercel container: e.g. "/var/task"
+    if (norm.startsWith('/')) {
+      const parts = norm.split('/').filter(Boolean);
+      if (parts.length <= 1) {
+        loadWorkspaceFiles('/');
+        return;
+      }
+      parts.pop();
+      loadWorkspaceFiles('/' + parts.join('/'));
+      return;
+    }
+
+    // Windows or relative paths
     const parts = norm.split('/').filter(Boolean);
     if (parts.length <= 1) {
       loadWorkspaceFiles('ROOT');
       return;
     }
     parts.pop();
-    const parentDir = parts.join('/') + (norm.startsWith('/') ? '/' : '');
+    const parentDir = parts.join('/');
     const finalParent = parentDir.match(/^[a-zA-Z]:$/) ? `${parentDir}/` : parentDir;
     loadWorkspaceFiles(finalParent);
   };

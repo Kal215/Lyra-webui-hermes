@@ -314,12 +314,33 @@ function WorkspaceView() {
   }, [activeFilePath, files, liveTyping]);
 
   const handleNavigateUp = () => {
-    if (!currentDir || currentDir === 'ROOT') return;
-    const normalized = currentDir.replace(/\\/g, '/');
+    if (!currentDir || currentDir === 'ROOT' || currentDir === '/') return;
+    const normalized = currentDir.replace(/\\/g, '/').replace(/\/+$/, '');
+    
+    // Windows drive root check: e.g. "C:" or "D:"
+    if (/^[a-zA-Z]:$/.test(normalized)) {
+      fetchFiles('ROOT');
+      return;
+    }
+
+    // Unix / Linux / Vercel container: e.g. "/var/task"
+    if (normalized.startsWith('/')) {
+      const parts = normalized.split('/').filter(Boolean);
+      if (parts.length <= 1) {
+        fetchFiles('/');
+        return;
+      }
+      parts.pop();
+      fetchFiles('/' + parts.join('/'));
+      return;
+    }
+
+    // Windows or relative paths
     const parts = normalized.split('/').filter(Boolean);
     if (parts.length > 1) {
       parts.pop();
-      fetchFiles(parts.join('/'));
+      const parentDir = parts.join('/');
+      fetchFiles(parentDir.match(/^[a-zA-Z]:$/) ? `${parentDir}/` : parentDir);
     } else {
       fetchFiles('ROOT');
     }
