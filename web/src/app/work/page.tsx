@@ -43,6 +43,7 @@ import { DeliverableCard } from '@/components/work/DeliverableCard';
 import { AutonomousConversationView } from '@/components/work/AutonomousConversationView';
 import { WorkSessionItem } from '@/components/work/WorkSessionItem';
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel';
+import { SquadTopologyPipeline, SquadPhase } from '@/components/work/SquadTopologyPipeline';
 import Link from 'next/link';
 import { loadLyraAiConfig, getModelsForProvider, PROVIDER_PRESETS } from '@/lib/ai-providers';
 
@@ -265,11 +266,19 @@ export default function WorkPage() {
   const feedEndRef = useRef<HTMLDivElement>(null);
 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [currentSquadPhase, setCurrentSquadPhase] = useState<SquadPhase>('dispatch');
 
   // Handle Work Session Click: Load conversation & task status in Studio without navigating away
   const handleSelectWorkTask = async (task: any) => {
     setActiveTaskId(task.id);
     initDemoSession(task.title || task.id, task.assignee || 'default');
+    
+    // Set appropriate phase for selected task
+    if (task.status === 'done' || task.status === 'completed') {
+      setCurrentSquadPhase('verification');
+    } else {
+      setCurrentSquadPhase('engineering');
+    }
     
     // Add task description and requirements as conversation
     useWorkSessionStore.setState({ conversationMessages: [] });
@@ -576,6 +585,14 @@ Guidelines:
       let receivedAnyChunk = false;
       let accumulatedAssistantText = '';
 
+      // Prioritas 2 (Poin 4): Circuit Breaker Counters
+      let toolIterationCount = 0;
+      const MAX_CIRCUIT_BREAKER_ITERATIONS = 10;
+      let isCircuitBreakerTriggered = false;
+
+      // Start phase: Dispatch
+      setCurrentSquadPhase('dispatch');
+
       while (!done) {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
@@ -590,6 +607,25 @@ Guidelines:
                 const data = JSON.parse(part.substring(6));
 
                 if (data.type === 'tool_use') {
+                  toolIterationCount++;
+
+                  // Circuit Breaker: Halt infinite tool loop if threshold exceeded
+                  if (toolIterationCount > MAX_CIRCUIT_BREAKER_ITERATIONS) {
+                    if (!isCircuitBreakerTriggered) {
+                      isCircuitBreakerTriggered = true;
+                      if (abortControllerRef.current) {
+                        abortControllerRef.current.abort('Circuit breaker triggered');
+                      }
+                      appendAssistantChunk(
+                        language === 'id'
+                          ? `\n\n⚠️ **[Circuit Breaker Terpicu]**: Batas aman iterasi alat tercapai (${MAX_CIRCUIT_BREAKER_ITERATIONS} langkah). Eksekusi dihentikan secara otomatis untuk mencegah pemborosan token dan loop tak terbatas. Silakan tinjau status di atas.`
+                          : `\n\n⚠️ **[Circuit Breaker Triggered]**: Safe tool execution limit reached (${MAX_CIRCUIT_BREAKER_ITERATIONS} iterations). Autonomous execution was paused to protect against infinite loops and token drain. Please review current progress.`,
+                        getAgentInfo(selectedAgent).name
+                      );
+                    }
+                    break;
+                  }
+
                   const toolId = 'tool_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
                   const toolName = data.name || 'system_call';
                   const toolInput = data.input || {};
@@ -635,7 +671,12 @@ Guidelines:
                   accumulatedAssistantText += (data.text || '');
                   appendAssistantChunk(data.text, getAgentInfo(selectedAgent).name);
 
-                  // Helper: extract and update REAL dynamic todos from assistant stream text
+                  // Dynamic Squad Phase Progression based on output signals
+                  if (accumulatedAssistantText.includes('```') || data.type === 'tool_use') {
+                    setCurrentSquadPhase('engineering');
+                  } else if (accumulatedAssistantText.toLowerCase().includes('arsitektur') || accumulatedAssistantText.toLowerCase().includes('rencana') || accumulatedAssistantText.toLowerCase().includes('analisis') || accumulatedAssistantText.toLowerCase().includes('design')) {
+                    setCurrentSquadPhase('architect');
+                  }
                   const extractRealTodos = (text: string) => {
                     const lines = text.split('\n');
                     const foundTodos: { id: string; order: number; label: string; state: 'completed' | 'in_progress' | 'pending' }[] = [];
@@ -748,6 +789,12 @@ Guidelines:
       const hasGeneratedCode = accumulatedAssistantText.includes('```');
 
       if (!hasWarning && hasGeneratedCode) {
+        // Advanced phases upon code completion: QA & Verification
+        setCurrentSquadPhase('qa');
+        setTimeout(() => {
+          setCurrentSquadPhase('verification');
+        }, 1200);
+
         // If real todos were parsed during execution, mark them all completed at finish
         const currentTodos = useWorkSessionStore.getState().todos;
         if (currentTodos && currentTodos.length > 0) {
@@ -975,6 +1022,7 @@ Guidelines:
                 if (confirm(language === 'id' ? 'Mulai sesi baru? Feed obrolan saat ini akan dibersihkan.' : 'Start new session? Current feed will be cleared.')) {
                   resetSession();
                   setActiveTaskId(null);
+                  setCurrentSquadPhase('dispatch');
                   localStorage.removeItem('lyra_active_task_id');
                   localStorage.removeItem('lyra_active_execution_id');
                   localStorage.removeItem('lyra_is_submitting_work');
@@ -1012,6 +1060,13 @@ Guidelines:
 
         {/* Scrollable Work Feed (Todos, Tool Blocks, Reasoning, Deliverables) */}
         <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
+          {/* Autonomous Squad Delegation Topology Pipeline */}
+          <SquadTopologyPipeline 
+            currentPhase={currentSquadPhase} 
+            activeAgentId={selectedAgent} 
+            isStreaming={isSubmitting} 
+          />
+
           {!sessionId ? (
             /* Welcome / Empty State */
             <div className="flex flex-col items-center justify-center py-16 text-center">
