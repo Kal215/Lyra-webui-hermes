@@ -12,154 +12,16 @@ import { useSoundStore, useTactileSound } from '@/hooks/use-tactile-sound';
 import { Check, ChevronDown, ChevronRight, Server, Link, Cpu, ShieldAlert, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export type ProviderType = 'openai' | 'anthropic' | 'openrouter' | 'deepseek' | 'google' | 'groq' | 'mistral' | 'ollama' | 'custom';
-
-interface ProviderPreset {
-  id: ProviderType;
-  label: string;
-  baseUrl: string;
-  defaultModel: string;
-  keyEnv: string;
-  keyPlaceholder: string;
-  keyHelp: string;
-  models: { id: string; name: string }[];
-}
-
-const PROVIDER_PRESETS: ProviderPreset[] = [
-  {
-    id: 'openrouter',
-    label: 'OpenRouter (All Models)',
-    baseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'anthropic/claude-3.5-sonnet',
-    keyEnv: 'OPENROUTER_API_KEY',
-    keyPlaceholder: 'sk-or-v1-...',
-    keyHelp: 'openrouter.ai/keys (Akses ratusan model LLM sekaligus)',
-    models: [
-      { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
-      { id: 'openai/gpt-4o', name: 'GPT-4o' },
-      { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3' },
-      { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (Reasoning)' },
-      { id: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-      { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
-      { id: 'qwen/qwen-2.5-coder-32b-instruct', name: 'Qwen 2.5 Coder 32B' },
-      { id: 'minimax/minimax-01', name: 'MiniMax-01' }
-    ]
-  },
-  {
-    id: 'openai',
-    label: 'OpenAI (Official)',
-    baseUrl: 'https://api.openai.com/v1',
-    defaultModel: 'gpt-4o',
-    keyEnv: 'OPENAI_API_KEY',
-    keyPlaceholder: 'sk-proj-...',
-    keyHelp: 'platform.openai.com/api-keys',
-    models: [
-      { id: 'gpt-4o', name: 'GPT-4o (Omni)' },
-      { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-      { id: 'o1', name: 'o1 (Reasoning)' },
-      { id: 'o1-mini', name: 'o1 Mini' },
-      { id: 'o3-mini', name: 'o3 Mini' }
-    ]
-  },
-  {
-    id: 'deepseek',
-    label: 'DeepSeek',
-    baseUrl: 'https://api.deepseek.com/v1',
-    defaultModel: 'deepseek-chat',
-    keyEnv: 'DEEPSEEK_API_KEY',
-    keyPlaceholder: 'sk-...',
-    keyHelp: 'platform.deepseek.com/api_keys',
-    models: [
-      { id: 'deepseek-chat', name: 'DeepSeek V3 (Chat)' },
-      { id: 'deepseek-reasoner', name: 'DeepSeek R1 (Reasoner)' }
-    ]
-  },
-  {
-    id: 'anthropic',
-    label: 'Anthropic (Claude)',
-    baseUrl: 'https://api.anthropic.com/v1',
-    defaultModel: 'claude-3-5-sonnet-latest',
-    keyEnv: 'ANTHROPIC_API_KEY',
-    keyPlaceholder: 'sk-ant-api03-...',
-    keyHelp: 'console.anthropic.com/settings/keys',
-    models: [
-      { id: 'claude-3-5-sonnet-latest', name: 'Claude 3.5 Sonnet' },
-      { id: 'claude-3-5-haiku-latest', name: 'Claude 3.5 Haiku' },
-      { id: 'claude-3-opus-latest', name: 'Claude 3 Opus' }
-    ]
-  },
-  {
-    id: 'google',
-    label: 'Google Gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-    defaultModel: 'gemini-2.0-flash',
-    keyEnv: 'GEMINI_API_KEY',
-    keyPlaceholder: 'AIzaSy...',
-    keyHelp: 'aistudio.google.com/apikey',
-    models: [
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-      { id: 'gemini-2.0-pro-exp-02-05', name: 'Gemini 2.0 Pro' },
-      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' }
-    ]
-  },
-  {
-    id: 'groq',
-    label: 'Groq (Ultra-Fast)',
-    baseUrl: 'https://api.groq.com/openai/v1',
-    defaultModel: 'llama-3.3-70b-versatile',
-    keyEnv: 'GROQ_API_KEY',
-    keyPlaceholder: 'gsk_...',
-    keyHelp: 'console.groq.com/keys',
-    models: [
-      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B' },
-      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B' },
-      { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 70B' }
-    ]
-  },
-  {
-    id: 'mistral',
-    label: 'Mistral AI',
-    baseUrl: 'https://api.mistral.ai/v1',
-    defaultModel: 'mistral-large-latest',
-    keyEnv: 'MISTRAL_API_KEY',
-    keyPlaceholder: '...',
-    keyHelp: 'console.mistral.ai/api-keys',
-    models: [
-      { id: 'mistral-large-latest', name: 'Mistral Large' },
-      { id: 'codestral-latest', name: 'Codestral (Coding)' },
-      { id: 'mistral-small-latest', name: 'Mistral Small' }
-    ]
-  },
-  {
-    id: 'ollama',
-    label: 'Ollama (Local)',
-    baseUrl: 'http://127.0.0.1:11434/v1',
-    defaultModel: 'llama3.1',
-    keyEnv: '',
-    keyPlaceholder: 'Tidak memerlukan API Key',
-    keyHelp: 'Berjalan di localhost mesin lokal Anda',
-    models: [
-      { id: 'llama3.1', name: 'Llama 3.1' },
-      { id: 'qwen2.5-coder:7b', name: 'Qwen 2.5 Coder 7B' },
-      { id: 'deepseek-r1:8b', name: 'DeepSeek R1 8B' },
-      { id: 'mistral', name: 'Mistral 7B' }
-    ]
-  },
-  {
-    id: 'custom',
-    label: 'Custom / VPS / Self-Hosted',
-    baseUrl: 'http://localhost:8000/v1',
-    defaultModel: 'custom-model',
-    keyEnv: 'LYRA_WEB_KEY',
-    keyPlaceholder: 'sk-...',
-    keyHelp: 'Endpoint kompatibel OpenAI v1 (vLLM, LiteLLM, Ollama, TGI)',
-    models: [
-      { id: 'custom-model', name: 'Custom Model' },
-      { id: 'llama-3-8b', name: 'Llama 3 8B' },
-      { id: 'mistral-7b', name: 'Mistral 7B' }
-    ]
-  }
-];
+import { 
+  ProviderType, 
+  PROVIDER_PRESETS, 
+  ProviderPreset, 
+  ProviderAccount, 
+  LyraAiConfig, 
+  loadLyraAiConfig, 
+  saveLyraAiConfig,
+  getDefaultPreset 
+} from '@/lib/ai-providers';
 
 function getPresetMeta(preset: ProviderPreset | undefined, lang: string) {
   if (!preset) return { keyHelp: '', keyPlaceholder: 'sk-...' };
@@ -167,6 +29,12 @@ function getPresetMeta(preset: ProviderPreset | undefined, lang: string) {
     return {
       keyHelp: lang === 'id' ? 'openrouter.ai/keys (Akses ratusan model LLM sekaligus)' : 'openrouter.ai/keys (Access hundreds of LLM models)',
       keyPlaceholder: 'sk-or-v1-...'
+    };
+  }
+  if (preset.id === 'groq') {
+    return {
+      keyHelp: lang === 'id' ? 'console.groq.com/keys (Gratis, instan, & ultra-cepat)' : 'console.groq.com/keys (Free, instant, & ultra-fast)',
+      keyPlaceholder: 'gsk_...'
     };
   }
   if (preset.id === 'ollama') {
@@ -194,125 +62,124 @@ export default function SettingsPage() {
   const { enabled, volume, setEnabled, setVolume } = useSoundStore();
   const { playClick, playPress } = useTactileSound();
 
+  // Full multi-provider persistent config (Each provider retains its own API key and settings)
+  const [aiConfig, setAiConfig] = useState<LyraAiConfig>(() => ({
+    activeProvider: 'openrouter',
+    providerId: 'openrouter',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    apiKey: '',
+    model: 'anthropic/claude-3.5-sonnet',
+    providers: {}
+  }));
+
+  // Currently viewed provider tab in the UI
+  const [providerType, setProviderType] = useState<ProviderType>('openrouter');
+  // Form fields for the currently viewed tab
   const [aiBaseUrl, setAiBaseUrl] = useState('https://openrouter.ai/api/v1');
   const [aiModel, setAiModel] = useState('anthropic/claude-3.5-sonnet');
   const [aiApiKey, setAiApiKey] = useState('');
-  const [providerType, setProviderType] = useState<ProviderType>('openrouter');
+
   const [aiStatus, setAiStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
 
   useEffect(() => {
-    // 1. Try reading from local browser storage first for instant BYOK persistence
-    try {
-      const cached = localStorage.getItem('lyra_ai_config');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.baseUrl) setAiBaseUrl(parsed.baseUrl);
-        if (parsed.model) setAiModel(parsed.model);
-        if (parsed.apiKey) setAiApiKey(parsed.apiKey);
-        if (parsed.providerId) setProviderType(parsed.providerId);
-      }
-    } catch (e) {}
+    // Load saved multi-provider BYOK configuration
+    const loaded = loadLyraAiConfig();
+    setAiConfig(loaded);
+    
+    const active = loaded.activeProvider || 'openrouter';
+    setProviderType(active);
 
-    // 2. Sync with backend if available
-    fetch('/api/settings/ai')
-      .then(res => res.json())
-      .then(data => {
-        if (!data.error && data.baseUrl) {
-          const fetchedUrl = data.baseUrl || '';
-          setAiBaseUrl(fetchedUrl);
-          if (data.model) setAiModel(data.model);
-          if (data.apiKey && !data.apiKey.startsWith('••••')) setAiApiKey(data.apiKey);
-          
-          if (fetchedUrl.includes('openrouter.ai')) setProviderType('openrouter');
-          else if (fetchedUrl.includes('api.openai.com')) setProviderType('openai');
-          else if (fetchedUrl.includes('deepseek.com')) setProviderType('deepseek');
-          else if (fetchedUrl.includes('api.anthropic.com')) setProviderType('anthropic');
-          else if (fetchedUrl.includes('googleapis.com')) setProviderType('google');
-          else if (fetchedUrl.includes('groq.com')) setProviderType('groq');
-          else if (fetchedUrl.includes('mistral.ai')) setProviderType('mistral');
-          else if (fetchedUrl.includes('11434')) setProviderType('ollama');
-          else if (data.provider) setProviderType(data.provider);
-        }
-      })
-      .catch(() => {});
+    const activeAcc = loaded.providers[active];
+    const preset = getDefaultPreset(active);
+    setAiBaseUrl(activeAcc?.baseUrl || preset.baseUrl);
+    setAiModel(activeAcc?.model || preset.defaultModel);
+    setAiApiKey(activeAcc?.apiKey || '');
   }, []);
 
-  const handleProviderTypeChange = (type: ProviderType) => {
-    setProviderType(type);
-    const preset = PROVIDER_PRESETS.find(p => p.id === type);
-    if (preset) {
+  const handleProviderTypeChange = (newType: ProviderType) => {
+    playClick();
+
+    // 1. Stash current tab's inputs into state so user edits are NEVER lost or mixed up
+    const updatedProviders: Partial<Record<ProviderType, ProviderAccount>> = {
+      ...aiConfig.providers,
+      [providerType]: {
+        apiKey: aiApiKey,
+        baseUrl: aiBaseUrl,
+        model: aiModel
+      }
+    };
+
+    // 2. Switch tab
+    setProviderType(newType);
+
+    // 3. Load target provider's settings from updatedProviders (or fallback to preset default)
+    const targetAcc = updatedProviders[newType];
+    const preset = getDefaultPreset(newType);
+
+    if (targetAcc) {
+      setAiBaseUrl(targetAcc.baseUrl || preset.baseUrl);
+      setAiModel(targetAcc.model || preset.defaultModel);
+      setAiApiKey(targetAcc.apiKey || '');
+    } else {
       setAiBaseUrl(preset.baseUrl);
       setAiModel(preset.defaultModel);
+      setAiApiKey('');
     }
+
+    setAiConfig(prev => ({
+      ...prev,
+      providers: updatedProviders
+    }));
   };
 
   const handleApiKeyChange = (val: string) => {
     setAiApiKey(val);
-    const trimmed = val.trim();
-    if (trimmed.startsWith('gsk_')) {
-      setProviderType('groq');
-      const groqPreset = PROVIDER_PRESETS.find(p => p.id === 'groq');
-      if (groqPreset) {
-        setAiBaseUrl(groqPreset.baseUrl);
-        if (!aiModel || aiModel.includes('claude') || aiModel.includes('gpt-') || aiModel === 'gpt-4o') {
-          setAiModel(groqPreset.defaultModel);
-        }
-      }
-    } else if (trimmed.startsWith('sk-or-')) {
-      setProviderType('openrouter');
-      const orPreset = PROVIDER_PRESETS.find(p => p.id === 'openrouter');
-      if (orPreset) {
-        setAiBaseUrl(orPreset.baseUrl);
-      }
-    } else if (trimmed.startsWith('sk-ant-')) {
-      setProviderType('anthropic');
-      const antPreset = PROVIDER_PRESETS.find(p => p.id === 'anthropic');
-      if (antPreset) setAiBaseUrl(antPreset.baseUrl);
-    } else if (trimmed.startsWith('sk-proj-')) {
-      setProviderType('openai');
-      const oaiPreset = PROVIDER_PRESETS.find(p => p.id === 'openai');
-      if (oaiPreset) setAiBaseUrl(oaiPreset.baseUrl);
-    }
   };
 
   const handleSaveAiConfig = async () => {
     setAiStatus('saving');
     playClick();
 
-    // Save locally in browser for robust BYOK across serverless / Vercel
-    try {
-      localStorage.setItem('lyra_ai_config', JSON.stringify({
-        baseUrl: aiBaseUrl,
-        model: aiModel,
-        apiKey: (aiApiKey || ''),
-        providerId: providerType
-      }));
-      if (aiModel) {
-        localStorage.setItem('lyra_chat_model', aiModel);
-        localStorage.setItem('lyra_work_model', aiModel);
+    const currentPreset = getDefaultPreset(providerType);
+    const updatedProviders: Partial<Record<ProviderType, ProviderAccount>> = {
+      ...aiConfig.providers,
+      [providerType]: {
+        apiKey: aiApiKey,
+        baseUrl: aiBaseUrl || currentPreset.baseUrl,
+        model: aiModel || currentPreset.defaultModel
       }
-    } catch (e) {}
+    };
+
+    const newConfig: LyraAiConfig = {
+      activeProvider: providerType,
+      providerId: providerType,
+      baseUrl: aiBaseUrl || currentPreset.baseUrl,
+      apiKey: aiApiKey,
+      model: aiModel || currentPreset.defaultModel,
+      providers: updatedProviders
+    };
+
+    setAiConfig(newConfig);
+    saveLyraAiConfig(newConfig);
 
     try {
-      const currentPreset = PROVIDER_PRESETS.find(p => p.id === providerType);
-      const res = await fetch('/api/settings/ai', {
+      await fetch('/api/settings/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          baseUrl: aiBaseUrl, 
-          model: aiModel, 
-          apiKey: (aiApiKey || ''),
-          providerId: providerType,
+          baseUrl: newConfig.baseUrl, 
+          model: newConfig.model, 
+          apiKey: newConfig.apiKey,
+          providerId: newConfig.providerId,
           keyEnv: currentPreset?.keyEnv || 'LYRA_WEB_KEY'
         })
       });
       setAiStatus('saved');
-      setTimeout(() => setAiStatus('idle'), 2000);
+      setTimeout(() => setAiStatus('idle'), 2500);
     } catch (e) {
-      // Even if server post fails (e.g. offline or serverless error), local storage is saved
       setAiStatus('saved');
-      setTimeout(() => setAiStatus('idle'), 2000);
+      setTimeout(() => setAiStatus('idle'), 2500);
     }
   };
 
@@ -392,30 +259,53 @@ export default function SettingsPage() {
                   
                   {/* Provider Tabs */}
                   <div className="flex flex-wrap gap-2 pb-2">
-                    {PROVIDER_PRESETS.map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => handleProviderTypeChange(p.id)}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-                          providerType === p.id 
-                            ? 'bg-lyra-accent text-white shadow-md' 
-                            : 'bg-lyra-surface-inset text-lyra-text hover:bg-lyra-border'
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+                    {PROVIDER_PRESETS.map(p => {
+                      const isActive = aiConfig.activeProvider === p.id;
+                      const hasKey = !!aiConfig.providers[p.id]?.apiKey;
+                      const isSelected = providerType === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => handleProviderTypeChange(p.id)}
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                            isSelected 
+                              ? 'bg-lyra-accent text-white shadow-md ring-2 ring-lyra-accent/30' 
+                              : 'bg-lyra-surface-inset text-lyra-text hover:bg-lyra-border'
+                          }`}
+                        >
+                          <span>{p.label}</span>
+                          {isActive && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-bold tracking-wider uppercase">
+                              Active
+                            </span>
+                          )}
+                          {!isActive && hasKey && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="API Key saved" />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Preset Active Info Bar */}
                   {(() => {
                     const preset = PROVIDER_PRESETS.find(p => p.id === providerType);
+                    const isActive = aiConfig.activeProvider === providerType;
                     return (
-                      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-lyra-accent/5 border border-lyra-accent/15 text-xs">
-                        <span className="font-semibold text-lyra-accent">
-                          Preset: {preset?.label}
-                        </span>
-                        <span className="text-lyra-text-secondary opacity-75 font-mono text-[11px]">
+                      <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl border text-xs transition-colors ${
+                        isActive 
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                          : 'bg-lyra-accent/5 border-lyra-accent/15 text-lyra-text-secondary'
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-lyra-text-muted'}`} />
+                          <span className="font-semibold text-lyra-text">
+                            {isActive 
+                              ? (language === 'id' ? `Provider Aktif: ${preset?.label}` : `Active Provider: ${preset?.label}`) 
+                              : (language === 'id' ? `Konfigurasi: ${preset?.label}` : `Configuring: ${preset?.label}`)}
+                          </span>
+                        </div>
+                        <span className="opacity-75 font-mono text-[11px]">
                           ENV: {preset?.keyEnv || 'None'}
                         </span>
                       </div>

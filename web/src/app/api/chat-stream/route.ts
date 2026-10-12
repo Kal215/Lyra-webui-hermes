@@ -42,28 +42,39 @@ export async function POST(req: NextRequest) {
   }
 
   const aiConfig = getAiConfig();
+  const activeProvider = clientConfig?.activeProvider || clientConfig?.providerId;
   let effectiveBaseUrl = (clientConfig?.baseUrl || aiConfig.baseUrl)?.replace(/\/$/, '') || '';
   const apiKey = (clientConfig?.apiKey || aiConfig.apiKey)?.trim() || '';
 
-  // Smart endpoint resolution: Auto-detect provider if baseUrl was left default, empty, or mismatched
-  if (apiKey.startsWith('gsk_')) {
-    // Groq API keys ALWAYS begin with 'gsk_'
+  // Smart endpoint resolution: respect activeProvider or auto-detect from API key signature
+  if (activeProvider === 'groq' || apiKey.startsWith('gsk_')) {
     effectiveBaseUrl = 'https://api.groq.com/openai/v1';
-  } else if (apiKey.startsWith('sk-or-')) {
-    // OpenRouter API keys ALWAYS begin with 'sk-or-'
+  } else if (activeProvider === 'openrouter' || apiKey.startsWith('sk-or-')) {
     effectiveBaseUrl = 'https://openrouter.ai/api/v1';
-  } else if (apiKey.startsWith('sk-ant-')) {
-    // Anthropic API keys
+  } else if (activeProvider === 'anthropic' || apiKey.startsWith('sk-ant-')) {
     effectiveBaseUrl = 'https://api.anthropic.com/v1';
+  } else if (activeProvider === 'openai' || apiKey.startsWith('sk-proj-')) {
+    effectiveBaseUrl = 'https://api.openai.com/v1';
+  } else if (activeProvider === 'deepseek') {
+    effectiveBaseUrl = 'https://api.deepseek.com/v1';
+  } else if (activeProvider === 'ollama') {
+    effectiveBaseUrl = 'http://127.0.0.1:11434/v1';
   } else if (!effectiveBaseUrl) {
-    // Default fallback
     effectiveBaseUrl = 'https://openrouter.ai/api/v1';
   }
 
   const isHermesAlias = !model || model === 'default' || model === 'hermes-agent' || model === 'Hermes Agent';
-  const effectiveModel = !isHermesAlias
-    ? model 
-    : (clientConfig?.model || aiConfig.model || (effectiveBaseUrl.includes('groq.com') ? 'llama-3.3-70b-versatile' : 'anthropic/claude-3.5-sonnet'));
+  let effectiveModel = !isHermesAlias ? model : (clientConfig?.model || aiConfig.model);
+
+  if (!effectiveModel || isHermesAlias) {
+    if (effectiveBaseUrl.includes('groq.com')) {
+      effectiveModel = 'llama-3.3-70b-versatile';
+    } else if (effectiveBaseUrl.includes('openai.com')) {
+      effectiveModel = 'gpt-4o';
+    } else {
+      effectiveModel = 'anthropic/claude-3.5-sonnet';
+    }
+  }
 
   const isEnglish = language === 'en';
 

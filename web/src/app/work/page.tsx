@@ -43,6 +43,7 @@ import { AutonomousConversationView } from '@/components/work/AutonomousConversa
 import { WorkSessionItem } from '@/components/work/WorkSessionItem';
 import { WorkspacePanel } from '@/components/workspace/WorkspacePanel';
 import Link from 'next/link';
+import { loadLyraAiConfig, getModelsForProvider, PROVIDER_PRESETS } from '@/lib/ai-providers';
 
 export default function WorkPage() {
   const t = useTranslation();
@@ -100,6 +101,7 @@ export default function WorkPage() {
   ];
   const [modelsList, setModelsList] = useState(DEFAULT_MODELS);
   const [selectedModel, setSelectedModel] = useState('Claude 3.5 Sonnet');
+  const [activeProviderId, setActiveProviderId] = useState('openrouter');
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const [isEffortMenuOpen, setIsEffortMenuOpen] = useState(false);
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
@@ -115,36 +117,27 @@ export default function WorkPage() {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Sync with Settings configured model from lyra_ai_config
+  // Sync with Settings configured provider & models
   useEffect(() => {
     try {
-      const aiConfigStr = localStorage.getItem('lyra_ai_config');
-      let configuredModelId = '';
-      if (aiConfigStr) {
-        try {
-          const cfg = JSON.parse(aiConfigStr);
-          if (cfg.model) configuredModelId = cfg.model;
-        } catch (e) {}
+      const cfg = loadLyraAiConfig();
+      const activeP = cfg.activeProvider || 'openrouter';
+      setActiveProviderId(activeP);
+
+      const pModels = getModelsForProvider(activeP);
+      const combined = [...pModels];
+      if (cfg.model && !combined.some(m => m.id === cfg.model || m.name === cfg.model)) {
+        combined.unshift({ id: cfg.model, name: cfg.model, badge: 'Active' });
       }
+      setModelsList(combined);
 
       const savedWorkModel = localStorage.getItem('lyra_work_model');
-
-      if (configuredModelId) {
-        setModelsList(prev => {
-          const exists = prev.some(m => m.id === configuredModelId || m.name === configuredModelId);
-          if (!exists) {
-            return [{ id: configuredModelId, name: configuredModelId, badge: 'Active' }, ...prev];
-          }
-          return prev;
-        });
-      }
-
-      let target = savedWorkModel || configuredModelId || 'Claude 3.5 Sonnet';
+      let target = cfg.model || savedWorkModel || combined[0]?.name || 'Claude 3.5 Sonnet';
       if (target === 'hermes-agent' || target === 'Hermes Agent' || target === 'default') {
-        target = configuredModelId || 'Claude 3.5 Sonnet';
+        target = cfg.model || combined[0]?.name;
       }
 
-      const matched = DEFAULT_MODELS.find(m => m.id === target || m.name === target);
+      const matched = combined.find(m => m.id === target || m.name === target);
       setSelectedModel(matched ? matched.name : target);
     } catch (e) {}
   }, []);
@@ -1455,6 +1448,23 @@ Instruksi format respon:
                           onClick={(e) => e.stopPropagation()}
                           className="absolute left-0 bottom-[calc(100%+8px)] w-72 bg-lyra-surface border border-lyra-accent/20 rounded-2xl shadow-2xl z-50 p-2.5 backdrop-blur-md flex flex-col"
                         >
+                          {/* Active Provider Header */}
+                          <div className="flex items-center justify-between px-2.5 py-1.5 mb-2 rounded-xl bg-lyra-accent/10 border border-lyra-accent/20 text-xs">
+                            <div className="flex items-center gap-1.5 font-medium text-lyra-accent">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                              <span className="truncate max-w-[140px]">
+                                {PROVIDER_PRESETS.find(p => p.id === activeProviderId)?.label || 'OpenRouter'}
+                              </span>
+                            </div>
+                            <Link 
+                              href="/settings" 
+                              onClick={() => setIsModelMenuOpen(false)}
+                              className="text-[11px] text-blue-500 hover:text-blue-400 underline font-medium"
+                            >
+                              {language === 'id' ? 'Ganti' : 'Change'}
+                            </Link>
+                          </div>
+
                           {/* Search Input */}
                           <div className="relative mb-2">
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-lyra-text-secondary opacity-60" />
