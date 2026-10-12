@@ -398,6 +398,37 @@ export default function WorkPage() {
     return map[id] || { name: id.charAt(0).toUpperCase() + id.slice(1), role: 'Specialist', desc: 'Pekerja otonom', color: 'text-lyra-accent bg-lyra-accent/10 border-lyra-accent/20' };
   };
 
+  const getAgentSystemPrompt = (id: string, currentLang: string) => {
+    const isId = currentLang === 'id';
+    const agent = getAgentInfo(id);
+    
+    return isId
+      ? `Anda adalah ${agent.name} (${agent.role} - ${agent.desc}) di dalam Lyra Studio (/work).
+Lyra adalah platform cerdas untuk rekayasa perangkat lunak, riset, dan kolaborasi dengan skuad AI otonom.
+
+Panduan Komunikasi & Eksekusi:
+1. Jika pengguna menyapa (seperti "hai", "halo"), bertanya santai, atau menanyakan identitas Anda maupun sistem (contoh: "siapa Anda", "siapa Aster", "bagaimana cara memakai work"):
+   - Jawab secara ramah, ringkas, alami, dan jelas dalam bahasa Indonesia.
+   - Jelaskan bahwa Anda adalah ${agent.name}, ${agent.role} di Lyra Autonomous Squad.
+   - Jelaskan halaman Work (/work) adalah Studio Otonom Lyra tempat pengguna dapat mendelegasikan tugas proyek, riset, dan coding ke agen AI spesialis.
+   - DILARANG KERAS memaksakan template Todo List atau daftar tahapan eksekusi kosong/palsu untuk sapaan atau percakapan biasa!
+   - JANGAN mengarang perintah fiktif seperti 'pip install work'. Anda adalah asisten internal bawaan webui Lyra.
+2. Jika pengguna menugaskan pekerjaan teknis, rancangan arsitektur, atau tugas coding:
+   - Berikan pemikiran analitis mendalam dan selesaikan tugas teknis dengan kode berkualitas tinggi.`
+      : `You are ${agent.name} (${agent.role} - ${agent.desc}) inside Lyra Studio (/work).
+Lyra is an intelligent platform for software engineering, deep research, and autonomous AI collaboration.
+
+Guidelines:
+1. If the user greets (e.g. "hi", "hello"), asks casual questions, or inquires about your identity or how to use /work:
+   - Respond warmly, naturally, and concisely in the user's language.
+   - State that you are ${agent.name}, ${agent.role} in the Lyra Autonomous Squad.
+   - Clarify that Work (/work) is Lyra's Autonomous Studio for delegating engineering and coding tasks to specialist AI agents.
+   - DO NOT generate empty Todo lists or robotic execution plans for simple greetings!
+   - NEVER hallucinate fake CLI commands like 'pip install work'.
+2. If the user assigns real engineering, coding, or architecture tasks:
+   - Deliver deep analytical reasoning and clean, production-ready solutions.`;
+  };
+
   // Autonomous Task Dispatching
   const handleDropOnComposer = (e: React.DragEvent) => {
     e.preventDefault();
@@ -487,18 +518,7 @@ export default function WorkPage() {
 
       const streamPayload = {
         executionId: currentExecId,
-        message: `[MODE OTONOM SQUAD WORKSPACE]
-Tugas Otonom: ${userPrompt}
-Peran: ${selectedAgent}
-
-Instruksi format respon:
-1. Awali dengan membuat rencana tahapan eksekusi menggunakan Todo List:
-   1. [ ] Analisis dan verifikasi kebutuhan
-   2. [ ] Rancang arsitektur atau implementasi
-   3. [ ] Buat kode dan berkas solusi
-   4. [ ] Pengujian dan validasi hasil
-2. Berikan pemikiran mendalam terstruktur.
-3. Eksekusi tugas dan selesaikan semua deliverable sampai tuntas.`,
+        message: userPrompt,
         agent: selectedAgent,
         model: resolvedModelParam,
         thinking: true,
@@ -507,7 +527,9 @@ Instruksi format respon:
         deepResearch: isDeepResearchEnabled,
         attachments: attachments,
         clientConfig: clientAiConfig,
-        language: language
+        language: language,
+        systemPrompt: getAgentSystemPrompt(selectedAgent, language),
+        conversationHistory: conversationMessages.slice(-8).map(m => ({ role: m.role, content: m.content }))
       };
 
       const res = await fetch('/api/chat-stream', {
@@ -1009,15 +1031,15 @@ Instruksi format respon:
           ) : (
             /* Active Autonomous Execution Feed */
             <div className="space-y-5">
-              {/* 1. Prompt Saya (User Prompt Message) */}
-              {conversationMessages.filter((m) => m.role === 'user').length > 0 && (
+              {/* Chronological Conversation Feed */}
+              {conversationMessages.length > 0 && (
                 <AutonomousConversationView 
-                  messages={conversationMessages.filter((m) => m.role === 'user')} 
-                  isStreaming={false} 
+                  messages={conversationMessages.filter((m) => !m.content.includes('Status Pekerjaan Sedang Berjalan'))} 
+                  isStreaming={isSubmitting} 
                 />
               )}
 
-              {/* 2. Thought Process (Reasoning Accordions) */}
+              {/* Thought Process (Reasoning Accordions) */}
               {reasoningOrder.map((nodeId) => {
                 const node = reasoningNodes[nodeId];
                 if (!node) return null;
@@ -1030,28 +1052,20 @@ Instruksi format respon:
                 );
               })}
 
-              {/* 3. Todo (Dynamic Todos Card) */}
+              {/* Todo (Dynamic Todos Card) */}
               {todos.length > 0 && (
                 <DynamicTodosCard todos={todos} />
               )}
 
-              {/* 4. Menjalankan Sistem (Tool Execution Block) */}
+              {/* Menjalankan Sistem (Tool Execution Block) */}
               {toolLogsList.length > 0 && (
                 <ToolExecutionBlock toolLogs={toolLogsList} defaultExpanded={false} />
               )}
 
-              {/* 5. Terminal / Live Coding Studio Viewport */}
+              {/* Terminal / Live Coding Studio Viewport */}
               <LiveCodingStudioBlock />
 
-              {/* 6. Status Pekerjaan Sedang Berjalan (jika ada) */}
-              {conversationMessages.filter((m) => m.role === 'assistant' && m.content.includes('Status Pekerjaan Sedang Berjalan')).length > 0 && (
-                <AutonomousConversationView 
-                  messages={conversationMessages.filter((m) => m.role === 'assistant' && m.content.includes('Status Pekerjaan Sedang Berjalan'))} 
-                  isStreaming={false} 
-                />
-              )}
-
-              {/* 7. Hasil (Deliverable Card & Assistant Output / Final Responses) */}
+              {/* Hasil (Deliverable Card) */}
               {deliverable && (
                 <DeliverableCard
                   artifact={deliverable}
@@ -1066,14 +1080,6 @@ Instruksi format respon:
                   onReject={() => {
                     alert('Permintaan revisi dikirimkan ke agen.');
                   }}
-                />
-              )}
-
-              {/* Final Assistant Result / Conversation Feed (excluding running status message) */}
-              {conversationMessages.filter((m) => m.role === 'assistant' && !m.content.includes('Status Pekerjaan Sedang Berjalan')).length > 0 && (
-                <AutonomousConversationView 
-                  messages={conversationMessages.filter((m) => m.role === 'assistant' && !m.content.includes('Status Pekerjaan Sedang Berjalan'))} 
-                  isStreaming={isSubmitting} 
                 />
               )}
             </div>

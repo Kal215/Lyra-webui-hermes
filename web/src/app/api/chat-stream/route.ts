@@ -32,7 +32,7 @@ function getAiConfig(): AiConfig {
 }
 
 export async function POST(req: NextRequest) {
-  let { message, session_id, attachments, systemPrompt, model, thinking, clientConfig, language } = await req.json();
+  let { message, session_id, attachments, systemPrompt, model, thinking, clientConfig, language, conversationHistory } = await req.json();
 
   if (!message) {
     return new Response(JSON.stringify({ error: 'Message is required' }), {
@@ -192,6 +192,19 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
     : formattingStandard;
 
   messages.push({ role: 'system', content: finalSystemPrompt });
+
+  // Add conversation history if provided (multi-turn memory)
+  if (Array.isArray(conversationHistory) && conversationHistory.length > 0) {
+    for (const item of conversationHistory) {
+      if (item && item.role && item.content) {
+        messages.push({
+          role: item.role === 'user' ? 'user' : 'assistant',
+          content: String(item.content)
+        });
+      }
+    }
+  }
+
   messages.push({ role: 'user', content: message });
 
   try {
