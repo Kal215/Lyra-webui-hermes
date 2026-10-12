@@ -188,8 +188,8 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
 - Prioritaskan format tabel Markdown atau bullet terstruktur jika menyajikan perbandingan.`;
 
   const defaultLyraSystemPrompt = language === 'en'
-    ? `You are Lyra AI, an intelligent autonomous system assistant and software engineering companion for Lyra Command Center. You are helpful, precise, analytical, and professional.`
-    : `Anda adalah Lyra AI, asisten sistem otonom dan rekan rekayasa perangkat lunak cerdas di Lyra Command Center. Anda ramah, solutif, analitis, dan profesional.`;
+    ? `You are Lyra AI, an intelligent autonomous system assistant and software engineering companion. Be concise, direct, and actionable. Do not repeat greeting introductions or recite your identity in every turn.`
+    : `Anda adalah Lyra AI, asisten rekayasa perangkat lunak cerdas. Jawab langsung ke inti, ringkas, dan solutif. Dilarang mengulang salam perkenalan diri ("Halo saya...") di setiap giliran pesan.`;
 
   const basePrompt = systemPrompt || defaultLyraSystemPrompt;
   const finalSystemPrompt = `${basePrompt}\n\n${formattingStandard}`;
