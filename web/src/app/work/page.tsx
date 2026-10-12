@@ -361,7 +361,7 @@ export default function WorkPage() {
         fetch('/api/work')
       ]);
       const dataAgents = await resAgents.json();
-      if (dataAgents.success && Array.isArray(dataAgents.data)) {
+      if (dataAgents.success && Array.isArray(dataAgents.data) && dataAgents.data.length > 1) {
         setAvailableAgents(dataAgents.data);
       }
       const dataWork = await resWork.json();
@@ -902,17 +902,17 @@ Guidelines:
           </button>
 
           {isSpecialistsExpanded && (
-            <div className="space-y-1.5 mt-2 max-h-56 overflow-y-auto pr-1 no-scrollbar">
+            <div className="space-y-1.5 mt-2 max-h-72 overflow-y-auto pr-1 no-scrollbar">
               {availableAgents.map((agId) => {
                 const info = getAgentInfo(agId);
                 const isSelected = selectedAgent === agId;
                 return (
                   <div
                     key={agId}
-                    className={`p-1.5 rounded-xl border transition-all ${
+                    className={`p-2 rounded-xl border transition-all ${
                       isSelected
-                        ? 'bg-lyra-accent/15 border-lyra-accent/30 text-lyra-text shadow-sm'
-                        : 'bg-lyra-surface/40 border-lyra-accent/10 hover:border-lyra-accent/20 text-lyra-text-secondary'
+                        ? 'bg-lyra-accent/15 border-lyra-accent/40 text-lyra-text shadow-sm ring-1 ring-lyra-accent/20'
+                        : 'bg-lyra-surface/50 border-lyra-accent/10 hover:border-lyra-accent/30 text-lyra-text-secondary'
                     }`}
                   >
                     <div 
@@ -920,32 +920,36 @@ Guidelines:
                       onClick={() => setSelectedAgent(agId)}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-lyra-accent shrink-0" />
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? 'bg-lyra-accent' : 'bg-lyra-text-secondary/40'}`} />
                         <div className="truncate">
-                          <div className="text-xs font-semibold text-lyra-text">{info.name}</div>
-                          <div className="text-[9px] text-lyra-text-secondary/70 truncate">{info.role}</div>
+                          <div className="text-xs font-semibold text-lyra-text leading-tight">{info.name}</div>
+                          <div className="text-[10px] text-lyra-text-secondary truncate leading-tight mt-0.5">{info.role}</div>
                         </div>
                       </div>
-                      {isSelected && <span className="text-[9px] text-lyra-accent font-mono shrink-0">{language === 'id' ? 'Aktif' : 'Active'}</span>}
+                      {isSelected && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-lyra-accent/20 text-lyra-accent font-mono font-medium shrink-0">
+                          {language === 'id' ? 'Aktif' : 'Active'}
+                        </span>
+                      )}
                     </div>
 
                     {/* Direct Deep Links per Specialist */}
-                    <div className="flex items-center gap-1.5 mt-1.5 pt-1 border-t border-lyra-accent/10">
+                    <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-lyra-accent/10">
                       <Link
                         href={`/workspace?activeAgent=${agId}`}
-                        className="flex-1 py-0.5 px-1.5 rounded-md bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/10 hover:border-lyra-accent/30 flex items-center justify-center gap-1 text-[9px] font-mono text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer"
+                        className="flex-1 py-1 px-2 rounded-lg bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/15 hover:border-lyra-accent/30 flex items-center justify-center gap-1.5 text-[10px] font-medium text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer shadow-2xs"
                         title={`Buka Editor Workspace Agen ${info.name}`}
                       >
-                        <FileCode2 size={10} className="text-emerald-400" />
+                        <FileCode2 size={11} className="text-emerald-500" />
                         <span>Workspace</span>
                       </Link>
 
                       <Link
                         href={`/world?focusAgent=${agId}`}
-                        className="flex-1 py-0.5 px-1.5 rounded-md bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/10 hover:border-lyra-accent/30 flex items-center justify-center gap-1 text-[9px] font-mono text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer"
+                        className="flex-1 py-1 px-2 rounded-lg bg-lyra-surface hover:bg-lyra-accent/15 border border-lyra-accent/15 hover:border-lyra-accent/30 flex items-center justify-center gap-1.5 text-[10px] font-medium text-lyra-text-secondary hover:text-lyra-accent transition-all cursor-pointer shadow-2xs"
                         title={`Lihat Karakter ${info.name} di World HQ`}
                       >
-                        <ExternalLink size={10} className="text-sky-400" />
+                        <ExternalLink size={11} className="text-sky-500" />
                         <span>Markas 2D</span>
                       </Link>
                     </div>
@@ -1059,7 +1063,7 @@ Guidelines:
         </div>
 
         {/* Scrollable Work Feed (Todos, Tool Blocks, Reasoning, Deliverables) */}
-        <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6">
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 max-w-4xl mx-auto w-full space-y-5 no-scrollbar">
           {/* Autonomous Squad Delegation Topology Pipeline */}
           <SquadTopologyPipeline 
             currentPhase={currentSquadPhase} 
@@ -1069,21 +1073,21 @@ Guidelines:
 
           {!sessionId ? (
             /* Welcome / Empty State */
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-lyra-accent/10 border border-lyra-accent/20 flex items-center justify-center mb-4 text-lyra-accent shadow-lg">
-                <Sparkles size={28} />
+            <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-lyra-accent/15 border border-lyra-accent/30 flex items-center justify-center mb-3 text-lyra-accent shadow-md">
+                <Sparkles size={24} />
               </div>
-              <h2 className="text-xl font-bold text-lyra-text mb-2">
+              <h2 className="text-lg sm:text-xl font-bold text-lyra-text mb-1.5">
                 {language === 'id' ? 'Pendelegasian Tugas Otonom Berjenjang' : 'Tiered Autonomous Task Delegation'}
               </h2>
-              <p className="text-sm text-lyra-text-secondary max-w-md mb-8 leading-relaxed">
+              <p className="text-xs sm:text-sm text-lyra-text-secondary max-w-md mb-6 leading-relaxed">
                 {language === 'id' 
                   ? 'Berbeda dari chat biasa, mode ini menyusun rencana kerja (Todos), mengeksekusi perintah di komputer lokal Anda, dan mencentang setiap tahapan hingga selesai sempurna.' 
                   : 'Unlike regular chat, this mode drafts an execution plan (Todos), runs operations directly on your local system, and checks off each stage through completion.'}
               </p>
 
               {/* Sample Quick Starters */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl text-left">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-xl text-left">
                 {[
                   { 
                     title: language === 'id' ? 'Scrape 20 Data Toko Roti' : 'Scrape 20 Bakery Records', 
@@ -1113,12 +1117,12 @@ Guidelines:
                       setSelectedAgent(s.agent);
                       setPromptInput(s.prompt);
                     }}
-                    className="p-3.5 rounded-xl border border-lyra-accent/15 bg-lyra-surface/50 hover:bg-lyra-accent/10 hover:border-lyra-accent/30 transition-all text-left cursor-pointer group"
+                    className="p-3 rounded-xl border border-lyra-accent/20 bg-lyra-surface hover:bg-lyra-accent/15 hover:border-lyra-accent/40 shadow-2xs hover:shadow-xs transition-all text-left cursor-pointer group"
                   >
-                    <div className="text-xs font-semibold text-lyra-text group-hover:text-lyra-accent transition-colors mb-1">
+                    <div className="text-xs font-bold text-lyra-text group-hover:text-lyra-accent transition-colors mb-1">
                       {s.title}
                     </div>
-                    <div className="text-[11px] text-lyra-text-secondary/70 line-clamp-2 leading-relaxed">
+                    <div className="text-[11px] text-lyra-text-secondary line-clamp-2 leading-relaxed">
                       {s.prompt}
                     </div>
                   </button>
