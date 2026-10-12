@@ -32,7 +32,7 @@ function getAiConfig(): AiConfig {
 }
 
 export async function POST(req: NextRequest) {
-  let { message, session_id, attachments, systemPrompt, model, thinking, clientConfig } = await req.json();
+  let { message, session_id, attachments, systemPrompt, model, thinking, clientConfig, language } = await req.json();
 
   if (!message) {
     return new Response(JSON.stringify({ error: 'Message is required' }), {
@@ -48,19 +48,36 @@ export async function POST(req: NextRequest) {
     : (clientConfig?.model || aiConfig.model || 'gpt-4o-mini');
   const apiKey = clientConfig?.apiKey || aiConfig.apiKey;
 
+  const isEnglish = language === 'en';
+
   if (!apiKey && !effectiveBaseUrl.includes('localhost') && !effectiveBaseUrl.includes('127.0.0.1')) {
-    const errorMsg = `### ⚠️ API Key Belum Dikonfigurasi / API Key Required
+    const errorMsg = isEnglish
+      ? `### ⚠️ API Key Required (BYOK Mode)
+
+**Lyra Studio** is currently operating in **Bring Your Own Key (BYOK)** mode. No active API key was found for this session.
+
+#### How to Activate:
+1. Open the **[Settings](/settings)** page.
+2. Select your AI provider (e.g. **OpenRouter**, **OpenAI**, **Groq**, **DeepSeek**, or **Ollama**).
+3. Enter your **API Key** and click **Save Connection**.
+
+Once configured, you can immediately chat, generate code, and orchestrate autonomous AI agents.
+
+---
+💡 *Tip: Don't have an API key? You can get a free key on [OpenRouter](https://openrouter.ai/keys) or run [Ollama](https://ollama.ai) locally without needing an API key.*`
+      : `### ⚠️ API Key Belum Dikonfigurasi (Mode BYOK)
 
 **Lyra Studio** berjalan dalam mode **Bring Your Own Key (BYOK)**. Belum ada API Key yang dikonfigurasi untuk sesi ini.
 
 #### Cara Mengaktifkan:
-1. Buka menu **[Pengaturan / Settings](/settings)**.
-2. Pilih penyedia AI Anda (contoh: **OpenRouter**, **OpenAI**, **Groq**, **DeepSeek**, **Ollama**, dll.).
+1. Buka menu **[Pengaturan](/settings)**.
+2. Pilih penyedia AI Anda (contoh: **OpenRouter**, **OpenAI**, **Groq**, **DeepSeek**, atau **Ollama**).
 3. Masukkan **API Key** Anda lalu klik **Simpan Pengaturan**.
 
+Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasikan tugas ke skuad agen AI secara penuh.
+
 ---
-*(English)*:
-Please configure your API Key in **[Settings](/settings)** to start chatting and orchestrating autonomous AI agents. Your credentials are saved securely in your browser session.`;
+💡 *Tips: Belum memiliki API Key? Anda bisa membuat akun gratis di [OpenRouter](https://openrouter.ai/keys) atau menjalankan [Ollama](https://ollama.ai) secara lokal di komputer Anda tanpa memerlukan API key.*`;
 
     return new Response(
       `data: ${JSON.stringify({ type: 'text', text: errorMsg })}\n\ndata: {"type": "done"}\n\n`,

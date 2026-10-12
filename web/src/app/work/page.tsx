@@ -485,7 +485,8 @@ Instruksi format respon:
         webSearch: isWebSearchEnabled,
         deepResearch: isDeepResearchEnabled,
         attachments: attachments,
-        clientConfig: clientAiConfig
+        clientConfig: clientAiConfig,
+        language: language
       };
 
       const res = await fetch('/api/chat-stream', {

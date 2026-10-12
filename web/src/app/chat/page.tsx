@@ -1462,7 +1462,8 @@ function NativeChatContent() {
       effort: thinkingEffort,
       webSearch: isWebSearchEnabled,
       deepResearch: isDeepResearchEnabled,
-      clientConfig: clientAiConfig
+      clientConfig: clientAiConfig,
+      language: language
     };
     
     if (messageAttachments === undefined) {
