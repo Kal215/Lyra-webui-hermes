@@ -70,8 +70,13 @@ export async function GET() {
     }
 
     const sortedSkills = Array.from(uniqueSkills.values()).sort((a, b) => a.name.localeCompare(b.name));
+    const isHermesDetected = fs.existsSync(localPath) && sortedSkills.length > 0;
 
-    return NextResponse.json({ success: true, skills: sortedSkills });
+    return NextResponse.json({ 
+      success: true, 
+      skills: sortedSkills, 
+      hermes_detected: isHermesDetected 
+    });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

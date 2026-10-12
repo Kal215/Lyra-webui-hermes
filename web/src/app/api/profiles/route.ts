@@ -11,25 +11,31 @@ export async function GET() {
   try {
     const env = getHermesEnv();
     await ensureSpecialistProfiles();
-    const { stdout } = await execFileAsync('hermes', ['profile', 'list'], { env });
-    
-    const lines = stdout.split('\n').filter(l => l.trim().length > 0 && !l.includes('────') && !l.includes('Profile'));
-    const profiles = lines.map(l => {
-      const cleanLine = l.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
-      const is_active = cleanLine.includes('◆');
-      const nameMatch = cleanLine.match(/(?:◆|\s)\s*([a-zA-Z0-9_-]+)/);
-      const name = nameMatch ? nameMatch[1] : 'unknown';
-      
-      if (name === 'unknown' || name === 'Gateway' || name === 'Model') return null;
-      
-      return {
-        name,
-        is_active,
-        dir: name === 'default' ? env.HERMES_HOME : path.join(env.HERMES_HOME, 'profiles', name)
-      };
-    }).filter(Boolean);
+    let isHermesInstalled = false;
+    let profiles: any[] = [];
+    try {
+      const { stdout } = await execFileAsync('hermes', ['profile', 'list'], { env });
+      isHermesInstalled = true;
+      const lines = stdout.split('\n').filter(l => l.trim().length > 0 && !l.includes('────') && !l.includes('Profile'));
+      profiles = lines.map(l => {
+        const cleanLine = l.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+        const is_active = cleanLine.includes('◆');
+        const nameMatch = cleanLine.match(/(?:◆|\s)\s*([a-zA-Z0-9_-]+)/);
+        const name = nameMatch ? nameMatch[1] : 'unknown';
+        
+        if (name === 'unknown' || name === 'Gateway' || name === 'Model') return null;
+        
+        return {
+          name,
+          is_active,
+          dir: name === 'default' ? env.HERMES_HOME : path.join(env.HERMES_HOME, 'profiles', name)
+        };
+      }).filter(Boolean);
+    } catch (cliErr) {
+      isHermesInstalled = false;
+    }
 
-    return NextResponse.json({ success: true, data: profiles });
+    return NextResponse.json({ success: true, data: profiles, hermes_installed: isHermesInstalled });
   } catch (error: any) {
     console.error('Failed to list profiles:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

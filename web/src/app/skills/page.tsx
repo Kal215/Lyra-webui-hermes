@@ -7,12 +7,14 @@ import { Zap, Puzzle, MessageSquare, Terminal, ChevronRight } from 'lucide-react
 import { useTactileSound } from '@/hooks/use-tactile-sound';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18nStore } from '@/i18n';
+import { HermesInstallBanner } from '@/components/common/HermesInstallBanner';
 
 export default function SkillsPage() {
   const { language } = useI18nStore();
   const { playClick } = useTactileSound();
   const [skillsList, setSkillsList] = useState<any[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(true);
+  const [isHermesDetected, setIsHermesDetected] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<'skills' | 'snippets'>('skills');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -24,7 +26,12 @@ export default function SkillsPage() {
     fetch('/api/skills')
       .then(res => res.json())
       .then(data => {
-        if (data.success) setSkillsList(data.skills);
+        if (data.success) {
+          setSkillsList(data.skills);
+          if (typeof data.hermes_detected === 'boolean') {
+            setIsHermesDetected(data.hermes_detected);
+          }
+        }
       })
       .finally(() => setSkillsLoading(false));
       
@@ -85,6 +92,11 @@ export default function SkillsPage() {
           </p>
         </div>
       </div>
+
+      {/* Hermes Engine Installation Guidance Banner if not detected */}
+      {isHermesDetected === false && (
+        <HermesInstallBanner featureName={language === 'id' ? 'Katalog Skills & Ekstensi' : 'Skills & Extension Catalog'} />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-4 border-b border-lyra-border/50 shrink-0">

@@ -7,6 +7,7 @@ import { NeoButton } from '@/components/NeoButton';
 import { NeoInput } from '@/components/NeoInput';
 import { UsersRound, Plus, Trash2, ShieldCheck, Cpu, HardDrive, Terminal, X, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { HermesInstallBanner } from '@/components/common/HermesInstallBanner';
 
 interface ProfileItem {
   name: string;
@@ -21,6 +22,7 @@ export default function ProfilesPage() {
   const [profiles, setProfiles] = useState<ProfileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isHermesInstalled, setIsHermesInstalled] = useState<boolean | null>(null);
   
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
@@ -39,6 +41,9 @@ export default function ProfilesPage() {
       const json = await res.json();
       if (json.success && json.data) {
         setProfiles(json.data);
+        if (typeof json.hermes_installed === 'boolean') {
+          setIsHermesInstalled(json.hermes_installed);
+        }
       } else {
         throw new Error(json.error || 'Unknown error');
       }
@@ -134,6 +139,11 @@ export default function ProfilesPage() {
           {language === 'id' ? 'Buat Profil Baru' : 'New Profile'}
         </NeoButton>
       </div>
+
+      {/* Hermes Engine Installation Guidance Banner if not installed */}
+      {isHermesInstalled === false && (
+        <HermesInstallBanner featureName={language === 'id' ? 'Manajemen Multi-Profil' : 'Multi-Profile Management'} />
+      )}
 
       {/* CONTENT */}
       {loading ? (
