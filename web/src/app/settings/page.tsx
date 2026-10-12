@@ -161,6 +161,32 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
   }
 ];
 
+function getPresetMeta(preset: ProviderPreset | undefined, lang: string) {
+  if (!preset) return { keyHelp: '', keyPlaceholder: 'sk-...' };
+  if (preset.id === 'openrouter') {
+    return {
+      keyHelp: lang === 'id' ? 'openrouter.ai/keys (Akses ratusan model LLM sekaligus)' : 'openrouter.ai/keys (Access hundreds of LLM models)',
+      keyPlaceholder: 'sk-or-v1-...'
+    };
+  }
+  if (preset.id === 'ollama') {
+    return {
+      keyHelp: lang === 'id' ? 'Berjalan di localhost mesin lokal Anda' : 'Runs locally on your machine',
+      keyPlaceholder: lang === 'id' ? 'Tidak memerlukan API Key' : 'No API key required'
+    };
+  }
+  if (preset.id === 'custom') {
+    return {
+      keyHelp: lang === 'id' ? 'Endpoint kompatibel OpenAI v1 (vLLM, LiteLLM, Ollama, TGI)' : 'OpenAI v1 compatible endpoint (vLLM, LiteLLM, Ollama, TGI)',
+      keyPlaceholder: 'sk-...'
+    };
+  }
+  return {
+    keyHelp: preset.keyHelp,
+    keyPlaceholder: preset.keyPlaceholder
+  };
+}
+
 export default function SettingsPage() {
   const t = useTranslation();
   const { language, setLanguage } = useI18nStore();
@@ -443,7 +469,8 @@ export default function SettingsPage() {
                           <p className="text-xs text-lyra-text-muted mb-2">
                             {(() => {
                               const preset = PROVIDER_PRESETS.find(p => p.id === providerType);
-                              return preset?.keyHelp || 'Kunci akses rahasia (akan dienkripsi di backend Hermes).';
+                              const meta = getPresetMeta(preset, language);
+                              return meta.keyHelp || (language === 'id' ? 'Kunci akses rahasia (disimpan aman di sesi browser Anda).' : 'Secret access key (stored securely in your browser session).');
                             })()}
                           </p>
                           <input 
@@ -453,14 +480,15 @@ export default function SettingsPage() {
                             onChange={e => setAiApiKey(e.target.value)}
                             placeholder={(() => {
                               const preset = PROVIDER_PRESETS.find(p => p.id === providerType);
-                              return preset?.keyPlaceholder || 'sk-...';
+                              const meta = getPresetMeta(preset, language);
+                              return meta.keyPlaceholder;
                             })()}
                           />
                         </div>
                       ) : (
                         <div className="p-4 rounded-xl bg-lyra-bg/40 border border-lyra-border text-xs text-lyra-text-muted space-y-2">
                           <div className="font-semibold text-lyra-text flex items-center gap-2">
-                            <Server size={14} className="text-emerald-400" /> Server Lokal Ollama
+                            <Server size={14} className="text-emerald-400" /> {language === 'id' ? 'Server Lokal Ollama' : 'Local Ollama Server'}
                           </div>
                           <p>
                             {language === 'id' 
