@@ -613,34 +613,48 @@ Instruksi format respon:
                     return null;
                   };
 
-                  const parsedTodos = extractRealTodos(accumulatedAssistantText);
-                  if (parsedTodos) {
+                  const isWarningOrError = 
+                    accumulatedAssistantText.includes('API Key Required') || 
+                    accumulatedAssistantText.includes('API Key Belum Dikonfigurasi') || 
+                    accumulatedAssistantText.includes('BYOK Mode') ||
+                    accumulatedAssistantText.includes('Mode BYOK');
+
+                  if (!isWarningOrError) {
+                    const parsedTodos = extractRealTodos(accumulatedAssistantText);
+                    if (parsedTodos) {
+                      dispatchAgentEvent({
+                        type: 'TODOS_MUTATED',
+                        payload: { todos: parsedTodos as any }
+                      });
+                    }
+
+                    // Extract live code snippets from accumulated stream
+                    const codeMatch = accumulatedAssistantText.match(/```(?:[a-zA-Z0-9_\-]+)?\s*([\s\S]+?)(?:```|$)/);
+                    if (codeMatch && codeMatch[1] && codeMatch[1].length > 5) {
+                      const agentInfo = getAgentInfo(selectedAgent);
+                      useWorkspaceStore.getState().setLiveTyping({
+                        active: true,
+                        agentName: agentInfo.name,
+                        agentRole: agentInfo.role,
+                        filePath: 'workspace/generated_code.ts',
+                        diffOrContent: codeMatch[1]
+                      });
+                    } else if (data.text && !accumulatedAssistantText.includes('```')) {
+                      // Even before full code block, start live typing with assistant streaming text
+                      const agentInfo = getAgentInfo(selectedAgent);
+                      useWorkspaceStore.getState().setLiveTyping({
+                        active: true,
+                        agentName: agentInfo.name,
+                        agentRole: agentInfo.role,
+                        filePath: 'workspace/agent_plan.md',
+                        diffOrContent: accumulatedAssistantText
+                      });
+                    }
+                  } else {
+                    useWorkspaceStore.getState().setLiveTyping(null);
                     dispatchAgentEvent({
                       type: 'TODOS_MUTATED',
-                      payload: { todos: parsedTodos as any }
-                    });
-                  }
-
-                  // Extract live code snippets from accumulated stream
-                  const codeMatch = accumulatedAssistantText.match(/```(?:[a-zA-Z0-9_\-]+)?\s*([\s\S]+?)(?:```|$)/);
-                  if (codeMatch && codeMatch[1] && codeMatch[1].length > 5) {
-                    const agentInfo = getAgentInfo(selectedAgent);
-                    useWorkspaceStore.getState().setLiveTyping({
-                      active: true,
-                      agentName: agentInfo.name,
-                      agentRole: agentInfo.role,
-                      filePath: 'workspace/generated_code.ts',
-                      diffOrContent: codeMatch[1]
-                    });
-                  } else if (data.text && !accumulatedAssistantText.includes('```')) {
-                    // Even before full code block, start live typing with assistant streaming text
-                    const agentInfo = getAgentInfo(selectedAgent);
-                    useWorkspaceStore.getState().setLiveTyping({
-                      active: true,
-                      agentName: agentInfo.name,
-                      agentRole: agentInfo.role,
-                      filePath: 'workspace/agent_plan.md',
-                      diffOrContent: accumulatedAssistantText
+                      payload: { todos: [] }
                     });
                   }
                 }
@@ -658,34 +672,50 @@ Instruksi format respon:
         );
       }
 
-      // Trigger deliverables & complete state
-      // If real todos were parsed during execution, mark them all completed at finish
-      const currentTodos = useWorkSessionStore.getState().todos;
-      if (currentTodos && currentTodos.length > 0) {
+      // Trigger deliverables & complete state only if NOT a warning/error
+      const hasWarning = 
+        accumulatedAssistantText.includes('API Key Required') || 
+        accumulatedAssistantText.includes('API Key Belum Dikonfigurasi') || 
+        accumulatedAssistantText.includes('BYOK Mode') ||
+        accumulatedAssistantText.includes('Mode BYOK');
+
+      if (!hasWarning) {
+        // If real todos were parsed during execution, mark them all completed at finish
+        const currentTodos = useWorkSessionStore.getState().todos;
+        if (currentTodos && currentTodos.length > 0) {
+          dispatchAgentEvent({
+            type: 'TODOS_MUTATED',
+            payload: {
+              todos: currentTodos.map(t => ({ ...t, state: 'completed' as const }))
+            }
+          });
+        }
+
         dispatchAgentEvent({
-          type: 'TODOS_MUTATED',
+          type: 'DELIVERABLE_READY',
           payload: {
-            todos: currentTodos.map(t => ({ ...t, state: 'completed' as const }))
+            title: language === 'en' ? `Task Completed: ${taskTitle}` : `Tugas Selesai: ${taskTitle}`,
+            summary: language === 'en'
+              ? `The autonomous agent squad has completed your instructions. Review deliverables and files in the workspace.`
+              : `Swarm Agen telah menuntaskan instruksi secara otonom. Hasil pengerjaan dan percakapan dapat ditinjau di feed dan file terkait siap diinspeksi.`,
+            changedFiles: [
+              { path: 'package.json', action: 'modified' },
+              { path: 'README.md', action: 'modified' }
+            ],
+            nextActionableSteps: language === 'en'
+              ? [
+                  'Click the files above to open them in the Workspace Panel',
+                  'Observe live agent simulation on World HQ',
+                  'Provide follow-up instructions if adjustments are needed'
+                ]
+              : [
+                  'Klik berkas di atas untuk membukanya langsung di Workspace Panel',
+                  'Lihat aktivitas agen di World HQ untuk simulasi 2D markas',
+                  'Beri instruksi lanjutan jika memerlukan penyesuaian'
+                ]
           }
         });
       }
-
-      dispatchAgentEvent({
-        type: 'DELIVERABLE_READY',
-        payload: {
-          title: `Tugas Selesai: ${taskTitle}`,
-          summary: `Swarm Agen telah menuntaskan instruksi secara otonom. Hasil pengerjaan dan percakapan dapat ditinjau di feed dan file terkait siap diinspeksi.`,
-          changedFiles: [
-            { path: 'package.json', action: 'modified' },
-            { path: 'README.md', action: 'modified' }
-          ],
-          nextActionableSteps: [
-            'Klik berkas di atas untuk membukanya langsung di Workspace Panel',
-            'Lihat aktivitas agen di World HQ untuk simulasi 2D markas',
-            'Beri instruksi lanjutan jika memerlukan penyesuaian'
-          ]
-        }
-      });
 
     } catch (err: any) {
       // Don't log or show error banner if user deliberately aborted/stopped

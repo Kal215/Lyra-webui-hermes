@@ -165,7 +165,7 @@ export const AutonomousConversationView: React.FC<AutonomousConversationViewProp
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-semibold text-lyra-text">
-                {msg.role === 'user' ? 'Anda' : (msg.agentName || 'Lyra Specialist')}
+                {msg.role === 'user' ? (language === 'id' ? 'Anda' : 'You') : (msg.agentName || 'Lyra Specialist')}
               </span>
               {msg.timestamp && (
                 <span className="text-[10px] text-lyra-text-secondary/60 font-mono">

@@ -11,6 +11,41 @@ interface DynamicTodosCardProps {
   className?: string;
 }
 
+function renderTodoLabel(label: string) {
+  const linkRegex = /\[(.*?)\]\((.*?)\)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = linkRegex.exec(label)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(label.substring(lastIndex, match.index));
+    }
+    const text = match[1];
+    const url = match[2];
+    const isExternal = url.startsWith('http') || url.startsWith('//');
+    parts.push(
+      <a
+        key={match.index}
+        href={url}
+        target={isExternal ? '_blank' : undefined}
+        rel={isExternal ? 'noopener noreferrer' : undefined}
+        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold underline underline-offset-2 decoration-blue-500/50 hover:decoration-blue-500 transition-colors cursor-pointer"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {text}
+      </a>
+    );
+    lastIndex = linkRegex.lastIndex;
+  }
+
+  if (lastIndex < label.length) {
+    parts.push(label.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : label;
+}
+
 export const DynamicTodosCard: React.FC<DynamicTodosCardProps> = ({ todos, className = '' }) => {
   const { language } = useI18nStore();
   const completedCount = todos.filter((t) => t.state === 'completed').length;
@@ -97,7 +132,7 @@ export const DynamicTodosCard: React.FC<DynamicTodosCardProps> = ({ todos, class
                         : 'text-lyra-text-secondary'
                     }`}
                   >
-                    {todo.label}
+                    {renderTodoLabel(todo.label)}
                   </p>
                   {todo.assignee && (
                     <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono border transition-all ${
