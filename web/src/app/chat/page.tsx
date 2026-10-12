@@ -1476,11 +1476,7 @@ function NativeChatContent() {
     const activeModelObj = modelsList.find(m => m.name === selectedModel);
     const resolvedModelParam = activeModelObj ? activeModelObj.id : selectedModel;
 
-    let clientAiConfig: any = null;
-    try {
-      const stored = localStorage.getItem('lyra_ai_config');
-      if (stored) clientAiConfig = JSON.parse(stored);
-    } catch (e) {}
+    const clientAiConfig = loadLyraAiConfig();
 
     const payload = {
       message: userText,

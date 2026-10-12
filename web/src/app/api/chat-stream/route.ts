@@ -42,29 +42,77 @@ export async function POST(req: NextRequest) {
   }
 
   const aiConfig = getAiConfig();
-  const activeProvider = clientConfig?.activeProvider || clientConfig?.providerId;
+  const providersMap = clientConfig?.providers || {};
+  let activeProvider = clientConfig?.activeProvider || clientConfig?.providerId || 'openrouter';
   let effectiveBaseUrl = (clientConfig?.baseUrl || aiConfig.baseUrl)?.replace(/\/$/, '') || '';
-  const apiKey = (clientConfig?.apiKey || aiConfig.apiKey)?.trim() || '';
+  let apiKey = (clientConfig?.apiKey || aiConfig.apiKey)?.trim() || '';
 
-  // Smart endpoint resolution: respect activeProvider or auto-detect from API key signature
-  if (activeProvider === 'groq' || apiKey.startsWith('gsk_')) {
+  const isHermesAlias = !model || model === 'default' || model === 'hermes-agent' || model === 'Hermes Agent';
+  let effectiveModel = !isHermesAlias ? model : (clientConfig?.model || aiConfig.model);
+
+  // If the model requested is a Groq model (e.g. 'llama-3.1-8b-instant' or 'llama-3.3-70b-versatile')
+  // and we have a Groq key saved in providersMap, prioritize Groq!
+  if ((effectiveModel === 'llama-3.1-8b-instant' || effectiveModel === 'llama-3.3-70b-versatile' || effectiveModel?.includes('distill-llama-70b')) 
+      && providersMap['groq']?.apiKey) {
+    activeProvider = 'groq';
+    apiKey = providersMap['groq'].apiKey.trim();
     effectiveBaseUrl = 'https://api.groq.com/openai/v1';
-  } else if (activeProvider === 'openrouter' || apiKey.startsWith('sk-or-')) {
+  } else if (providersMap[activeProvider]?.apiKey) {
+    apiKey = providersMap[activeProvider].apiKey.trim();
+    effectiveBaseUrl = providersMap[activeProvider].baseUrl || effectiveBaseUrl;
+  }
+
+  // Key prefix routing guarantees:
+  if (apiKey.startsWith('gsk_')) {
+    effectiveBaseUrl = 'https://api.groq.com/openai/v1';
+    activeProvider = 'groq';
+  } else if (apiKey.startsWith('sk-or-')) {
     effectiveBaseUrl = 'https://openrouter.ai/api/v1';
-  } else if (activeProvider === 'anthropic' || apiKey.startsWith('sk-ant-')) {
+    activeProvider = 'openrouter';
+  } else if (apiKey.startsWith('sk-ant-')) {
     effectiveBaseUrl = 'https://api.anthropic.com/v1';
-  } else if (activeProvider === 'openai' || apiKey.startsWith('sk-proj-')) {
+    activeProvider = 'anthropic';
+  } else if (apiKey.startsWith('sk-proj-')) {
     effectiveBaseUrl = 'https://api.openai.com/v1';
+    activeProvider = 'openai';
   } else if (activeProvider === 'deepseek') {
     effectiveBaseUrl = 'https://api.deepseek.com/v1';
   } else if (activeProvider === 'ollama') {
     effectiveBaseUrl = 'http://127.0.0.1:11434/v1';
-  } else if (!effectiveBaseUrl) {
+  }
+
+  if (!effectiveBaseUrl) {
     effectiveBaseUrl = 'https://openrouter.ai/api/v1';
   }
 
-  const isHermesAlias = !model || model === 'default' || model === 'hermes-agent' || model === 'Hermes Agent';
-  let effectiveModel = !isHermesAlias ? model : (clientConfig?.model || aiConfig.model);
+  // Harmonize model IDs according to target endpoint:
+  if (effectiveBaseUrl.includes('openrouter.ai')) {
+    // OpenRouter requires provider namespace prefixes
+    if (effectiveModel === 'llama-3.1-8b-instant' || effectiveModel === 'llama-3.1-8b') {
+      effectiveModel = 'meta-llama/llama-3.1-8b-instruct';
+    } else if (effectiveModel === 'llama-3.3-70b-versatile' || effectiveModel === 'llama-3.3-70b') {
+      effectiveModel = 'meta-llama/llama-3.3-70b-instruct';
+    } else if (effectiveModel === 'deepseek-r1-distill-llama-70b') {
+      effectiveModel = 'deepseek/deepseek-r1-distill-llama-70b';
+    } else if (effectiveModel === 'gpt-4o') {
+      effectiveModel = 'openai/gpt-4o';
+    } else if (effectiveModel === 'gpt-4o-mini') {
+      effectiveModel = 'openai/gpt-4o-mini';
+    } else if (effectiveModel === 'deepseek-chat') {
+      effectiveModel = 'deepseek/deepseek-chat';
+    } else if (effectiveModel === 'deepseek-reasoner') {
+      effectiveModel = 'deepseek/deepseek-r1';
+    }
+  } else if (effectiveBaseUrl.includes('groq.com')) {
+    // Groq requires bare un-namespaced IDs
+    if (effectiveModel === 'meta-llama/llama-3.1-8b-instruct' || effectiveModel === 'llama-3.1-8b') {
+      effectiveModel = 'llama-3.1-8b-instant';
+    } else if (effectiveModel === 'meta-llama/llama-3.3-70b-instruct' || effectiveModel === 'llama-3.3-70b') {
+      effectiveModel = 'llama-3.3-70b-versatile';
+    } else if (effectiveModel?.includes('deepseek-r1')) {
+      effectiveModel = 'deepseek-r1-distill-llama-70b';
+    }
+  }
 
   if (!effectiveModel || isHermesAlias) {
     if (effectiveBaseUrl.includes('groq.com')) {
@@ -180,8 +228,11 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
         parsedError = json.error?.message || errBody;
       } catch (e) {}
 
+      let endpointHost = 'API';
+      try { endpointHost = new URL(endpoint).hostname; } catch (e) {}
+
       return new Response(
-        `data: ${JSON.stringify({ type: 'text', text: `\n\n**[API Error ${response.status}]**: ${parsedError}` })}\n\ndata: {"type": "done"}\n\n`,
+        `data: ${JSON.stringify({ type: 'text', text: `\n\n**[API Error ${response.status} from ${endpointHost}]**: ${parsedError}\n*(Request target: \`${effectiveModel}\` on \`${endpointHost}\`)*` })}\n\ndata: {"type": "done"}\n\n`,
         {
           headers: {
             'Content-Type': 'text/event-stream',
