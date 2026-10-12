@@ -7,6 +7,15 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { buildRichMessages } from './messageParser';
+import { 
+  getLocalChatSessions, 
+  saveLocalChatSession, 
+  deleteLocalChatSession, 
+  renameLocalChatSession, 
+  pinLocalChatSession, 
+  getLocalChatMessages, 
+  saveLocalChatMessages 
+} from '@/lib/store/useLocalChatStorage';
 import { extractInlineThinking } from '@/lib/reasoning/extractor';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -1177,59 +1186,93 @@ function NativeChatContent() {
     try {
       const res = await fetch('/api/sessions', { cache: 'no-store' });
       const data = await res.json();
-      setSessions(data.sessions || []);
+      const serverSessions = data.sessions || [];
+      
+      // Combine server sessions with local browser sessions
+      const localSessions = getLocalChatSessions();
+      
+      // Deduplicate by ID
+      const mergedMap = new Map<string, any>();
+      serverSessions.forEach((s: any) => mergedMap.set(s.id, s));
+      localSessions.forEach((s: any) => {
+        if (!mergedMap.has(s.id)) {
+          mergedMap.set(s.id, s);
+        }
+      });
+      
+      const merged = Array.from(mergedMap.values()).sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+      setSessions(merged);
     } catch (e) {
-      console.error(e);
+      console.warn('Backend /api/sessions unavailable (e.g. Vercel), falling back to local browser storage:', e);
+      const localSessions = getLocalChatSessions();
+      setSessions(localSessions);
     }
   };
 
   const handleDeleteSession = async (id: string) => {
     setSessions(prev => prev.filter(s => s.id !== id));
+    deleteLocalChatSession(id);
     if (activeSessionId === id) setActiveSessionId(null);
     try {
       await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
-      fetchSessions();
     } catch (e) {
-      fetchSessions();
+      // Ignore if serverless
     }
+    fetchSessions();
   };
 
   const handleRenameSession = async (id: string, newTitle: string) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, title: newTitle } : s));
+    renameLocalChatSession(id, newTitle);
     try {
       await fetch(`/api/sessions/${id}`, { 
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newTitle })
       });
-      fetchSessions();
     } catch (e) {
-      fetchSessions();
+      // Ignore if serverless
     }
+    fetchSessions();
   };
 
   const handlePinSession = async (id: string, pin: boolean) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, is_pinned: pin } : s));
+    pinLocalChatSession(id, pin);
     try {
       await fetch(`/api/sessions/${id}`, { 
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin })
       });
-      fetchSessions();
     } catch (e) {
-      fetchSessions();
+      // Ignore if serverless
     }
+    fetchSessions();
   };
 
   const fetchMessages = async (id: string) => {
     try {
       const res = await fetch(`/api/sessions/${id}/messages`);
-      const data = await res.json();
-      const rich = buildRichMessages(data.messages || []);
-      setMessages(rich);
+      if (res.ok) {
+        const data = await res.json();
+        const rich = buildRichMessages(data.messages || []);
+        if (rich && rich.length > 0) {
+          setMessages(rich);
+          return;
+        }
+      }
+      // If server returned 404/500 or empty, try local storage
+      const localMsgs = getLocalChatMessages(id);
+      if (localMsgs && localMsgs.length > 0) {
+        setMessages(localMsgs);
+      } else {
+        setMessages([]);
+      }
     } catch (e) {
-      console.error(e);
+      console.warn(`Server message load failed for ${id}, using local storage:`, e);
+      const localMsgs = getLocalChatMessages(id);
+      setMessages(localMsgs || []);
     }
   };
 
@@ -1478,6 +1521,11 @@ function NativeChatContent() {
 
     const clientAiConfig = loadLyraAiConfig();
 
+    const priorHistory = initialMessages.map(m => ({
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: m.content || m.rawContent || ''
+    }));
+
     const payload = {
       message: userText,
       session_id: activeSessionId,
@@ -1490,7 +1538,8 @@ function NativeChatContent() {
       webSearch: isWebSearchEnabled,
       deepResearch: isDeepResearchEnabled,
       clientConfig: clientAiConfig,
-      language: language
+      language: language,
+      conversationHistory: priorHistory
     };
     
     if (messageAttachments === undefined) {
@@ -1627,6 +1676,25 @@ function NativeChatContent() {
         }
       }
       
+      // Persist to local browser storage (fallback/hybrid persistence for Vercel)
+      const targetSessionId = currentSessionId || activeSessionId;
+      if (targetSessionId) {
+        setMessages(finalMsgs => {
+          if (finalMsgs && finalMsgs.length > 0) {
+            saveLocalChatMessages(targetSessionId, finalMsgs);
+            const firstUser = finalMsgs.find(m => m.role === 'user');
+            const previewTitle = firstUser ? (firstUser.content.slice(0, 32) + (firstUser.content.length > 32 ? '...' : '')) : 'Chat Session';
+            saveLocalChatSession({
+              id: targetSessionId,
+              title: previewTitle,
+              created_at: Date.now(),
+              updated_at: Date.now()
+            });
+          }
+          return finalMsgs;
+        });
+      }
+
       fetchSessions();
     } catch (e: any) {
       if (e.name === 'AbortError') {
