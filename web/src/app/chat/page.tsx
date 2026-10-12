@@ -1395,7 +1395,7 @@ function NativeChatContent() {
     for (const m of messages) {
       const roleName = m.role === 'user' 
         ? (language === 'id' ? '👤 Pengguna' : '👤 User') 
-        : `🤖 ${m.agentName || (selectedModel && selectedModel !== 'Hermes Agent' ? selectedModel : 'Lyra Studio Agent')}`;
+        : `✨ Lyra`;
       const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('id-ID') : '';
       md += `### ${roleName} ${timeStr ? `(${timeStr})` : ''}\n\n`;
       
@@ -2170,8 +2170,15 @@ function NativeChatContent() {
                 <div className="flex items-end justify-start max-w-[85%] sm:max-w-[75%] gap-2 w-full">
                   {/* Assistant Bubble */}
                   <div className="rounded-3xl p-5 bg-lyra-surface border border-white/5 text-lyra-text shadow-sm transition-all max-w-full">
-                    <div className="text-sm font-semibold opacity-60 uppercase tracking-wider mb-2">
-                      {m.agentName || (selectedModel && selectedModel !== 'Hermes Agent' ? selectedModel : 'Lyra Studio Agent')}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-semibold tracking-wider text-lyra-text">
+                        Lyra
+                      </span>
+                      {selectedModel && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-lyra-accent/10 text-lyra-text-secondary/70 font-mono">
+                          {selectedModel}
+                        </span>
+                      )}
                     </div>
 
                     {/* Reasoning & Tools Execution Pipeline */}
