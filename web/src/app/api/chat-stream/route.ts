@@ -42,12 +42,28 @@ export async function POST(req: NextRequest) {
   }
 
   const aiConfig = getAiConfig();
-  const effectiveBaseUrl = (clientConfig?.baseUrl || aiConfig.baseUrl)?.replace(/\/$/, '') || 'https://api.openai.com/v1';
+  let effectiveBaseUrl = (clientConfig?.baseUrl || aiConfig.baseUrl)?.replace(/\/$/, '') || '';
+  const apiKey = (clientConfig?.apiKey || aiConfig.apiKey)?.trim() || '';
+
+  // Smart endpoint resolution: Auto-detect provider if baseUrl was left default, empty, or mismatched
+  if (apiKey.startsWith('gsk_')) {
+    // Groq API keys ALWAYS begin with 'gsk_'
+    effectiveBaseUrl = 'https://api.groq.com/openai/v1';
+  } else if (apiKey.startsWith('sk-or-')) {
+    // OpenRouter API keys ALWAYS begin with 'sk-or-'
+    effectiveBaseUrl = 'https://openrouter.ai/api/v1';
+  } else if (apiKey.startsWith('sk-ant-')) {
+    // Anthropic API keys
+    effectiveBaseUrl = 'https://api.anthropic.com/v1';
+  } else if (!effectiveBaseUrl) {
+    // Default fallback
+    effectiveBaseUrl = 'https://openrouter.ai/api/v1';
+  }
+
   const isHermesAlias = !model || model === 'default' || model === 'hermes-agent' || model === 'Hermes Agent';
   const effectiveModel = !isHermesAlias
     ? model 
-    : (clientConfig?.model || aiConfig.model || 'anthropic/claude-3.5-sonnet');
-  const apiKey = clientConfig?.apiKey || aiConfig.apiKey;
+    : (clientConfig?.model || aiConfig.model || (effectiveBaseUrl.includes('groq.com') ? 'llama-3.3-70b-versatile' : 'anthropic/claude-3.5-sonnet'));
 
   const isEnglish = language === 'en';
 

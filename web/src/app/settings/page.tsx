@@ -194,10 +194,10 @@ export default function SettingsPage() {
   const { enabled, volume, setEnabled, setVolume } = useSoundStore();
   const { playClick, playPress } = useTactileSound();
 
-  const [aiBaseUrl, setAiBaseUrl] = useState('');
-  const [aiModel, setAiModel] = useState('');
+  const [aiBaseUrl, setAiBaseUrl] = useState('https://openrouter.ai/api/v1');
+  const [aiModel, setAiModel] = useState('anthropic/claude-3.5-sonnet');
   const [aiApiKey, setAiApiKey] = useState('');
-  const [providerType, setProviderType] = useState<ProviderType>('custom');
+  const [providerType, setProviderType] = useState<ProviderType>('openrouter');
   const [aiStatus, setAiStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
 
@@ -244,6 +244,35 @@ export default function SettingsPage() {
     if (preset) {
       setAiBaseUrl(preset.baseUrl);
       setAiModel(preset.defaultModel);
+    }
+  };
+
+  const handleApiKeyChange = (val: string) => {
+    setAiApiKey(val);
+    const trimmed = val.trim();
+    if (trimmed.startsWith('gsk_')) {
+      setProviderType('groq');
+      const groqPreset = PROVIDER_PRESETS.find(p => p.id === 'groq');
+      if (groqPreset) {
+        setAiBaseUrl(groqPreset.baseUrl);
+        if (!aiModel || aiModel.includes('claude') || aiModel.includes('gpt-') || aiModel === 'gpt-4o') {
+          setAiModel(groqPreset.defaultModel);
+        }
+      }
+    } else if (trimmed.startsWith('sk-or-')) {
+      setProviderType('openrouter');
+      const orPreset = PROVIDER_PRESETS.find(p => p.id === 'openrouter');
+      if (orPreset) {
+        setAiBaseUrl(orPreset.baseUrl);
+      }
+    } else if (trimmed.startsWith('sk-ant-')) {
+      setProviderType('anthropic');
+      const antPreset = PROVIDER_PRESETS.find(p => p.id === 'anthropic');
+      if (antPreset) setAiBaseUrl(antPreset.baseUrl);
+    } else if (trimmed.startsWith('sk-proj-')) {
+      setProviderType('openai');
+      const oaiPreset = PROVIDER_PRESETS.find(p => p.id === 'openai');
+      if (oaiPreset) setAiBaseUrl(oaiPreset.baseUrl);
     }
   };
 
@@ -481,7 +510,7 @@ export default function SettingsPage() {
                             type="password" 
                             className="w-full bg-lyra-bg border border-lyra-border rounded-lyra-md px-4 py-3 text-sm text-lyra-text focus:outline-none focus:border-lyra-accent focus:shadow-[0_0_0_2px_rgba(var(--color-lyra-accent),0.2)] transition-all shadow-neo-inset"
                             value={aiApiKey}
-                            onChange={e => setAiApiKey(e.target.value)}
+                            onChange={e => handleApiKeyChange(e.target.value)}
                             placeholder={(() => {
                               const preset = PROVIDER_PRESETS.find(p => p.id === providerType);
                               const meta = getPresetMeta(preset, language);
