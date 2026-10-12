@@ -49,8 +49,8 @@ Lyra Studio adalah ruang kerja pengembang open-source yang dirancang untuk berin
 ### Instalasi
 
 ```bash
-git clone https://github.com/Kal215/lyrav2.git
-cd lyrav2/web
+git clone https://github.com/Kal215/Lyra-webui-hermes.git
+cd Lyra-webui-hermes/web
 npm install
 npm run dev
 ```
