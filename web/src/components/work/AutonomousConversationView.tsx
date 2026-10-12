@@ -83,6 +83,20 @@ function InlineCodeBlock({ inline, className, children, ...props }: any) {
 const markdownComponents = {
   code: InlineCodeBlock,
   pre: ({ children }: any) => <>{children}</>,
+  a: ({ href, children, ...props }: any) => {
+    const isExternal = href?.startsWith('http') || href?.startsWith('//');
+    return (
+      <a
+        href={href}
+        target={isExternal ? '_blank' : undefined}
+        rel={isExternal ? 'noopener noreferrer' : undefined}
+        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold underline underline-offset-2 decoration-blue-500/50 hover:decoration-blue-500 transition-colors cursor-pointer inline-flex items-center gap-0.5"
+        {...props}
+      >
+        {children}
+      </a>
+    );
+  },
   h1: ({ children }: any) => <h1 className="text-xl font-bold tracking-tight text-lyra-text mt-6 mb-3 border-b border-lyra-accent/15 pb-2">{children}</h1>,
   h2: ({ children }: any) => <h2 className="text-lg font-bold tracking-tight text-lyra-text mt-5 mb-2.5">{children}</h2>,
   h3: ({ children }: any) => <h3 className="text-base font-semibold text-lyra-text mt-4 mb-2">{children}</h3>,

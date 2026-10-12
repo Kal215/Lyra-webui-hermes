@@ -208,6 +208,20 @@ function CodeBlock({ inline, className, children, ...props }: any) {
 const markdownComponents = {
   code: CodeBlock,
   pre: ({ children }: any) => <>{children}</>,
+  a: ({ href, children, ...props }: any) => {
+    const isExternal = href?.startsWith('http') || href?.startsWith('//');
+    return (
+      <a
+        href={href}
+        target={isExternal ? '_blank' : undefined}
+        rel={isExternal ? 'noopener noreferrer' : undefined}
+        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold underline underline-offset-2 decoration-blue-500/50 hover:decoration-blue-500 transition-colors cursor-pointer inline-flex items-center gap-0.5"
+        {...props}
+      >
+        {children}
+      </a>
+    );
+  },
   h1: ({ children }: any) => <h1 className="text-xl font-bold tracking-tight text-lyra-text mt-6 mb-3 border-b border-lyra-accent/15 pb-2">{children}</h1>,
   h2: ({ children }: any) => <h2 className="text-lg font-bold tracking-tight text-lyra-text mt-5 mb-2.5">{children}</h2>,
   h3: ({ children }: any) => <h3 className="text-base font-semibold text-lyra-text mt-4 mb-2">{children}</h3>,
@@ -2071,7 +2085,7 @@ function NativeChatContent() {
 
                     {/* Markdown Content with CodeBlock */}
                     {m.content && (
-                      <div className="prose prose-p:leading-relaxed prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-none prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-lyra-accent prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none">
+                      <div className="prose prose-p:leading-relaxed prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-none prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:font-semibold prose-a:underline prose-a:underline-offset-2 hover:prose-a:text-blue-700 dark:hover:prose-a:text-blue-300 prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none">
                         <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                           {m.content}
                         </ReactMarkdown>

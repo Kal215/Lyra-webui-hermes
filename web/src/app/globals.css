@@ -289,3 +289,36 @@
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Distinct Blue Interactive Links for Chat, Studio, and Markdown */
+.prose a,
+.prose-a,
+article a {
+  color: #2563eb !important;
+  font-weight: 600;
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(37, 99, 235, 0.45) !important;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.prose a:hover,
+.prose-a:hover,
+article a:hover {
+  color: #1d4ed8 !important;
+  text-decoration-color: #1d4ed8 !important;
+}
+
+html[data-mode="dark"] .prose a,
+html[data-mode="dark"] .prose-a,
+html[data-mode="dark"] article a {
+  color: #60a5fa !important;
+  text-decoration-color: rgba(96, 165, 250, 0.45) !important;
+}
+
+html[data-mode="dark"] .prose a:hover,
+html[data-mode="dark"] .prose-a:hover,
+html[data-mode="dark"] article a:hover {
+  color: #93c5fd !important;
+  text-decoration-color: #93c5fd !important;
+}
