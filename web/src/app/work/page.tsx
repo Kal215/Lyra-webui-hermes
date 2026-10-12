@@ -73,6 +73,14 @@ export default function WorkPage() {
   ]);
   const [selectedAgent, setSelectedAgent] = useState('default');
   const [isHermesInstalled, setIsHermesInstalled] = useState<boolean | null>(null);
+  const [hasDismissedCloudHint, setHasDismissedCloudHint] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem('lyra_cloud_mode_hint_dismissed') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
 
   // Input Prompt State
   const [promptInput, setPromptInput] = useState('');
@@ -1192,6 +1200,33 @@ Communication Rules:
 
         {/* Bottom Autonomous Dispatch Prompt Bar (Exact Mirror of Chat Input Bar) */}
         <div className="p-4 border-t border-lyra-accent/10 bg-lyra-surface/90 backdrop-blur-md shrink-0 z-10 shadow-lg">
+          {/* Subtle Smart Notification when using in Cloud / Vercel without Hermes Engine */}
+          {isHermesInstalled === false && !hasDismissedCloudHint && (
+            <div className="max-w-4xl mx-auto mb-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-lyra-text flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-1 duration-300">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="p-1 rounded-md bg-amber-500/20 text-amber-500 shrink-0">⚡</span>
+                <span className="text-[11px] sm:text-xs text-lyra-text-secondary leading-snug">
+                  {language === 'id' 
+                    ? 'Mode Cloud aktif. Anda tetap dapat menggunakan studio ini, namun memasang Hermes Engine lokal akan memaksimalkan kemampuan eksekusi file & background process.' 
+                    : 'Cloud mode active. You can still work with AI specialists here, but installing local Hermes Engine unlocks full background process & file tree execution.'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setHasDismissedCloudHint(true);
+                  try {
+                    localStorage.setItem('lyra_cloud_mode_hint_dismissed', 'true');
+                  } catch (e) {}
+                }}
+                className="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded-md hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 shrink-0 transition-colors cursor-pointer"
+                title={language === 'id' ? 'Tutup info' : 'Dismiss notice'}
+              >
+                {language === 'id' ? 'Mengerti' : 'Got it'}
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleLaunchAutonomousWork} className="max-w-4xl mx-auto flex flex-col gap-2">
             
             {/* Top Selector: Agent / Squad Mode */}
