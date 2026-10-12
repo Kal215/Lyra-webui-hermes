@@ -21,8 +21,8 @@ export async function GET() {
   });
 
   // 2. Hermes Core
-  let coreStatus = 'unavailable';
-  let coreDetails = 'Stopped';
+  let coreStatus = 'standby';
+  let coreDetails = 'Cloud / Standalone';
   try {
     const { stdout } = await execFileAsync('hermes', ['status'], { env, encoding: 'utf8' });
     const gwMatch = stdout.match(/Gateway Service\s*Status:\s*(.*?)\n\s*Manager:\s*(.*?)\n\s*PID\(s\):\s*(.*)/);
@@ -31,7 +31,7 @@ export async function GET() {
       coreDetails = `PID: ${gwMatch[3]}`;
     }
   } catch (e) {
-    console.error(e);
+    // Expected when running on Vercel / serverless cloud without local Hermes daemon
   }
   systems.push({
     id: 'hermes',

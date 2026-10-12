@@ -176,14 +176,27 @@ export default function SettingsPage() {
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
 
   useEffect(() => {
+    // 1. Try reading from local browser storage first for instant BYOK persistence
+    try {
+      const cached = localStorage.getItem('lyra_ai_config');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.baseUrl) setAiBaseUrl(parsed.baseUrl);
+        if (parsed.model) setAiModel(parsed.model);
+        if (parsed.apiKey) setAiApiKey(parsed.apiKey);
+        if (parsed.providerId) setProviderType(parsed.providerId);
+      }
+    } catch (e) {}
+
+    // 2. Sync with backend if available
     fetch('/api/settings/ai')
       .then(res => res.json())
       .then(data => {
-        if (!data.error) {
+        if (!data.error && data.baseUrl) {
           const fetchedUrl = data.baseUrl || '';
           setAiBaseUrl(fetchedUrl);
-          setAiModel(data.model || '');
-          setAiApiKey(data.apiKey || '');
+          if (data.model) setAiModel(data.model);
+          if (data.apiKey && !data.apiKey.startsWith('••••')) setAiApiKey(data.apiKey);
           
           if (fetchedUrl.includes('openrouter.ai')) setProviderType('openrouter');
           else if (fetchedUrl.includes('api.openai.com')) setProviderType('openai');
@@ -193,9 +206,10 @@ export default function SettingsPage() {
           else if (fetchedUrl.includes('groq.com')) setProviderType('groq');
           else if (fetchedUrl.includes('mistral.ai')) setProviderType('mistral');
           else if (fetchedUrl.includes('11434')) setProviderType('ollama');
-          else setProviderType('custom');
+          else if (data.provider) setProviderType(data.provider);
         }
-      });
+      })
+      .catch(() => {});
   }, []);
 
   const handleProviderTypeChange = (type: ProviderType) => {
@@ -210,6 +224,17 @@ export default function SettingsPage() {
   const handleSaveAiConfig = async () => {
     setAiStatus('saving');
     playClick();
+
+    // Save locally in browser for robust BYOK across serverless / Vercel
+    try {
+      localStorage.setItem('lyra_ai_config', JSON.stringify({
+        baseUrl: aiBaseUrl,
+        model: aiModel,
+        apiKey: (aiApiKey || ''),
+        providerId: providerType
+      }));
+    } catch (e) {}
+
     try {
       const currentPreset = PROVIDER_PRESETS.find(p => p.id === providerType);
       const res = await fetch('/api/settings/ai', {
@@ -218,19 +243,17 @@ export default function SettingsPage() {
         body: JSON.stringify({ 
           baseUrl: aiBaseUrl, 
           model: aiModel, 
-          apiKey: aiApiKey,
+          apiKey: (aiApiKey || ''),
           providerId: providerType,
           keyEnv: currentPreset?.keyEnv || 'LYRA_WEB_KEY'
         })
       });
-      if (res.ok) {
-        setAiStatus('saved');
-        setTimeout(() => setAiStatus('idle'), 2000);
-      } else {
-        setAiStatus('error');
-      }
+      setAiStatus('saved');
+      setTimeout(() => setAiStatus('idle'), 2000);
     } catch (e) {
-      setAiStatus('error');
+      // Even if server post fails (e.g. offline or serverless error), local storage is saved
+      setAiStatus('saved');
+      setTimeout(() => setAiStatus('idle'), 2000);
     }
   };
 

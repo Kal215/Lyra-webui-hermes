@@ -33,10 +33,14 @@ function readConfig(): AiConfig {
 }
 
 function writeConfig(config: AiConfig) {
-  if (!fs.existsSync(CONFIG_DIR)) {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    fs.writeFileSync(AI_CONFIG_PATH, JSON.stringify(config, null, 2));
+  } catch (e) {
+    // Graceful fallback for read-only serverless filesystems (e.g. Vercel)
   }
-  fs.writeFileSync(AI_CONFIG_PATH, JSON.stringify(config, null, 2));
 }
 
 export async function GET() {

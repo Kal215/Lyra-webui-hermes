@@ -32,7 +32,7 @@ function getAiConfig(): AiConfig {
 }
 
 export async function POST(req: NextRequest) {
-  let { message, session_id, attachments, systemPrompt, model, thinking } = await req.json();
+  let { message, session_id, attachments, systemPrompt, model, thinking, clientConfig } = await req.json();
 
   if (!message) {
     return new Response(JSON.stringify({ error: 'Message is required' }), {
@@ -42,14 +42,26 @@ export async function POST(req: NextRequest) {
   }
 
   const aiConfig = getAiConfig();
-  const effectiveBaseUrl = aiConfig.baseUrl?.replace(/\/$/, '') || 'https://api.openai.com/v1';
+  const effectiveBaseUrl = (clientConfig?.baseUrl || aiConfig.baseUrl)?.replace(/\/$/, '') || 'https://api.openai.com/v1';
   const effectiveModel = (model && model !== 'default' && model !== 'Hermes Agent') 
     ? model 
-    : (aiConfig.model || 'gpt-4o-mini');
-  const apiKey = aiConfig.apiKey;
+    : (clientConfig?.model || aiConfig.model || 'gpt-4o-mini');
+  const apiKey = clientConfig?.apiKey || aiConfig.apiKey;
 
   if (!apiKey && !effectiveBaseUrl.includes('localhost') && !effectiveBaseUrl.includes('127.0.0.1')) {
-    const errorMsg = 'API Key belum dikonfigurasi. Silakan buka menu Pengaturan (Settings) untuk memasukkan API Key.';
+    const errorMsg = `### ⚠️ API Key Belum Dikonfigurasi / API Key Required
+
+**Lyra Studio** berjalan dalam mode **Bring Your Own Key (BYOK)**. Belum ada API Key yang dikonfigurasi untuk sesi ini.
+
+#### Cara Mengaktifkan:
+1. Buka menu **[Pengaturan / Settings](/settings)**.
+2. Pilih penyedia AI Anda (contoh: **OpenRouter**, **OpenAI**, **Groq**, **DeepSeek**, **Ollama**, dll.).
+3. Masukkan **API Key** Anda lalu klik **Simpan Pengaturan**.
+
+---
+*(English)*:
+Please configure your API Key in **[Settings](/settings)** to start chatting and orchestrating autonomous AI agents. Your credentials are saved securely in your browser session.`;
+
     return new Response(
       `data: ${JSON.stringify({ type: 'text', text: errorMsg })}\n\ndata: {"type": "done"}\n\n`,
       {

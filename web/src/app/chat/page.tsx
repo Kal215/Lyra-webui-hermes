@@ -1299,7 +1299,9 @@ function NativeChatContent() {
     md += `\n---\n\n`;
 
     for (const m of messages) {
-      const roleName = m.role === 'user' ? '👤 Pengguna' : '🤖 Hermes';
+      const roleName = m.role === 'user' 
+        ? (language === 'id' ? '👤 Pengguna' : '👤 User') 
+        : `🤖 ${m.agentName || (selectedModel && selectedModel !== 'Hermes Agent' ? selectedModel : 'Lyra Studio Agent')}`;
       const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString('id-ID') : '';
       md += `### ${roleName} ${timeStr ? `(${timeStr})` : ''}\n\n`;
       
@@ -1443,6 +1445,12 @@ function NativeChatContent() {
     const activeModelObj = modelsList.find(m => m.name === selectedModel);
     const resolvedModelParam = activeModelObj ? activeModelObj.id : selectedModel;
 
+    let clientAiConfig: any = null;
+    try {
+      const stored = localStorage.getItem('lyra_ai_config');
+      if (stored) clientAiConfig = JSON.parse(stored);
+    } catch (e) {}
+
     const payload = {
       message: userText,
       session_id: activeSessionId,
@@ -1453,7 +1461,8 @@ function NativeChatContent() {
       thinking: isReasoningEnabled,
       effort: thinkingEffort,
       webSearch: isWebSearchEnabled,
-      deepResearch: isDeepResearchEnabled
+      deepResearch: isDeepResearchEnabled,
+      clientConfig: clientAiConfig
     };
     
     if (messageAttachments === undefined) {
@@ -2046,7 +2055,7 @@ function NativeChatContent() {
                   {/* Assistant Bubble */}
                   <div className="rounded-3xl p-5 bg-lyra-surface border border-white/5 text-lyra-text shadow-sm transition-all max-w-full">
                     <div className="text-sm font-semibold opacity-60 uppercase tracking-wider mb-2">
-                      Hermes
+                      {m.agentName || (selectedModel && selectedModel !== 'Hermes Agent' ? selectedModel : 'Lyra Studio Agent')}
                     </div>
 
                     {/* Reasoning & Tools Execution Pipeline */}
