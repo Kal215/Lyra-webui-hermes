@@ -1,5 +1,6 @@
 export type TaskLifecycle = 'queued' | 'in_progress' | 'completed' | 'failed' | 'paused';
-export type TodoState = 'pending' | 'in_progress' | 'completed';
+export type TodoState = 'pending' | 'in_progress' | 'completed' | 'failed';
+export type WorkPlanStatus = 'draft' | 'approved' | 'executing' | 'completed';
 export type ToolExecutionStatus = 'running' | 'success' | 'failed';
 
 export interface AgentTodoItem {
@@ -10,8 +11,11 @@ export interface AgentTodoItem {
   state: TodoState;
   assignee?: string;
   assigneeRole?: string;
+  toolType?: string;
   startedAt?: string;
   completedAt?: string;
+  durationMs?: number;
+  outputArtifact?: string;
 }
 
 export interface ToolCallLog {

@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { 
   AgentTodoItem, 
+  WorkPlanStatus,
   ToolCallLog, 
   ReasoningNode, 
   DeliverableArtifact, 
@@ -23,6 +24,7 @@ export interface WorkSessionState {
   sessionId: string | null;
   agentId: string;
   agentStatus: 'idle' | 'reasoning' | 'executing' | 'complete' | 'error';
+  planStatus: WorkPlanStatus;
   reasoningNodes: Record<string, ReasoningNode>;
   reasoningOrder: string[];
   activeReasoningId: string | null;
@@ -37,6 +39,11 @@ export interface WorkSessionState {
   // Actions
   setSessionId: (id: string) => void;
   setAgentId: (id: string) => void;
+  setPlanStatus: (status: WorkPlanStatus) => void;
+  setTodos: (todos: AgentTodoItem[]) => void;
+  addTodo: (todo: Omit<AgentTodoItem, 'id' | 'order'>) => void;
+  updateTodo: (id: string, updates: Partial<AgentTodoItem>) => void;
+  removeTodo: (id: string) => void;
   dispatchAgentEvent: (event: AgentStreamEvent) => void;
   dispatchAgentEventsBatch: (events: AgentStreamEvent[]) => void;
   addConversationMessage: (msg: AutonomousMessage) => void;
@@ -53,6 +60,7 @@ export const useWorkSessionStore = create<WorkSessionState>()(
       sessionId: null,
       agentId: 'coder',
       agentStatus: 'idle',
+      planStatus: 'draft',
       reasoningNodes: {},
       reasoningOrder: [],
       activeReasoningId: null,
@@ -66,6 +74,30 @@ export const useWorkSessionStore = create<WorkSessionState>()(
 
       setSessionId: (id: string) => set({ sessionId: id }),
       setAgentId: (id: string) => set({ agentId: id }),
+      setPlanStatus: (status: WorkPlanStatus) => set({ planStatus: status }),
+
+      setTodos: (todos: AgentTodoItem[]) => set({ todos }),
+
+      addTodo: (todo) => set((state) => {
+        const newOrder = state.todos.length + 1;
+        const newItem: AgentTodoItem = {
+          ...todo,
+          id: 'todo_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+          order: newOrder,
+        };
+        return { todos: [...state.todos, newItem] };
+      }),
+
+      updateTodo: (id, updates) => set((state) => ({
+        todos: state.todos.map((t) => (t.id === id ? { ...t, ...updates } : t))
+      })),
+
+      removeTodo: (id) => set((state) => {
+        const filtered = state.todos.filter((t) => t.id !== id);
+        // re-index order
+        const reindexed = filtered.map((t, idx) => ({ ...t, order: idx + 1 }));
+        return { todos: reindexed };
+      }),
 
       addConversationMessage: (msg: AutonomousMessage) => set((state) => ({
         conversationMessages: [...state.conversationMessages, msg]
@@ -111,6 +143,7 @@ export const useWorkSessionStore = create<WorkSessionState>()(
           sessionId: sId,
           agentId: selectedAgent,
           agentStatus: 'reasoning',
+          planStatus: 'draft',
           hqAgentState: 'thinking',
           reasoningNodes: {
             'r-1': {
@@ -133,6 +166,7 @@ export const useWorkSessionStore = create<WorkSessionState>()(
       resetSession: () => set({
         sessionId: null,
         agentStatus: 'idle',
+        planStatus: 'draft',
         reasoningNodes: {},
         reasoningOrder: [],
         activeReasoningId: null,
@@ -151,6 +185,7 @@ export const useWorkSessionStore = create<WorkSessionState>()(
         sessionId: state.sessionId,
         agentId: state.agentId,
         agentStatus: state.agentStatus,
+        planStatus: state.planStatus,
         reasoningNodes: state.reasoningNodes,
         reasoningOrder: state.reasoningOrder,
         activeReasoningId: state.activeReasoningId,

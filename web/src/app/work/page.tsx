@@ -45,7 +45,7 @@ import {
   saveLocalWorkMessages,
   LocalWorkTask
 } from '@/lib/store/useLocalWorkStorage';
-import { DynamicTodosCard } from '@/components/work/DynamicTodosCard';
+import { InteractiveMissionPlanCard } from '@/components/work/InteractiveMissionPlanCard';
 import { ReasoningAccordion } from '@/components/work/ReasoningAccordion';
 import { ToolExecutionBlock } from '@/components/work/ToolExecutionBlock';
 import { LiveCodingStudioBlock } from '@/components/work/LiveCodingStudioBlock';
@@ -101,7 +101,7 @@ export default function WorkPage() {
 
   // Accordion UI State for Left Sidebar (v and ^)
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
-  const [isSpecialistsExpanded, setIsSpecialistsExpanded] = useState(true);
+  const [isSpecialistsExpanded, setIsSpecialistsExpanded] = useState(false);
 
   // Right Workspace Drawer State (< and >)
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
@@ -270,6 +270,11 @@ export default function WorkPage() {
   const reasoningOrder = useWorkSessionStore((s) => s.reasoningOrder);
   const activeReasoningId = useWorkSessionStore((s) => s.activeReasoningId);
   const todos = useWorkSessionStore((s) => s.todos);
+  const planStatus = useWorkSessionStore((s) => s.planStatus);
+  const setPlanStatus = useWorkSessionStore((s) => s.setPlanStatus);
+  const addTodo = useWorkSessionStore((s) => s.addTodo);
+  const updateTodo = useWorkSessionStore((s) => s.updateTodo);
+  const removeTodo = useWorkSessionStore((s) => s.removeTodo);
   const toolExecutions = useWorkSessionStore((s) => s.toolExecutions);
   const toolOrder = useWorkSessionStore((s) => s.toolOrder);
   const deliverable = useWorkSessionStore((s) => s.deliverable);
@@ -870,6 +875,7 @@ Communication Rules:
         // If real todos were parsed during execution, mark them all completed at finish
         const currentTodos = useWorkSessionStore.getState().todos;
         if (currentTodos && currentTodos.length > 0) {
+          setPlanStatus('completed');
           dispatchAgentEvent({
             type: 'TODOS_MUTATED',
             payload: {
@@ -972,11 +978,16 @@ Communication Rules:
           </div>
           <button
             type="button"
-            onClick={resetSession}
-            className="p-1.5 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 transition-colors cursor-pointer"
-            title={language === 'id' ? 'Sesi Baru' : 'New Session'}
+            onClick={() => {
+              resetSession();
+              setActiveTaskId(null);
+              localStorage.removeItem('lyra_active_task_id');
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-lyra-accent hover:bg-lyra-accent/90 text-white font-medium text-xs shadow-sm transition-all cursor-pointer hover:scale-105 active:scale-95"
+            title={language === 'id' ? 'Buat Tugas Baru' : 'New Mission'}
           >
-            <Plus size={15} />
+            <Plus size={14} />
+            <span>{language === 'id' ? 'Tugas Baru' : 'New Task'}</span>
           </button>
         </div>
 
@@ -1228,7 +1239,26 @@ Communication Rules:
           ) : (
             /* Active Autonomous Execution Feed */
             <div className="space-y-5">
-              {/* Chronological Conversation Feed */}
+              {/* 1. Interactive Mission Plan & Approval Gate (Placed at Top for Mission Overview) */}
+              {todos.length > 0 && (
+                <InteractiveMissionPlanCard
+                  todos={todos}
+                  planStatus={planStatus}
+                  isExecuting={isSubmitting}
+                  onApprovePlan={() => {
+                    setPlanStatus('approved');
+                    appendAssistantChunk(
+                      `\n\n> 🎯 **Persetujuan Pengguna Diterima:** Seluruh tahapan rencana kerja telah disetujui. Melanjutkan proses eksekusi otonom...`,
+                      getAgentInfo(selectedAgent).name
+                    );
+                  }}
+                  onAddTodo={addTodo}
+                  onUpdateTodo={updateTodo}
+                  onRemoveTodo={removeTodo}
+                />
+              )}
+
+              {/* 2. Chronological Conversation Feed */}
               {conversationMessages.length > 0 && (
                 <AutonomousConversationView 
                   messages={conversationMessages} 
@@ -1236,7 +1266,7 @@ Communication Rules:
                 />
               )}
 
-              {/* Thought Process (Reasoning Accordions) */}
+              {/* 3. Thought Process (Reasoning Accordions) */}
               {reasoningOrder.map((nodeId) => {
                 const node = reasoningNodes[nodeId];
                 if (!node) return null;
@@ -1249,20 +1279,15 @@ Communication Rules:
                 );
               })}
 
-              {/* Todo (Dynamic Todos Card) */}
-              {todos.length > 0 && (
-                <DynamicTodosCard todos={todos} />
-              )}
-
-              {/* Menjalankan Sistem (Tool Execution Block) */}
+              {/* 4. Menjalankan Sistem (Tool Execution Block) */}
               {toolLogsList.length > 0 && (
                 <ToolExecutionBlock toolLogs={toolLogsList} defaultExpanded={false} />
               )}
 
-              {/* Terminal / Live Coding Studio Viewport */}
+              {/* 5. Terminal / Live Coding Studio Viewport */}
               <LiveCodingStudioBlock />
 
-              {/* Hasil (Deliverable Card) */}
+              {/* 6. Hasil (Deliverable Card) */}
               {deliverable && (
                 <DeliverableCard
                   artifact={deliverable}
