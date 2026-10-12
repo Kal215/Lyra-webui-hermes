@@ -238,7 +238,9 @@ export default function ProfilesPage() {
                     Profil baru adalah direktori <strong>.hermes/profiles/&lt;nama&gt;</strong> yang kosong. Ia akan mewarisi pengaturan global Anda, tetapi memiliki ruang memori, obrolan, dan pekerjaan yang independen.
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">Nama Profil</label>
+                    <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">
+                      {language === 'id' ? 'Nama Profil' : 'Profile Name'}
+                    </label>
                     <input 
                       required 
                       autoFocus
@@ -246,18 +248,20 @@ export default function ProfilesPage() {
                       value={newProfileName} 
                       onChange={e => setNewProfileName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))} 
                       className="w-full bg-black/20 border border-lyra-accent/20 rounded-xl p-3 text-lyra-text focus:border-lyra-accent outline-none font-mono" 
-                      placeholder="contoh: penulis_kode" 
+                      placeholder={language === 'id' ? 'contoh: penulis_kode' : 'e.g. code_writer'} 
                     />
-                    <p className="text-[10px] text-lyra-text-muted mt-2">Gunakan huruf kecil, angka, dan underscore saja.</p>
+                    <p className="text-[10px] text-lyra-text-muted mt-2">
+                      {language === 'id' ? 'Gunakan huruf kecil, angka, dan underscore saja.' : 'Use lowercase letters, numbers, and underscores only.'}
+                    </p>
                   </div>
                 </div>
                 
                 <div className="p-6 border-t border-lyra-accent/10 flex justify-end gap-3 bg-black/10 rounded-b-3xl">
                   <button type="button" onClick={() => setShowCreateModal(false)} className="px-5 py-2.5 text-sm font-medium text-lyra-text hover:bg-white/5 rounded-xl transition-colors">
-                    Batal
+                    {language === 'id' ? 'Batal' : 'Cancel'}
                   </button>
                   <button type="submit" disabled={isCreating} className="px-6 py-2.5 text-sm font-medium bg-lyra-accent text-white hover:bg-lyra-accent/90 rounded-xl transition-colors shadow-lg shadow-lyra-accent/20 flex items-center justify-center min-w-[120px]">
-                    {isCreating ? 'Membangun Otak...' : 'Ciptakan Profil'}
+                    {isCreating ? (language === 'id' ? 'Membangun Otak...' : 'Creating Brain...') : (language === 'id' ? 'Ciptakan Profil' : 'Create Profile')}
                   </button>
                 </div>
               </form>
@@ -287,22 +291,24 @@ export default function ProfilesPage() {
                       : 'Define the AI behavior and rules here. This text will be saved to AGENTS.md within this profile directory, acting as the absolute System Prompt for this agent.'}
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">Instruksi Sistem (AGENTS.md)</label>
+                    <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">
+                      {language === 'id' ? 'Instruksi Sistem (AGENTS.md)' : 'System Instructions (AGENTS.md)'}
+                    </label>
                     <textarea 
                       value={configPrompt} 
                       onChange={e => setConfigPrompt(e.target.value)} 
                       className="w-full h-64 bg-black/20 border border-lyra-accent/20 rounded-xl p-4 text-lyra-text focus:border-lyra-accent outline-none font-mono text-[13px] resize-none" 
-                      placeholder="Contoh: Anda adalah agen ahli pemrograman Python. Anda selalu menggunakan type-hints..." 
+                      placeholder={language === 'id' ? 'Contoh: Anda adalah agen ahli pemrograman Python. Anda selalu menggunakan type-hints...' : 'Example: You are a senior Python software engineer. You always use type hints...'} 
                     />
                   </div>
                 </div>
                 
                 <div className="p-6 border-t border-lyra-accent/10 flex justify-end gap-3 bg-black/10 rounded-b-3xl">
                   <button type="button" onClick={() => setShowConfigModal(false)} className="px-5 py-2.5 text-sm font-medium text-lyra-text hover:bg-white/5 rounded-xl transition-colors">
-                    Batal
+                    {language === 'id' ? 'Batal' : 'Cancel'}
                   </button>
                   <button type="submit" disabled={isSavingConfig} className="px-6 py-2.5 text-sm font-medium bg-lyra-accent text-white hover:bg-lyra-accent/90 rounded-xl transition-colors shadow-lg shadow-lyra-accent/20 flex items-center justify-center min-w-[120px]">
-                    {isSavingConfig ? 'Menyimpan...' : 'Simpan Konfigurasi'}
+                    {isSavingConfig ? (language === 'id' ? 'Menyimpan...' : 'Saving...') : (language === 'id' ? 'Simpan Konfigurasi' : 'Save Configuration')}
                   </button>
                 </div>
               </form>

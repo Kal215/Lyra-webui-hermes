@@ -261,8 +261,12 @@ export default function WorkPage() {
       id: 'task_resp_' + task.id,
       role: 'assistant',
       content: isDone 
-        ? `### Tugas Selesai Dikerjakan\n\nPekerjaan **"${task.title}"** telah diselesaikan oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** Selesai (${task.status})\n- **ID Tugas:** \`${task.id}\`\n${task.workspace_path ? `- **Direktori Hasil:** \`${task.workspace_path}\`` : ''}\n\nSemua perubahan telah terintegrasi dengan baik.`
-        : `### Status Pekerjaan Sedang Berjalan\n\nTugas **"${task.title}"** sedang dalam penanganan aktif oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** ${task.status.toUpperCase()}\n- **ID Tugas:** \`${task.id}\`\n\nSedang memantau eksekusi proses background...`,
+        ? (language === 'id'
+            ? `### Tugas Selesai Dikerjakan\n\nPekerjaan **"${task.title}"** telah diselesaikan oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** Selesai (${task.status})\n- **ID Tugas:** \`${task.id}\`\n${task.workspace_path ? `- **Direktori Hasil:** \`${task.workspace_path}\`` : ''}\n\nSemua perubahan telah terintegrasi dengan baik.`
+            : `### Task Completed\n\nThe task **"${task.title}"** has been completed by specialist \`@${task.assignee}\`.\n\n- **Status:** Completed (${task.status})\n- **Task ID:** \`${task.id}\`\n${task.workspace_path ? `- **Deliverable Path:** \`${task.workspace_path}\`` : ''}\n\nAll changes have been successfully integrated.`)
+        : (language === 'id'
+            ? `### Status Pekerjaan Sedang Berjalan\n\nTugas **"${task.title}"** sedang dalam penanganan aktif oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** ${task.status.toUpperCase()}\n- **ID Tugas:** \`${task.id}\`\n\nSedang memantau eksekusi proses background...`
+            : `### Work In Progress\n\nTask **"${task.title}"** is actively handled by specialist \`@${task.assignee}\`.\n\n- **Status:** ${task.status.toUpperCase()}\n- **Task ID:** \`${task.id}\`\n\nMonitoring background process execution...`),
       agentName: getAgentInfo(task.assignee || 'default').name,
       timestamp: task.completed_at ? new Date(task.completed_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined
     });
@@ -272,14 +276,19 @@ export default function WorkPage() {
       dispatchAgentEvent({
         type: 'DELIVERABLE_READY',
         payload: {
-          title: `Hasil Pekerjaan: ${task.title}`,
-          summary: `Tugas #${task.id} telah diselesaikan secara otonom oleh @${task.assignee}. Berkas hasil pekerjaan tersimpan di workspace.`,
+          title: language === 'id' ? `Hasil Pekerjaan: ${task.title}` : `Deliverable: ${task.title}`,
+          summary: language === 'id' 
+            ? `Tugas #${task.id} telah diselesaikan secara otonom oleh @${task.assignee}. Berkas hasil pekerjaan tersimpan di workspace.`
+            : `Task #${task.id} was completed autonomously by @${task.assignee}. Deliverable files are saved in workspace.`,
           changedFiles: [
             { path: task.workspace_path ? `${task.workspace_path}/output.txt` : 'workspace/output.txt', action: 'created' }
           ],
-          nextActionableSteps: [
+          nextActionableSteps: language === 'id' ? [
             'Klik tombol "Detail Pekerjaan" pada menu tugas untuk membuka tab audit lengkap',
             'Buka berkas hasil pada panel Workspace sebelah kanan'
+          ] : [
+            'Click "Work Details" on the task menu to view the audit tab',
+            'Open output files in the right Workspace panel'
           ]
         }
       });
@@ -765,7 +774,7 @@ Instruksi format respon:
                           <div className="text-[9px] text-lyra-text-secondary/70 truncate">{info.role}</div>
                         </div>
                       </div>
-                      {isSelected && <span className="text-[9px] text-lyra-accent font-mono shrink-0">Aktif</span>}
+                      {isSelected && <span className="text-[9px] text-lyra-accent font-mono shrink-0">{language === 'id' ? 'Aktif' : 'Active'}</span>}
                     </div>
 
                     {/* Direct Deep Links per Specialist */}
@@ -1179,7 +1188,9 @@ Instruksi format respon:
                           onClick={(e) => e.stopPropagation()}
                           className="absolute left-0 bottom-[calc(100%+8px)] w-64 bg-lyra-surface border border-lyra-accent/20 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col py-2 backdrop-blur-md"
                         >
-                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">File & Media</div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">
+                            {language === 'id' ? 'File & Media' : 'File & Media'}
+                          </div>
                           
                           <button 
                             type="button" 
@@ -1190,7 +1201,9 @@ Instruksi format respon:
                             className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
                           >
                             <FileText size={15} className="text-lyra-text" />
-                            <span className="font-medium text-lyra-text">Unggah file atau gambar</span>
+                            <span className="font-medium text-lyra-text">
+                              {language === 'id' ? 'Unggah file atau gambar' : 'Upload file or image'}
+                            </span>
                           </button>
 
                           <button 
@@ -1202,7 +1215,9 @@ Instruksi format respon:
                             className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
                           >
                             <Folder size={15} className="text-lyra-text" />
-                            <span className="font-medium text-lyra-text">Unggah folder lokal...</span>
+                            <span className="font-medium text-lyra-text">
+                              {language === 'id' ? 'Unggah folder lokal...' : 'Upload local folder...'}
+                            </span>
                           </button>
                           
                           <button 
@@ -1214,7 +1229,9 @@ Instruksi format respon:
                             className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
                           >
                             <FolderTree size={15} className="text-lyra-text" />
-                            <span className="font-medium text-lyra-text">Pilih dari Workspace</span>
+                            <span className="font-medium text-lyra-text">
+                              {language === 'id' ? 'Pilih dari Workspace' : 'Select from Workspace'}
+                            </span>
                           </button>
 
                           <button 
@@ -1226,23 +1243,29 @@ Instruksi format respon:
                             className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
                           >
                             <Monitor size={15} className="text-lyra-text" />
-                            <span className="font-medium text-lyra-text">Ambil tangkapan layar</span>
+                            <span className="font-medium text-lyra-text">
+                              {language === 'id' ? 'Ambil tangkapan layar' : 'Take screenshot'}
+                            </span>
                           </button>
 
                           <button 
                             type="button" 
-                            onClick={() => {
-                              setIsAttachMenuOpen(false);
-                              handleClipboardPaste();
+                            onClick={() => { 
+                              setIsAttachMenuOpen(false); 
+                              handleClipboardPaste(); 
                             }} 
                             className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-xs text-left transition-colors w-full cursor-pointer"
                           >
                             <Clipboard size={15} className="text-lyra-text" />
-                            <span className="font-medium text-lyra-text">Tempel dari clipboard</span>
+                            <span className="font-medium text-lyra-text">
+                              {language === 'id' ? 'Tempel dari clipboard' : 'Paste from clipboard'}
+                            </span>
                           </button>
 
                           <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
-                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Konteks & Proyek</div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">
+                            {language === 'id' ? 'Konteks & Proyek' : 'Context & Project'}
+                          </div>
 
                           <button 
                             type="button" 

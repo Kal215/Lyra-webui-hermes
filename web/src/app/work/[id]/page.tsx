@@ -46,7 +46,7 @@ export default function WorkDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-lyra-muted">
         <div className="w-8 h-8 rounded-full border-2 border-lyra-text/20 border-t-lyra-text animate-spin mb-4" />
-        <h1 className="text-sm">Memuat Pekerjaan...</h1>
+        <h1 className="text-sm">{language === 'en' ? 'Loading Work...' : 'Memuat Pekerjaan...'}</h1>
       </div>
     );
   }
@@ -301,15 +301,19 @@ function ActivityTab({ runId, language }: any) {
   }, [runId]);
 
   if (loading) {
-    return <div className="p-8 text-center text-sm text-lyra-muted">Memuat aktivitas...</div>;
+    return <div className="p-8 text-center text-sm text-lyra-muted">{language === 'en' ? 'Loading activity...' : 'Memuat aktivitas...'}</div>;
   }
 
   if (activities.length === 0) {
     return (
       <NeoPanel className="p-8 text-center border border-dashed border-lyra-border/20">
         <Terminal className="w-8 h-8 mx-auto text-lyra-muted mb-3 opacity-50" />
-        <h3 className="text-lyra-text font-medium mb-1">Belum Ada Aktivitas</h3>
-        <p className="text-sm text-lyra-muted">Tugas ini belum menghasilkan rekaman observasi.</p>
+        <h3 className="text-lyra-text font-medium mb-1">
+          {language === 'en' ? 'No Activity Yet' : 'Belum Ada Aktivitas'}
+        </h3>
+        <p className="text-sm text-lyra-muted">
+          {language === 'en' ? 'This task has not produced observation records yet.' : 'Tugas ini belum menghasilkan rekaman observasi.'}
+        </p>
       </NeoPanel>
     );
   }
@@ -340,9 +344,11 @@ function OutputTab({ latestSummary, language }: any) {
     return (
       <NeoPanel className="p-12 text-center border border-dashed border-lyra-border/20">
         <Box className="w-10 h-10 mx-auto text-lyra-muted mb-4 opacity-50" />
-        <h3 className="text-lyra-text font-medium mb-1">Output belum tersedia.</h3>
+        <h3 className="text-lyra-text font-medium mb-1">
+          {language === 'en' ? 'Output not available yet.' : 'Output belum tersedia.'}
+        </h3>
         <p className="text-sm text-lyra-muted max-w-sm mx-auto">
-          Tidak ada hasil akhir yang direkam pada saat ini.
+          {language === 'en' ? 'No final deliverable recorded at this time.' : 'Tidak ada hasil akhir yang direkam pada saat ini.'}
         </p>
       </NeoPanel>
     );
@@ -350,7 +356,9 @@ function OutputTab({ latestSummary, language }: any) {
 
   return (
     <NeoPanel className="p-6">
-      <h3 className="text-sm font-medium text-lyra-text mb-4">Hasil Pekerjaan</h3>
+      <h3 className="text-sm font-medium text-lyra-text mb-4">
+        {language === 'en' ? 'Deliverable Output' : 'Hasil Pekerjaan'}
+      </h3>
       <div className="bg-lyra-surface-inset shadow-neo-inset p-4 rounded-lg text-sm text-lyra-text font-mono whitespace-pre-wrap">
         {latestSummary}
       </div>
@@ -361,7 +369,9 @@ function OutputTab({ latestSummary, language }: any) {
 function DetailsTab({ task, mappedStatus, runId, language }: any) {
   return (
     <NeoPanel className="p-6">
-      <h3 className="text-sm font-medium text-lyra-text mb-6">Metadata Sistem</h3>
+      <h3 className="text-sm font-medium text-lyra-text mb-6">
+        {language === 'en' ? 'System Metadata' : 'Metadata Sistem'}
+      </h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>

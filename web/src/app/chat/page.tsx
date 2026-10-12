@@ -255,6 +255,7 @@ const formatTimeLabel = (updated_at: number) => {
 };
 
 function SidebarSessionItem({ session, isActive, onClick, onDelete, onRename, onPin }: any) {
+  const { language } = useI18nStore();
   const [isEditing, setIsEditing] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [editTitle, setEditTitle] = useState(session.title || session.id);
@@ -279,7 +280,9 @@ function SidebarSessionItem({ session, isActive, onClick, onDelete, onRename, on
     <div className={`relative group w-full rounded-lg mb-1 flex items-center transition-colors ${isActive ? 'bg-lyra-accent/15 text-lyra-accent font-medium' : 'text-lyra-text-secondary hover:bg-lyra-accent/5'}`}>
       {isConfirmingDelete ? (
         <div className="flex-1 flex items-center justify-between p-2 text-sm bg-red-500/10 rounded-lg">
-          <span className="text-red-500 pl-2 truncate font-semibold">Hapus sesi?</span>
+          <span className="text-red-500 pl-2 truncate font-semibold">
+            {language === 'id' ? 'Hapus sesi?' : 'Delete session?'}
+          </span>
           <div className="flex gap-1 shrink-0">
             <button onClick={(e) => { e.stopPropagation(); onDelete(session.id); setIsConfirmingDelete(false); }} className="text-emerald-500 p-1 hover:bg-emerald-500/20 rounded transition-colors"><Check size={14}/></button>
             <button onClick={(e) => { e.stopPropagation(); setIsConfirmingDelete(false); }} className="text-lyra-text-secondary p-1 hover:bg-lyra-accent/10 rounded transition-colors"><X size={14}/></button>
@@ -302,7 +305,7 @@ function SidebarSessionItem({ session, isActive, onClick, onDelete, onRename, on
           <button onClick={onClick} className="flex-1 flex items-center p-2 truncate text-sm text-left">
             <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${isActive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-gray-400/50'}`}></div>
             {(session.parent_session_id || session.title?.includes('(Branch)')) && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium shrink-0 flex items-center gap-0.5 mr-1" title="Percakapan bercabang">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium shrink-0 flex items-center gap-0.5 mr-1" title={language === 'id' ? 'Percakapan bercabang' : 'Branched session'}>
                 <GitBranch size={10} />
               </span>
             )}
@@ -2336,7 +2339,7 @@ function NativeChatContent() {
                         setIsEffortMenuOpen(false);
                       }}
                       className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isAttachMenuOpen ? 'bg-lyra-accent text-white' : 'text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10'}`}
-                      title="Lampirkan & Opsi Mode AI"
+                      title={language === 'id' ? 'Lampirkan & Opsi Mode AI' : 'Attach & AI Mode Options'}
                     >
                       <Plus size={18} className={`transition-transform duration-200 ${isAttachMenuOpen ? 'rotate-45' : ''}`} />
                     </button>
@@ -2351,50 +2354,66 @@ function NativeChatContent() {
                           onClick={(e) => e.stopPropagation()}
                           className="absolute left-0 bottom-[calc(100%+8px)] w-64 bg-lyra-surface border border-lyra-accent/20 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col py-2 backdrop-blur-md"
                         >
-                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">File & Media</div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">
+                            {language === 'id' ? 'File & Media' : 'File & Media'}
+                          </div>
                           
                           <button type="button" onClick={() => { document.getElementById('fileUpload')?.click(); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
                             <FileText size={16} className="text-lyra-text" />
                             <div>
-                              <div className="font-medium text-lyra-text">Unggah file atau gambar</div>
+                              <div className="font-medium text-lyra-text">
+                                {language === 'id' ? 'Unggah file atau gambar' : 'Upload file or image'}
+                              </div>
                             </div>
                           </button>
                           
                           <button type="button" onClick={() => { setActiveModal('folderPicker'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
                             <Folder size={16} className="text-lyra-text" />
                             <div>
-                              <div className="font-medium text-lyra-text">Unggah folder lokal...</div>
+                              <div className="font-medium text-lyra-text">
+                                {language === 'id' ? 'Unggah folder lokal...' : 'Upload local folder...'}
+                              </div>
                             </div>
                           </button>
 
                           <button type="button" onClick={() => { setIsAttachMenuOpen(false); captureScreenshot(); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
                             <Monitor size={16} className="text-lyra-text" />
                             <div>
-                              <div className="font-medium text-lyra-text">Ambil tangkapan layar</div>
+                              <div className="font-medium text-lyra-text">
+                                {language === 'id' ? 'Ambil tangkapan layar' : 'Take screenshot'}
+                              </div>
                             </div>
                           </button>
 
                           <button type="button" onClick={handleClipboardPaste} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
                             <Clipboard size={16} className="text-lyra-text" />
                             <div>
-                              <div className="font-medium text-lyra-text">Tempel dari clipboard</div>
+                              <div className="font-medium text-lyra-text">
+                                {language === 'id' ? 'Tempel dari clipboard' : 'Paste from clipboard'}
+                              </div>
                             </div>
                           </button>
                           
                           <button type="button" onClick={() => { setActiveModal('sketch'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
                             <PenTool size={16} className="text-lyra-text" />
                             <div>
-                              <div className="font-medium text-lyra-text">Sketsa manual</div>
+                              <div className="font-medium text-lyra-text">
+                                {language === 'id' ? 'Sketsa manual' : 'Manual sketch'}
+                              </div>
                             </div>
                           </button>
 
                           <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
-                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Konteks & Proyek</div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">
+                            {language === 'id' ? 'Konteks & Proyek' : 'Context & Project'}
+                          </div>
 
                           <button type="button" onClick={() => { setActiveModal('projectPicker'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full group cursor-pointer">
                             <Database size={16} className="text-lyra-text" />
                             <div className="flex-1">
-                              <div className="font-medium text-lyra-text">Ganti / Tautkan Proyek</div>
+                              <div className="font-medium text-lyra-text">
+                                {language === 'id' ? 'Ganti / Tautkan Proyek' : 'Switch / Link Project'}
+                              </div>
                             </div>
                             <ChevronRight size={14} className="opacity-50 group-hover:translate-x-1 transition-transform" />
                           </button>
@@ -2402,7 +2421,9 @@ function NativeChatContent() {
                           <button type="button" onClick={() => { setActiveModal('urlConnector'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
                             <Link size={16} className="text-lyra-text" />
                             <div className="flex-1">
-                              <div className="font-medium text-lyra-text">Tautkan URL / Konektor</div>
+                              <div className="font-medium text-lyra-text">
+                                {language === 'id' ? 'Tautkan URL / Konektor' : 'Link URL / Connector'}
+                              </div>
                             </div>
                           </button>
 
@@ -2415,7 +2436,9 @@ function NativeChatContent() {
 
                           {/* Mode AI (Requirement 2 & Toggle Fix) */}
                           <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
-                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Mode AI</div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">
+                            {language === 'id' ? 'Mode AI' : 'AI Mode'}
+                          </div>
 
                           <div 
                             onClick={(e) => {
@@ -2427,8 +2450,14 @@ function NativeChatContent() {
                             <div className="flex items-center gap-3">
                               <BrainCircuit size={16} className={isReasoningEnabled ? "text-purple-400" : "text-lyra-text-secondary"} />
                               <div>
-                                <div className="font-medium text-lyra-text">Pikirkan (Reasoning)</div>
-                                <div className="text-[10px] text-lyra-text-secondary">{isReasoningEnabled ? `Aktif: ${thinkingEffort}` : 'Nonaktif'}</div>
+                                <div className="font-medium text-lyra-text">
+                                  {language === 'id' ? 'Pikirkan (Reasoning)' : 'Reasoning'}
+                                </div>
+                                <div className="text-[10px] text-lyra-text-secondary">
+                                  {isReasoningEnabled 
+                                    ? (language === 'id' ? `Aktif: ${thinkingEffort}` : `Active: ${thinkingEffort}`) 
+                                    : (language === 'id' ? 'Nonaktif' : 'Inactive')}
+                                </div>
                               </div>
                             </div>
                             <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
@@ -2452,8 +2481,14 @@ function NativeChatContent() {
                             <div className="flex items-center gap-3">
                               <Globe size={16} className={isWebSearchEnabled ? "text-blue-400" : "text-lyra-text-secondary"} />
                               <div>
-                                <div className="font-medium text-lyra-text">Pencarian Web</div>
-                                <div className="text-[10px] text-lyra-text-secondary">{isWebSearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
+                                <div className="font-medium text-lyra-text">
+                                  {language === 'id' ? 'Pencarian Web' : 'Web Search'}
+                                </div>
+                                <div className="text-[10px] text-lyra-text-secondary">
+                                  {isWebSearchEnabled 
+                                    ? (language === 'id' ? 'Aktif' : 'Active') 
+                                    : (language === 'id' ? 'Nonaktif' : 'Inactive')}
+                                </div>
                               </div>
                             </div>
                             <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
@@ -2477,8 +2512,14 @@ function NativeChatContent() {
                             <div className="flex items-center gap-3">
                               <Search size={16} className={isDeepResearchEnabled ? "text-emerald-500" : "text-lyra-text-secondary"} />
                               <div>
-                                <div className="font-medium text-lyra-text">Riset Mendalam</div>
-                                <div className="text-[10px] text-lyra-text-secondary">{isDeepResearchEnabled ? 'Aktif' : 'Nonaktif'}</div>
+                                <div className="font-medium text-lyra-text">
+                                  {language === 'id' ? 'Riset Mendalam' : 'Deep Research'}
+                                </div>
+                                <div className="text-[10px] text-lyra-text-secondary">
+                                  {isDeepResearchEnabled 
+                                    ? (language === 'id' ? 'Aktif' : 'Active') 
+                                    : (language === 'id' ? 'Nonaktif' : 'Inactive')}
+                                </div>
                               </div>
                             </div>
                             <div className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
@@ -2493,19 +2534,29 @@ function NativeChatContent() {
                           </div>
 
                           <div className="h-px bg-lyra-accent/10 my-1 mx-2"></div>
-                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">Integrasi</div>
+                          <div className="text-[10px] font-bold text-lyra-text-secondary opacity-60 px-4 py-1.5 uppercase tracking-wider">
+                            {language === 'id' ? 'Integrasi' : 'Integrations'}
+                          </div>
                           
                           <button type="button" onClick={() => { setActiveModal('github'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
                             <GitBranch size={16} className={`text-lyra-text ${githubToken ? 'text-green-400' : ''}`} />
                             <div className="flex-1">
-                              <div className="font-medium text-lyra-text">{githubToken ? 'GitHub Terhubung' : 'Hubungkan GitHub'}</div>
+                              <div className="font-medium text-lyra-text">
+                                {githubToken 
+                                  ? (language === 'id' ? 'GitHub Terhubung' : 'GitHub Connected') 
+                                  : (language === 'id' ? 'Hubungkan GitHub' : 'Connect GitHub')}
+                              </div>
                             </div>
                           </button>
                           
                           <button type="button" onClick={() => { setActiveModal('notion'); setIsAttachMenuOpen(false); }} className="flex items-center gap-3 px-4 py-2 hover:bg-lyra-accent/10 text-sm text-left transition-colors w-full cursor-pointer">
                             <Library size={16} className={`text-lyra-text ${notionToken ? 'text-green-400' : ''}`} />
                             <div className="flex-1">
-                              <div className="font-medium text-lyra-text">{notionToken ? 'Notion Terhubung' : 'Hubungkan Notion'}</div>
+                              <div className="font-medium text-lyra-text">
+                                {notionToken 
+                                  ? (language === 'id' ? 'Notion Terhubung' : 'Notion Connected') 
+                                  : (language === 'id' ? 'Hubungkan Notion' : 'Connect Notion')}
+                              </div>
                             </div>
                           </button>
 
@@ -3122,10 +3173,15 @@ function NativeChatContent() {
 
               {activeModal === 'projectPicker' && (
                 <>
-                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Command size={20} className="text-lyra-accent" /> Pilih Proyek</h3>
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Command size={20} className="text-lyra-accent" /> 
+                    {language === 'id' ? 'Pilih Proyek' : 'Select Project'}
+                  </h3>
                   <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
                     {savedProjects.length === 0 ? (
-                      <div className="text-center opacity-50 py-4 text-sm">Belum ada proyek. Buat di halaman Projects.</div>
+                      <div className="text-center opacity-50 py-4 text-sm">
+                        {language === 'id' ? 'Belum ada proyek. Buat di halaman Projects.' : 'No projects yet. Create one on the Projects page.'}
+                      </div>
                     ) : (
                       savedProjects.map((p, i) => (
                         <button key={i} onClick={() => {
@@ -3136,19 +3192,28 @@ function NativeChatContent() {
                           <div className="font-bold text-lyra-text flex items-center gap-2">
                             {p.name} {activeProject?.id === p.id && <CheckCircle2 size={14} className="text-lyra-accent" />}
                           </div>
-                          <div className="text-xs text-lyra-text-secondary line-clamp-1">{p.description || 'Tanpa deskripsi'}</div>
+                          <div className="text-xs text-lyra-text-secondary line-clamp-1">{p.description || (language === 'id' ? 'Tanpa deskripsi' : 'No description')}</div>
                         </button>
                       ))
                     )}
                   </div>
-                  <button onClick={() => router.push('/projects')} className="w-full mt-4 bg-black/20 text-lyra-text p-3 rounded-xl font-semibold hover:bg-black/30 transition-colors text-sm">Kelola Proyek</button>
+                  <button onClick={() => router.push('/projects')} className="w-full mt-4 bg-black/20 text-lyra-text p-3 rounded-xl font-semibold hover:bg-black/30 transition-colors text-sm">
+                    {language === 'id' ? 'Kelola Proyek' : 'Manage Projects'}
+                  </button>
                 </>
               )}
 
               {activeModal === 'urlConnector' && (
                 <>
-                  <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Globe size={20} className="text-lyra-accent" /> Tautkan Halaman Web</h3>
-                  <p className="text-sm opacity-60 mb-6">Masukkan tautan artikel, dokumentasi, atau API. AI akan langsung membaca isinya secara otomatis.</p>
+                  <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+                    <Globe size={20} className="text-lyra-accent" /> 
+                    {language === 'id' ? 'Tautkan Halaman Web' : 'Link Web Page'}
+                  </h3>
+                  <p className="text-sm opacity-60 mb-6">
+                    {language === 'id' 
+                      ? 'Masukkan tautan artikel, dokumentasi, atau API. AI akan langsung membaca isinya secara otomatis.' 
+                      : 'Enter an article, documentation, or API link. The AI will directly read its content.'}
+                  </p>
                   
                   <div className="flex gap-2 mb-4">
                     <input
@@ -3169,17 +3234,19 @@ function NativeChatContent() {
                         setUrlInput(text);
                       } catch(e) {}
                     }} className="text-xs bg-black/20 hover:bg-lyra-accent/20 border border-lyra-accent/10 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors">
-                      <Clipboard size={12}/> Tempel dari clipboard
+                      <Clipboard size={12}/> {language === 'id' ? 'Tempel dari clipboard' : 'Paste from clipboard'}
                     </button>
                     <button onClick={() => setUrlInput('')} className="text-xs bg-black/20 hover:bg-red-500/20 border border-red-500/10 px-3 py-1.5 rounded-lg transition-colors text-red-400">
-                      Hapus
+                      {language === 'id' ? 'Hapus' : 'Clear'}
                     </button>
                   </div>
 
                   <div className="flex gap-2">
-                    <button onClick={() => { setActiveModal('none'); setUrlInput(''); }} className="flex-1 bg-black/20 text-lyra-text p-3 rounded-xl font-semibold hover:bg-black/30 transition-colors">Batal</button>
+                    <button onClick={() => { setActiveModal('none'); setUrlInput(''); }} className="flex-1 bg-black/20 text-lyra-text p-3 rounded-xl font-semibold hover:bg-black/30 transition-colors">
+                      {language === 'id' ? 'Batal' : 'Cancel'}
+                    </button>
                     <button onClick={handleAddUrl} disabled={!urlInput} className="flex-1 bg-lyra-accent text-white p-3 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2">
-                      Tautkan <Link size={16} />
+                      {language === 'id' ? 'Tautkan' : 'Link'} <Link size={16} />
                     </button>
                   </div>
                 </>
@@ -3195,7 +3262,9 @@ function NativeChatContent() {
                       </div>
                       <div>
                         Prompt Snippets & Skills
-                        <p className="text-xs text-lyra-text-muted font-normal mt-1">Kemampuan, Pengetahuan, dan Ingatan Inti JARVIS</p>
+                        <p className="text-xs text-lyra-text-muted font-normal mt-1">
+                          {language === 'id' ? 'Kemampuan, Pengetahuan, dan Ingatan Inti Agen' : 'Agent Capabilities, Knowledge, and Core Skills'}
+                        </p>
                       </div>
                     </h3>
                     
@@ -3204,14 +3273,14 @@ function NativeChatContent() {
                         onClick={() => setActiveSnippetsTab('skills')}
                         className={`pb-3 text-sm font-bold transition-all relative ${activeSnippetsTab === 'skills' ? 'text-lyra-accent' : 'text-lyra-text-secondary hover:text-lyra-text'}`}
                       >
-                        Panggil Kemampuan
+                        {language === 'id' ? 'Panggil Kemampuan' : 'Call Skills'}
                         {activeSnippetsTab === 'skills' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-lyra-accent rounded-t-full shadow-[0_-2px_8px_rgba(var(--color-lyra-accent),0.5)]"></div>}
                       </button>
                       <button 
                         onClick={() => setActiveSnippetsTab('snippets')}
                         className={`pb-3 text-sm font-bold transition-all relative ${activeSnippetsTab === 'snippets' ? 'text-lyra-accent' : 'text-lyra-text-secondary hover:text-lyra-text'}`}
                       >
-                        Gunakan Snippet
+                        {language === 'id' ? 'Gunakan Snippet' : 'Use Snippet'}
                         {activeSnippetsTab === 'snippets' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-lyra-accent rounded-t-full shadow-[0_-2px_8px_rgba(var(--color-lyra-accent),0.5)]"></div>}
                       </button>
                     </div>
@@ -3233,7 +3302,7 @@ function NativeChatContent() {
                                 onClick={() => setSelectedSkillCategory(cat)}
                                 className={`w-full text-left px-3 py-2 rounded-lyra-md text-sm font-medium transition-colors ${selectedSkillCategory === cat ? 'bg-lyra-surface shadow-neo text-lyra-accent' : 'text-lyra-text-secondary hover:bg-lyra-surface-inset hover:text-lyra-text'}`}
                               >
-                                {cat === 'All' ? 'Semua' : cat.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                {cat === 'All' ? (language === 'id' ? 'Semua' : 'All') : cat.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                 <span className="float-right text-[10px] opacity-50 mt-0.5">
                                   {cat === 'All' ? skillsList.length : skillsList.filter(s => s.category === cat).length}
                                 </span>
@@ -3246,7 +3315,7 @@ function NativeChatContent() {
                         <div className="flex-1 overflow-y-auto p-4">
                           {skillsLoading ? (
                             <div className="h-full flex items-center justify-center text-lyra-text-muted animate-pulse text-sm">
-                              Memuat kemampuan...
+                              {language === 'id' ? 'Memuat kemampuan...' : 'Loading skills...'}
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -3284,7 +3353,9 @@ function NativeChatContent() {
                             </button>
                           ))}
                           {snippetsList.length === 0 && (
-                            <div className="text-center text-sm text-lyra-text-muted py-10">Belum ada snippet. Kelola di menu Kemampuan (Skills).</div>
+                            <div className="text-center text-sm text-lyra-text-muted py-10">
+                              {language === 'id' ? 'Belum ada snippet. Kelola di menu Kemampuan (Skills).' : 'No snippets yet. Manage them in Skills.'}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -3298,27 +3369,36 @@ function NativeChatContent() {
                 <>
                   <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
                     {activeModal === 'github' ? <GitBranch size={20} /> : <Library size={20} />}
-                    Hubungkan {activeModal === 'github' ? 'GitHub' : 'Notion'}
+                    {language === 'id' ? 'Hubungkan' : 'Connect'} {activeModal === 'github' ? 'GitHub' : 'Notion'}
                   </h3>
-                  <p className="text-sm opacity-60 mb-6">Masukkan Personal Access Token Anda untuk membaca repositori dan database secara langsung.</p>
+                  <p className="text-sm opacity-60 mb-6">
+                    {language === 'id' 
+                      ? 'Masukkan Personal Access Token Anda untuk membaca repositori dan database secara langsung.' 
+                      : 'Enter your Personal Access Token to read repositories and databases directly.'}
+                  </p>
                   <input
                     type="password"
                     id="tokenInput"
-                    placeholder="Paste token di sini..."
+                    placeholder={language === 'id' ? 'Paste token di sini...' : 'Paste token here...'}
                     className="w-full bg-black/20 border border-lyra-accent/20 rounded-xl p-3 text-lyra-text outline-none focus:border-lyra-accent mb-4"
                   />
                   <button onClick={() => saveIntegrationToken(activeModal as 'github'|'notion', (document.getElementById('tokenInput') as HTMLInputElement).value)} className="w-full bg-lyra-accent text-white p-3 rounded-xl font-semibold hover:opacity-90 transition-opacity">
-                    Simpan & Hubungkan
+                    {language === 'id' ? 'Simpan & Hubungkan' : 'Save & Connect'}
                   </button>
                   {(activeModal === 'github' && githubToken) || (activeModal === 'notion' && notionToken) ? (
-                    <button onClick={() => saveIntegrationToken(activeModal as 'github'|'notion', '')} className="w-full mt-2 text-red-400 p-2 text-sm hover:underline">Putuskan Koneksi</button>
+                    <button onClick={() => saveIntegrationToken(activeModal as 'github'|'notion', '')} className="w-full mt-2 text-red-400 p-2 text-sm hover:underline">
+                      {language === 'id' ? 'Putuskan Koneksi' : 'Disconnect'}
+                    </button>
                   ) : null}
                 </>
               )}
 
               {activeModal === 'folderPicker' && (
                 <>
-                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Folder size={20} className="text-lyra-accent" /> Pilih Direktori Folder</h3>
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Folder size={20} className="text-lyra-accent" /> 
+                    {language === 'id' ? 'Pilih Direktori Folder' : 'Select Folder Directory'}
+                  </h3>
                   
                   <div className="flex gap-2 mb-4">
                     <button onClick={() => {
@@ -3331,7 +3411,7 @@ function NativeChatContent() {
                         loadBrowseDir('ROOT');
                       }
                     }} className="bg-black/20 text-lyra-text p-2 px-3 rounded-lg hover:bg-lyra-accent/20 transition-colors">
-                      ← Kembali (Naik)
+                      ← {language === 'id' ? 'Kembali (Naik)' : 'Back (Up)'}
                     </button>
                     <div className="flex-1 bg-black/20 p-2 px-3 rounded-lg font-mono text-xs flex items-center overflow-hidden whitespace-nowrap overflow-ellipsis">
                       {browseDir}
@@ -3340,7 +3420,9 @@ function NativeChatContent() {
 
                   <div className="w-full h-64 bg-black/20 border border-lyra-accent/10 rounded-xl overflow-y-auto mb-4">
                     {browseFiles.length === 0 ? (
-                      <div className="p-4 text-center text-xs opacity-50 italic">Folder kosong atau akses ditolak.</div>
+                      <div className="p-4 text-center text-xs opacity-50 italic">
+                        {language === 'id' ? 'Folder kosong atau akses ditolak.' : 'Folder is empty or access denied.'}
+                      </div>
                     ) : (
                       browseFiles.map((f, idx) => (
                         <button key={idx} onClick={() => loadBrowseDir(f.path)} className="w-full text-left p-3 border-b border-lyra-accent/5 hover:bg-lyra-accent/10 flex items-center gap-3 transition-colors">
@@ -3352,13 +3434,15 @@ function NativeChatContent() {
                   </div>
                   
                   <div className="flex gap-2">
-                    <button onClick={() => setActiveModal('none')} className="flex-1 bg-black/20 text-lyra-text p-3 rounded-xl font-semibold hover:bg-black/30 transition-colors">Batal</button>
+                    <button onClick={() => setActiveModal('none')} className="flex-1 bg-black/20 text-lyra-text p-3 rounded-xl font-semibold hover:bg-black/30 transition-colors">
+                      {language === 'id' ? 'Batal' : 'Cancel'}
+                    </button>
                     <button onClick={() => {
                       setCurrentWorkspace(browseDir);
                       setIsRightPanelOpen(true);
                       setActiveModal('none');
                     }} className="flex-1 bg-lyra-accent text-white p-3 rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-                      Pilih Folder Ini <Check size={16} />
+                      {language === 'id' ? 'Pilih Folder Ini' : 'Select This Folder'} <Check size={16} />
                     </button>
                   </div>
                 </>
@@ -3366,7 +3450,10 @@ function NativeChatContent() {
 
               {activeModal === 'sketch' && (
                 <>
-                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><PenTool size={20} className="text-lyra-accent" /> Sketsa (Canvas)</h3>
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <PenTool size={20} className="text-lyra-accent" /> 
+                    {language === 'id' ? 'Sketsa (Canvas)' : 'Sketch (Canvas)'}
+                  </h3>
                   <div className="w-full h-64 bg-white rounded-xl mb-4 overflow-hidden relative cursor-crosshair border-2 border-lyra-accent/20">
                     <canvas
                       ref={canvasRef}
@@ -3380,8 +3467,12 @@ function NativeChatContent() {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => { const ctx = canvasRef.current?.getContext('2d'); if(ctx) ctx.clearRect(0,0,400,256); }} className="flex-1 bg-black/20 text-lyra-text p-3 rounded-xl font-semibold hover:bg-black/30 transition-colors">Bersihkan</button>
-                    <button onClick={saveSketch} className="flex-1 bg-lyra-accent text-white p-3 rounded-xl font-semibold hover:opacity-90 transition-opacity">Simpan & Lampirkan</button>
+                    <button onClick={() => { const ctx = canvasRef.current?.getContext('2d'); if(ctx) ctx.clearRect(0,0,400,256); }} className="flex-1 bg-black/20 text-lyra-text p-3 rounded-xl font-semibold hover:bg-black/30 transition-colors">
+                      {language === 'id' ? 'Bersihkan' : 'Clear'}
+                    </button>
+                    <button onClick={saveSketch} className="flex-1 bg-lyra-accent text-white p-3 rounded-xl font-semibold hover:opacity-90 transition-opacity">
+                      {language === 'id' ? 'Simpan & Lampirkan' : 'Save & Attach'}
+                    </button>
                   </div>
                 </>
               )}
@@ -3397,7 +3488,7 @@ function NativeChatContent() {
 
 export default function NativeChatPage() {
   return (
-    <React.Suspense fallback={<div className="h-full flex items-center justify-center bg-lyra-bg text-lyra-text font-mono text-xs">Memuat Chat...</div>}>
+    <React.Suspense fallback={<div className="h-full flex items-center justify-center bg-lyra-bg text-lyra-text font-mono text-xs">Loading...</div>}>
       <NativeChatContent />
     </React.Suspense>
   );

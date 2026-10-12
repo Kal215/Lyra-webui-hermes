@@ -542,7 +542,7 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                             handleRevealInExplorer(f.path);
                           }}
                           className="p-1 rounded text-lyra-text-secondary hover:text-lyra-accent hover:bg-lyra-accent/20 cursor-pointer"
-                          title="Buka di folder"
+                          title={language === 'id' ? 'Buka di folder' : 'Reveal in folder'}
                         >
                           <ExternalLink size={12} />
                         </button>
@@ -550,12 +550,12 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm(`Hapus ${f.name}?`)) {
+                            if (confirm(language === 'id' ? `Hapus ${f.name}?` : `Delete ${f.name}?`)) {
                               handleDeleteItem(f.path);
                             }
                           }}
                           className="p-1 rounded text-lyra-text-secondary hover:text-red-400 hover:bg-red-500/15 cursor-pointer"
-                          title="Hapus"
+                          title={language === 'id' ? 'Hapus' : 'Delete'}
                         >
                           <Trash2 size={12} />
                         </button>

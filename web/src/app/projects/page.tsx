@@ -119,7 +119,7 @@ export default function ProjectsPage() {
 
   const deleteProject = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm('Hapus proyek ini secara permanen? Obrolan tidak akan ikut terhapus.')) return;
+    if (!confirm(language === 'id' ? 'Hapus proyek ini secara permanen? Obrolan tidak akan ikut terhapus.' : 'Delete this project permanently? Chat history will not be deleted.')) return;
     try {
       await fetch(`/api/projects/${id}`, { method: 'DELETE' });
       fetchProjects();
@@ -184,7 +184,7 @@ export default function ProjectsPage() {
               </div>
               
               <h3 className="text-xl font-bold text-lyra-text mb-2 truncate" title={proj.name}>{proj.name}</h3>
-              <p className="text-sm text-lyra-text-secondary mb-6 line-clamp-2 min-h-[40px]">{proj.description || 'Tidak ada deskripsi.'}</p>
+              <p className="text-sm text-lyra-text-secondary mb-6 line-clamp-2 min-h-[40px]">{proj.description || (language === 'id' ? 'Tidak ada deskripsi.' : 'No description.')}</p>
               
               <div className="mt-auto flex flex-col gap-2">
                 {proj.workspacePath && (
@@ -196,7 +196,7 @@ export default function ProjectsPage() {
                 {proj.systemPrompt && (
                   <div className="flex items-center gap-2 text-xs bg-black/20 px-3 py-1.5 rounded-lg text-lyra-text-secondary truncate">
                     <Sparkles size={12} className="shrink-0 text-purple-400/70" />
-                    <span className="truncate">Kustom AI aktif</span>
+                    <span className="truncate">{language === 'id' ? 'Kustom AI aktif' : 'Custom AI active'}</span>
                   </div>
                 )}
               </div>
@@ -216,41 +216,41 @@ export default function ProjectsPage() {
               className="bg-lyra-surface border border-lyra-accent/30 rounded-3xl w-full max-w-2xl shadow-2xl relative z-10 flex flex-col max-h-[90vh]"
             >
               <div className="p-6 border-b border-lyra-accent/10 flex justify-between items-center">
-                <h2 className="text-2xl font-bold">{editingId ? 'Edit Proyek' : 'Proyek Baru'}</h2>
+                <h2 className="text-2xl font-bold">{editingId ? (language === 'id' ? 'Edit Proyek' : 'Edit Project') : (language === 'id' ? 'Proyek Baru' : 'New Project')}</h2>
                 <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full"><X size={20} /></button>
               </div>
 
               <div className="p-6 overflow-y-auto flex-1 space-y-5">
                 <div>
-                  <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">Nama Proyek</label>
-                  <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-black/20 border border-lyra-accent/20 rounded-xl p-3 text-lyra-text focus:border-lyra-accent outline-none" placeholder="Misal: Asisten Python Backend" />
+                  <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">{language === 'id' ? 'Nama Proyek' : 'Project Name'}</label>
+                  <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-black/20 border border-lyra-accent/20 rounded-xl p-3 text-lyra-text focus:border-lyra-accent outline-none" placeholder={language === 'id' ? 'Misal: Asisten Python Backend' : 'E.g., Backend Python Assistant'} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">Deskripsi Singkat</label>
-                  <input type="text" value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-black/20 border border-lyra-accent/20 rounded-xl p-3 text-lyra-text focus:border-lyra-accent outline-none" placeholder="Jelaskan untuk apa agen ini..." />
+                  <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">{language === 'id' ? 'Deskripsi Singkat' : 'Short Description'}</label>
+                  <input type="text" value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-black/20 border border-lyra-accent/20 rounded-xl p-3 text-lyra-text focus:border-lyra-accent outline-none" placeholder={language === 'id' ? 'Jelaskan untuk apa agen ini...' : 'Describe what this agent is for...'} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">Alamat Folder (Workspace)</label>
+                  <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2">{language === 'id' ? 'Alamat Folder (Workspace)' : 'Folder Path (Workspace)'}</label>
                   <div className="flex gap-2">
                     <input type="text" value={workspacePath} onChange={e => setWorkspacePath(e.target.value)} className="flex-1 bg-black/20 border border-lyra-accent/20 rounded-xl p-3 font-mono text-sm text-lyra-text focus:border-lyra-accent outline-none" placeholder="D:/project/kode_saya" />
                     <button onClick={() => setIsFolderPickerOpen(true)} className="px-4 py-2 bg-lyra-accent/10 border border-lyra-accent/30 text-lyra-accent hover:bg-lyra-accent/20 rounded-xl transition-colors font-medium flex items-center gap-2">
-                      <FolderOpen size={16} /> Cari
+                      <FolderOpen size={16} /> {language === 'id' ? 'Cari' : 'Browse'}
                     </button>
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-lyra-text-secondary uppercase tracking-wider mb-2 flex items-center justify-between">
-                    <span>Instruksi Khusus (System Prompt)</span>
+                    <span>{language === 'id' ? 'Instruksi Khusus (System Prompt)' : 'Custom Instructions (System Prompt)'}</span>
                     <Sparkles size={14} className="text-purple-400" />
                   </label>
-                  <textarea value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)} rows={4} className="w-full bg-black/20 border border-lyra-accent/20 rounded-xl p-3 text-lyra-text focus:border-lyra-accent outline-none resize-none" placeholder="Kamu adalah senior developer. Selalu periksa keamanan sebelum membalas kode..." />
+                  <textarea value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)} rows={4} className="w-full bg-black/20 border border-lyra-accent/20 rounded-xl p-3 text-lyra-text focus:border-lyra-accent outline-none resize-none" placeholder={language === 'id' ? 'Kamu adalah senior developer. Selalu periksa keamanan sebelum membalas kode...' : 'You are a senior engineer. Always check security before generating code...'} />
                 </div>
               </div>
 
               <div className="p-6 border-t border-lyra-accent/10 flex justify-end gap-3">
-                <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl hover:bg-white/5 transition-colors font-medium">Batal</button>
+                <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl hover:bg-white/5 transition-colors font-medium">{language === 'id' ? 'Batal' : 'Cancel'}</button>
                 <button onClick={saveProject} disabled={!name} className="px-6 py-2.5 bg-lyra-accent text-white rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2">
-                  <Save size={16} /> Simpan Proyek
+                  <Save size={16} /> {language === 'id' ? 'Simpan Proyek' : 'Save Project'}
                 </button>
               </div>
             </motion.div>
@@ -264,7 +264,10 @@ export default function ProjectsPage() {
               initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 10 }}
               className="bg-lyra-surface border border-lyra-accent/30 rounded-3xl w-full max-w-lg shadow-2xl relative z-10 flex flex-col p-6"
             >
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><FolderOpen size={20} className="text-lyra-accent" /> Pilih Folder Proyek</h3>
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <FolderOpen size={20} className="text-lyra-accent" /> 
+                {language === 'id' ? 'Pilih Folder Proyek' : 'Select Project Folder'}
+              </h3>
               
               <div className="flex gap-2 mb-4">
                 <button onClick={() => {
@@ -277,7 +280,7 @@ export default function ProjectsPage() {
                     loadBrowseDir('ROOT');
                   }
                 }} className="bg-black/20 text-lyra-text p-2 px-3 rounded-lg hover:bg-lyra-accent/20 transition-colors">
-                  ← Naik
+                  ← {language === 'id' ? 'Naik' : 'Up'}
                 </button>
                 <div className="flex-1 bg-black/20 p-2 px-3 rounded-lg font-mono text-xs flex items-center overflow-hidden whitespace-nowrap overflow-ellipsis">
                   {browseDir}
@@ -286,7 +289,9 @@ export default function ProjectsPage() {
 
               <div className="w-full h-64 bg-black/20 border border-lyra-accent/10 rounded-xl overflow-y-auto mb-4">
                 {browseFiles.length === 0 ? (
-                  <div className="p-4 text-center text-xs opacity-50 italic">Folder kosong.</div>
+                  <div className="p-4 text-center text-xs opacity-50 italic">
+                    {language === 'id' ? 'Folder kosong.' : 'Folder is empty.'}
+                  </div>
                 ) : (
                   browseFiles.map((f, idx) => (
                     <button key={idx} onClick={() => loadBrowseDir(f.path)} className="w-full text-left p-3 border-b border-lyra-accent/5 hover:bg-lyra-accent/10 flex items-center gap-3 transition-colors">
@@ -299,23 +304,29 @@ export default function ProjectsPage() {
 
               {isCreatingFolder ? (
                 <div className="flex gap-2 mb-4">
-                  <input type="text" autoFocus value={newFolderName} onChange={e => setNewFolderName(e.target.value)} placeholder="Nama folder baru..." className="flex-1 bg-black/20 border border-lyra-accent/20 rounded-xl p-2 text-sm outline-none focus:border-lyra-accent" />
-                  <button onClick={createNewFolder} className="bg-lyra-accent text-white px-4 rounded-xl text-sm font-semibold hover:opacity-90">Buat</button>
-                  <button onClick={() => setIsCreatingFolder(false)} className="bg-black/20 text-lyra-text px-4 rounded-xl text-sm hover:bg-black/30">Batal</button>
+                  <input type="text" autoFocus value={newFolderName} onChange={e => setNewFolderName(e.target.value)} placeholder={language === 'id' ? 'Nama folder baru...' : 'New folder name...'} className="flex-1 bg-black/20 border border-lyra-accent/20 rounded-xl p-2 text-sm outline-none focus:border-lyra-accent" />
+                  <button onClick={createNewFolder} className="bg-lyra-accent text-white px-4 rounded-xl text-sm font-semibold hover:opacity-90">
+                    {language === 'id' ? 'Buat' : 'Create'}
+                  </button>
+                  <button onClick={() => setIsCreatingFolder(false)} className="bg-black/20 text-lyra-text px-4 rounded-xl text-sm hover:bg-black/30">
+                    {language === 'id' ? 'Batal' : 'Cancel'}
+                  </button>
                 </div>
               ) : (
                 <button onClick={() => setIsCreatingFolder(true)} className="text-lyra-accent text-sm flex items-center gap-2 mb-4 hover:underline w-fit">
-                  <Plus size={14} /> Buat folder baru di sini
+                  <Plus size={14} /> {language === 'id' ? 'Buat folder baru di sini' : 'Create new folder here'}
                 </button>
               )}
               
               <div className="flex gap-2">
-                <button onClick={() => setIsFolderPickerOpen(false)} className="flex-1 bg-black/20 text-lyra-text p-3 rounded-xl font-semibold hover:bg-black/30 transition-colors">Batal</button>
+                <button onClick={() => setIsFolderPickerOpen(false)} className="flex-1 bg-black/20 text-lyra-text p-3 rounded-xl font-semibold hover:bg-black/30 transition-colors">
+                  {language === 'id' ? 'Batal' : 'Cancel'}
+                </button>
                 <button onClick={() => {
                   setWorkspacePath(browseDir);
                   setIsFolderPickerOpen(false);
                 }} className="flex-1 bg-lyra-accent text-white p-3 rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-                  Pilih Folder Ini <Check size={16} />
+                  {language === 'id' ? 'Pilih Folder Ini' : 'Select This Folder'} <Check size={16} />
                 </button>
               </div>
             </motion.div>
