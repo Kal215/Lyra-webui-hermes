@@ -35,6 +35,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useWorkSessionStore } from '@/lib/store/useWorkSessionStore';
+import { 
+  getLocalWorkTasks, 
+  saveLocalWorkTask, 
+  deleteLocalWorkTask, 
+  updateLocalWorkTaskTitle, 
+  toggleLocalWorkTaskPin,
+  getLocalWorkMessages,
+  saveLocalWorkMessages,
+  LocalWorkTask
+} from '@/lib/store/useLocalWorkStorage';
 import { DynamicTodosCard } from '@/components/work/DynamicTodosCard';
 import { ReasoningAccordion } from '@/components/work/ReasoningAccordion';
 import { ToolExecutionBlock } from '@/components/work/ToolExecutionBlock';
@@ -280,31 +290,46 @@ export default function WorkPage() {
     setActiveTaskId(task.id);
     initDemoSession(task.title || task.id, task.assignee || 'default');
     
-    // Add task description and requirements as conversation
-    useWorkSessionStore.setState({ conversationMessages: [] });
-    addConversationMessage({
-      id: 'task_req_' + task.id,
-      role: 'user',
-      content: task.body || task.title || 'Instruksi pengerjaan otonom',
-      timestamp: task.created_at ? new Date(task.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined
-    });
+    // Check if there are saved historical messages for this task
+    const savedMsgs = getLocalWorkMessages(task.id);
+    if (savedMsgs && savedMsgs.length > 0) {
+      useWorkSessionStore.setState({ conversationMessages: savedMsgs });
+    } else {
+      useWorkSessionStore.setState({ conversationMessages: [] });
+      const createdTimeStr = task.created_at 
+        ? new Date(task.created_at > 1e11 ? task.created_at : task.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+        : undefined;
+      addConversationMessage({
+        id: 'task_req_' + task.id,
+        role: 'user',
+        content: task.body || task.title || 'Instruksi pengerjaan otonom',
+        timestamp: createdTimeStr
+      });
+
+      const isDone = task.status === 'done';
+      const isRunning = task.status === 'running';
+
+      const completedTimeStr = task.completed_at 
+        ? new Date(task.completed_at > 1e11 ? task.completed_at : task.completed_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+        : undefined;
+
+      addConversationMessage({
+        id: 'task_resp_' + task.id,
+        role: 'assistant',
+        content: isDone 
+          ? (language === 'id'
+              ? `### Tugas Selesai Dikerjakan\n\nPekerjaan **"${task.title}"** telah diselesaikan oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** Selesai (${task.status})\n- **ID Tugas:** \`${task.id}\`\n${task.workspace_path ? `- **Direktori Hasil:** \`${task.workspace_path}\`` : ''}\n\nSemua perubahan telah terintegrasi dengan baik.`
+              : `### Task Completed\n\nThe task **"${task.title}"** has been completed by specialist \`@${task.assignee}\`.\n\n- **Status:** Completed (${task.status})\n- **Task ID:** \`${task.id}\`\n${task.workspace_path ? `- **Deliverable Path:** \`${task.workspace_path}\`` : ''}\n\nAll changes have been successfully integrated.`)
+          : (language === 'id'
+              ? `### Status Pekerjaan Sedang Berjalan\n\nTugas **"${task.title}"** sedang dalam penanganan aktif oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** ${task.status.toUpperCase()}\n- **ID Tugas:** \`${task.id}\`\n\nSedang memantau eksekusi proses background...`
+              : `### Work In Progress\n\nTask **"${task.title}"** is actively handled by specialist \`@${task.assignee}\`.\n\n- **Status:** ${task.status.toUpperCase()}\n- **Task ID:** \`${task.id}\`\n\nMonitoring background process execution...`),
+        agentName: getAgentInfo(task.assignee || 'default').name,
+        timestamp: completedTimeStr
+      });
+    }
 
     const isDone = task.status === 'done';
     const isRunning = task.status === 'running';
-
-    addConversationMessage({
-      id: 'task_resp_' + task.id,
-      role: 'assistant',
-      content: isDone 
-        ? (language === 'id'
-            ? `### Tugas Selesai Dikerjakan\n\nPekerjaan **"${task.title}"** telah diselesaikan oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** Selesai (${task.status})\n- **ID Tugas:** \`${task.id}\`\n${task.workspace_path ? `- **Direktori Hasil:** \`${task.workspace_path}\`` : ''}\n\nSemua perubahan telah terintegrasi dengan baik.`
-            : `### Task Completed\n\nThe task **"${task.title}"** has been completed by specialist \`@${task.assignee}\`.\n\n- **Status:** Completed (${task.status})\n- **Task ID:** \`${task.id}\`\n${task.workspace_path ? `- **Deliverable Path:** \`${task.workspace_path}\`` : ''}\n\nAll changes have been successfully integrated.`)
-        : (language === 'id'
-            ? `### Status Pekerjaan Sedang Berjalan\n\nTugas **"${task.title}"** sedang dalam penanganan aktif oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** ${task.status.toUpperCase()}\n- **ID Tugas:** \`${task.id}\`\n\nSedang memantau eksekusi proses background...`
-            : `### Work In Progress\n\nTask **"${task.title}"** is actively handled by specialist \`@${task.assignee}\`.\n\n- **Status:** ${task.status.toUpperCase()}\n- **Task ID:** \`${task.id}\`\n\nMonitoring background process execution...`),
-      agentName: getAgentInfo(task.assignee || 'default').name,
-      timestamp: task.completed_at ? new Date(task.completed_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined
-    });
 
     // Populate deliverable card if done
     if (isDone) {
@@ -332,7 +357,8 @@ export default function WorkPage() {
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      await fetch(`/api/work/${taskId}`, { method: 'DELETE' });
+      deleteLocalWorkTask(taskId);
+      await fetch(`/api/work/${taskId}`, { method: 'DELETE' }).catch(() => {});
       setRecentTasks((prev) => prev.filter((t) => t.id !== taskId));
       if (activeTaskId === taskId) {
         resetSession();
@@ -344,10 +370,12 @@ export default function WorkPage() {
   };
 
   const handleRenameTask = async (taskId: string, newTitle: string) => {
+    updateLocalWorkTaskTitle(taskId, newTitle);
     setRecentTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, title: newTitle } : t));
   };
 
   const handlePinTask = async (taskId: string, isPinned: boolean) => {
+    toggleLocalWorkTaskPin(taskId, isPinned);
     setRecentTasks((prev) => {
       const updated = prev.map((t) => t.id === taskId ? { ...t, is_pinned: isPinned } : t);
       return [...updated].sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0));
@@ -356,23 +384,66 @@ export default function WorkPage() {
   // Fetch Specialist Agents & Recent Tasks
   const loadData = async () => {
     try {
+      const localTasks = getLocalWorkTasks();
+      
       const [resAgents, resWork] = await Promise.all([
-        fetch('/api/agents'),
-        fetch('/api/work')
+        fetch('/api/agents').catch(() => null),
+        fetch('/api/work').catch(() => null)
       ]);
-      const dataAgents = await resAgents.json();
-      if (dataAgents.success && Array.isArray(dataAgents.data) && dataAgents.data.length > 1) {
-        setAvailableAgents(dataAgents.data);
+      
+      if (resAgents && resAgents.ok) {
+        const dataAgents = await resAgents.json();
+        if (dataAgents.success && Array.isArray(dataAgents.data) && dataAgents.data.length > 1) {
+          setAvailableAgents(dataAgents.data);
+        }
+        if (dataAgents.success && typeof dataAgents.hermes_installed === 'boolean') {
+          setIsHermesInstalled(dataAgents.hermes_installed);
+        }
       }
-      if (dataAgents.success && typeof dataAgents.hermes_installed === 'boolean') {
-        setIsHermesInstalled(dataAgents.hermes_installed);
+
+      let serverTasks: any[] = [];
+      if (resWork && resWork.ok) {
+        const dataWork = await resWork.json();
+        if (dataWork.success && Array.isArray(dataWork.data)) {
+          serverTasks = dataWork.data;
+        }
       }
-      const dataWork = await resWork.json();
-      if (dataWork.success && Array.isArray(dataWork.data)) {
-        setRecentTasks(dataWork.data);
+
+      // Smart Merge server tasks + local tasks
+      const taskMap = new Map<string, any>();
+      // 1. Add server tasks
+      for (const st of serverTasks) {
+        if (st && st.id) taskMap.set(st.id, st);
       }
+      // 2. Add local tasks (preserves client-side created tasks on Vercel)
+      for (const lt of localTasks) {
+        if (lt && lt.id) {
+          if (!taskMap.has(lt.id)) {
+            taskMap.set(lt.id, lt);
+          } else {
+            // Merge metadata like is_pinned
+            const existing = taskMap.get(lt.id);
+            taskMap.set(lt.id, { ...existing, is_pinned: lt.is_pinned ?? existing.is_pinned });
+          }
+        }
+      }
+
+      const mergedTasks = Array.from(taskMap.values());
+      // Sort: pinned first, then newest first
+      mergedTasks.sort((a, b) => {
+        if (Boolean(b.is_pinned) !== Boolean(a.is_pinned)) {
+          return b.is_pinned ? 1 : -1;
+        }
+        const timeA = typeof a.created_at === 'number' ? (a.created_at > 1e11 ? a.created_at : a.created_at * 1000) : 0;
+        const timeB = typeof b.created_at === 'number' ? (b.created_at > 1e11 ? b.created_at : b.created_at * 1000) : 0;
+        return timeB - timeA;
+      });
+
+      setRecentTasks(mergedTasks);
     } catch (e) {
       console.warn('Failed to load work data:', e);
+      const fallbackLocal = getLocalWorkTasks();
+      setRecentTasks(fallbackLocal);
     } finally {
       setLoadingTasks(false);
     }
@@ -510,11 +581,25 @@ Communication Rules:
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
 
+    // Create an immediate local work task record so it instantly appears in history
+    const initialTaskId = 'task_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+    setActiveTaskId(initialTaskId);
+    localStorage.setItem('lyra_active_task_id', initialTaskId);
+    saveLocalWorkTask({
+      id: initialTaskId,
+      title: taskTitle,
+      body: userPrompt,
+      assignee: selectedAgent,
+      status: 'running',
+      created_at: Date.now()
+    });
+    loadData();
+
     // Reset previous live typing state until real code is generated
     useWorkspaceStore.getState().setLiveTyping(null);
 
     try {
-      // 2. Dispatch real task to Hermes backend kanban
+      // 2. Dispatch real task to Hermes backend kanban (if connected)
       fetch('/api/work', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -528,6 +613,16 @@ Communication Rules:
       .then(r => r.json())
       .then(res => {
         if (res?.taskId) {
+          // Update local task with real Hermes kanban task ID
+          deleteLocalWorkTask(initialTaskId);
+          saveLocalWorkTask({
+            id: res.taskId,
+            title: taskTitle,
+            body: userPrompt,
+            assignee: selectedAgent,
+            status: 'running',
+            created_at: Date.now()
+          });
           setActiveTaskId(res.taskId);
           localStorage.setItem('lyra_active_task_id', res.taskId);
         }
@@ -806,6 +901,21 @@ Communication Rules:
                 ]
           }
         });
+
+        // Mark local work task as completed
+        const curTaskId = localStorage.getItem('lyra_active_task_id');
+        if (curTaskId) {
+          saveLocalWorkTask({
+            id: curTaskId,
+            title: taskTitle,
+            body: userPrompt,
+            assignee: selectedAgent,
+            status: 'done',
+            created_at: Date.now(),
+            completed_at: Date.now()
+          });
+          loadData();
+        }
       }
 
     } catch (err: any) {
@@ -832,6 +942,16 @@ Communication Rules:
       setIsSubmitting(false);
       localStorage.removeItem('lyra_is_submitting_work');
       localStorage.removeItem('lyra_active_execution_id');
+
+      // Persist the full conversation messages to this work task
+      const activeTaskKey = localStorage.getItem('lyra_active_task_id');
+      if (activeTaskKey) {
+        const finalMsgs = useWorkSessionStore.getState().conversationMessages;
+        if (finalMsgs && finalMsgs.length > 0) {
+          saveLocalWorkMessages(activeTaskKey, finalMsgs);
+        }
+      }
+
       loadData();
     }
   };
@@ -1111,7 +1231,7 @@ Communication Rules:
               {/* Chronological Conversation Feed */}
               {conversationMessages.length > 0 && (
                 <AutonomousConversationView 
-                  messages={conversationMessages.filter((m) => !m.content.includes('Status Pekerjaan Sedang Berjalan'))} 
+                  messages={conversationMessages} 
                   isStreaming={isSubmitting} 
                 />
               )}
