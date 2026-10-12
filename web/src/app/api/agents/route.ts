@@ -19,8 +19,10 @@ export async function GET(req: NextRequest) {
 
     // 2. Discover all profiles using hermes profile list
     let agents: string[] = [];
+    let isHermesInstalled = false;
     try {
       const { stdout } = await execFileAsync('hermes', ['profile', 'list'], { env });
+      isHermesInstalled = true;
       const lines = stdout.split('\n').filter(l => l.trim().length > 0 && !l.includes('─────') && !l.includes('Profile'));
       
       agents = lines.map(line => {
@@ -32,7 +34,8 @@ export async function GET(req: NextRequest) {
         return null;
       }).filter(Boolean) as string[];
     } catch (cliErr) {
-      console.warn('[Agents API] hermes profile list warning, falling back to disk check:', cliErr);
+      // CLI not available (e.g. serverless Vercel)
+      isHermesInstalled = false;
     }
 
     // 3. Fallback to filesystem if list was empty
@@ -51,7 +54,7 @@ export async function GET(req: NextRequest) {
       agents.unshift('default');
     }
 
-    return NextResponse.json({ success: true, data: agents });
+    return NextResponse.json({ success: true, data: agents, hermes_installed: isHermesInstalled });
   } catch (error: any) {
     console.error('Failed to fetch agents:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

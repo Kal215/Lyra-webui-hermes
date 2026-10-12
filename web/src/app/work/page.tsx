@@ -72,6 +72,7 @@ export default function WorkPage() {
     'security-kanban'
   ]);
   const [selectedAgent, setSelectedAgent] = useState('default');
+  const [isHermesInstalled, setIsHermesInstalled] = useState<boolean | null>(null);
 
   // Input Prompt State
   const [promptInput, setPromptInput] = useState('');
@@ -363,6 +364,9 @@ export default function WorkPage() {
       const dataAgents = await resAgents.json();
       if (dataAgents.success && Array.isArray(dataAgents.data) && dataAgents.data.length > 1) {
         setAvailableAgents(dataAgents.data);
+      }
+      if (dataAgents.success && typeof dataAgents.hermes_installed === 'boolean') {
+        setIsHermesInstalled(dataAgents.hermes_installed);
       }
       const dataWork = await resWork.json();
       if (dataWork.success && Array.isArray(dataWork.data)) {
@@ -885,6 +889,11 @@ Communication Rules:
               <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-lyra-surface text-lyra-accent font-mono border border-lyra-accent/20">
                 {availableAgents.length}
               </span>
+              {isHermesInstalled === false && (
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-mono" title="Hermes local engine belum terhubung">
+                  Cloud
+                </span>
+              )}
             </div>
             <span className="text-xs text-lyra-text-secondary">
               {isSpecialistsExpanded ? '▲' : '▼'}
@@ -918,7 +927,9 @@ Communication Rules:
                       </div>
                       {isSelected && (
                         <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-lyra-accent/20 text-lyra-accent font-mono font-medium shrink-0">
-                          {language === 'id' ? 'Aktif' : 'Active'}
+                          {isHermesInstalled
+                            ? (language === 'id' ? 'Aktif' : 'Active')
+                            : (language === 'id' ? 'Terpilih' : 'Selected')}
                         </span>
                       )}
                     </div>
