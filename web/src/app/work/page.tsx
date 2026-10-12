@@ -28,6 +28,7 @@ import {
   BrainCircuit,
   Globe,
   X,
+  PlusCircle,
   File as FileIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -368,12 +369,37 @@ export default function WorkPage() {
   useEffect(() => {
     loadData();
 
-    // Check if there was an active execution prior to page refresh
+    // Check if there was an active execution or background Hermes task prior to page refresh
     if (typeof window !== 'undefined') {
       const activeExec = localStorage.getItem('lyra_active_execution_id');
       const isSubmittingStored = localStorage.getItem('lyra_is_submitting_work');
+      const savedTaskId = localStorage.getItem('lyra_active_task_id');
+
+      if (savedTaskId) {
+        setActiveTaskId(savedTaskId);
+        // Poll background task status from Hermes backend
+        fetch(`/api/work/${savedTaskId}`)
+          .then(r => r.json())
+          .then(res => {
+            if (res?.success && res?.data) {
+              const task = res.data;
+              if (task.status === 'done' || task.status === 'completed') {
+                setIsSubmitting(false);
+                localStorage.removeItem('lyra_is_submitting_work');
+                localStorage.removeItem('lyra_active_execution_id');
+              }
+            }
+          })
+          .catch(() => {});
+      }
+
+      // If page was refreshed mid-stream, clear zombie submission after 2s if no active connection
       if (activeExec || isSubmittingStored === 'true') {
-        setIsSubmitting(true);
+        const timer = setTimeout(() => {
+          setIsSubmitting(false);
+          localStorage.removeItem('lyra_is_submitting_work');
+        }, 2500);
+        return () => clearTimeout(timer);
       }
     }
   }, []);
@@ -496,7 +522,16 @@ Guidelines:
           assignee: selectedAgent,
           priority: 0
         })
-      }).then(() => loadData()).catch(() => {});
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res?.taskId) {
+          setActiveTaskId(res.taskId);
+          localStorage.setItem('lyra_active_task_id', res.taskId);
+        }
+        loadData();
+      })
+      .catch(() => {});
 
       // 3. Connect real LLM stream from /api/chat-stream for true autonomous reasoning, conversation & tools
       abortControllerRef.current = new AbortController();
@@ -934,6 +969,24 @@ Guidelines:
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(language === 'id' ? 'Mulai sesi baru? Feed obrolan saat ini akan dibersihkan.' : 'Start new session? Current feed will be cleared.')) {
+                  resetSession();
+                  setActiveTaskId(null);
+                  localStorage.removeItem('lyra_active_task_id');
+                  localStorage.removeItem('lyra_active_execution_id');
+                  localStorage.removeItem('lyra_is_submitting_work');
+                  setIsSubmitting(false);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-lyra-surface hover:bg-rose-500/15 border border-lyra-accent/15 hover:border-rose-500/30 text-xs text-lyra-text hover:text-rose-400 font-medium transition-colors cursor-pointer"
+              title={language === 'id' ? 'Mulai sesi baru' : 'Start new session'}
+            >
+              <PlusCircle size={13} className="text-lyra-accent group-hover:text-rose-400" />
+              <span>{language === 'id' ? 'Sesi Baru' : 'New Session'}</span>
+            </button>
             <button
               type="button"
               onClick={() => setIsWorkspaceOpen(!isWorkspaceOpen)}

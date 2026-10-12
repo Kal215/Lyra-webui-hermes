@@ -264,12 +264,23 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
         }
 
         const decoder = new TextDecoder();
+        const encoder = new TextEncoder();
         let buffer = '';
+        let pingInterval: any = null;
 
         try {
+          // Keep-alive heartbeat interval to prevent proxy, Nginx, or serverless HTTP/SSE timeouts
+          pingInterval = setInterval(() => {
+            try {
+              controller.enqueue(encoder.encode(': ping\n\n'));
+            } catch (e) {
+              clearInterval(pingInterval);
+            }
+          }, 8000);
+
           // Announce session_id
           const sid = session_id || 'session_' + Date.now();
-          controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: 'session_id', session_id: sid })}\n\n`));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'session_id', session_id: sid })}\n\n`));
 
           while (true) {
             const { done, value } = await reader.read();
@@ -321,6 +332,7 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
             );
           }
         } finally {
+          if (pingInterval) clearInterval(pingInterval);
           controller.close();
         }
       }

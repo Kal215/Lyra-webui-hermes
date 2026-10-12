@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { 
   AgentTodoItem, 
   ToolCallLog, 
@@ -46,102 +47,122 @@ export interface WorkSessionState {
 
 const TERMINAL_BUFFER_MAX_LINES = 500;
 
-export const useWorkSessionStore = create<WorkSessionState>((set) => ({
-  sessionId: null,
-  agentId: 'coder',
-  agentStatus: 'idle',
-  reasoningNodes: {},
-  reasoningOrder: [],
-  activeReasoningId: null,
-  todos: [],
-  toolExecutions: {},
-  toolOrder: [],
-  deliverable: null,
-  terminalBuffer: [],
-  hqAgentState: 'idle',
-  conversationMessages: [],
-
-  setSessionId: (id: string) => set({ sessionId: id }),
-  setAgentId: (id: string) => set({ agentId: id }),
-
-  addConversationMessage: (msg: AutonomousMessage) => set((state) => ({
-    conversationMessages: [...state.conversationMessages, msg]
-  })),
-
-  appendAssistantChunk: (chunk: string, agentName?: string) => set((state) => {
-    const msgs = [...state.conversationMessages];
-    const lastMsg = msgs[msgs.length - 1];
-    if (lastMsg && lastMsg.role === 'assistant') {
-      msgs[msgs.length - 1] = {
-        ...lastMsg,
-        content: lastMsg.content + chunk
-      };
-      return { conversationMessages: msgs };
-    }
-    const newMsg: AutonomousMessage = {
-      id: 'asst_' + Date.now().toString(36),
-      role: 'assistant',
-      content: chunk,
-      agentName: agentName || 'Aster',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    return { conversationMessages: [...msgs, newMsg] };
-  }),
-
-  dispatchAgentEvent: (event: AgentStreamEvent) => {
-    set((state) => applySingleEvent(state, event));
-  },
-
-  dispatchAgentEventsBatch: (events: AgentStreamEvent[]) => {
-    set((state) => {
-      let nextState = state;
-      for (const ev of events) {
-        nextState = applySingleEvent(nextState, ev);
-      }
-      return nextState;
-    });
-  },
-
-  initDemoSession: (prompt: string, selectedAgent = 'coder') => {
-    const sId = 'sess_' + Date.now().toString(36);
-    set({
-      sessionId: sId,
-      agentId: selectedAgent,
-      agentStatus: 'reasoning',
-      hqAgentState: 'thinking',
-      reasoningNodes: {
-        'r-1': {
-          id: 'r-1',
-          timestamp: new Date().toISOString(),
-          thought: `Menganalisis instruksi: "${prompt}".\nMenentukan ruang lingkup arsitektur, dependensi yang dibutuhkan, dan menyusun tahapan eksekusi otonom...`,
-          isStreaming: false
-        }
-      },
-      reasoningOrder: ['r-1'],
+export const useWorkSessionStore = create<WorkSessionState>()(
+  persist(
+    (set) => ({
+      sessionId: null,
+      agentId: 'coder',
+      agentStatus: 'idle',
+      reasoningNodes: {},
+      reasoningOrder: [],
       activeReasoningId: null,
       todos: [],
       toolExecutions: {},
       toolOrder: [],
       deliverable: null,
-      terminalBuffer: ['[Lyra Agent Engine] Initialized workspace session for ' + selectedAgent]
-    });
-  },
+      terminalBuffer: [],
+      hqAgentState: 'idle',
+      conversationMessages: [],
 
-  resetSession: () => set({
-    sessionId: null,
-    agentStatus: 'idle',
-    reasoningNodes: {},
-    reasoningOrder: [],
-    activeReasoningId: null,
-    todos: [],
-    toolExecutions: {},
-    toolOrder: [],
-    deliverable: null,
-    terminalBuffer: [],
-    hqAgentState: 'idle',
-    conversationMessages: [],
-  }),
-}));
+      setSessionId: (id: string) => set({ sessionId: id }),
+      setAgentId: (id: string) => set({ agentId: id }),
+
+      addConversationMessage: (msg: AutonomousMessage) => set((state) => ({
+        conversationMessages: [...state.conversationMessages, msg]
+      })),
+
+      appendAssistantChunk: (chunk: string, agentName?: string) => set((state) => {
+        const msgs = [...state.conversationMessages];
+        const lastMsg = msgs[msgs.length - 1];
+        if (lastMsg && lastMsg.role === 'assistant') {
+          msgs[msgs.length - 1] = {
+            ...lastMsg,
+            content: lastMsg.content + chunk
+          };
+          return { conversationMessages: msgs };
+        }
+        const newMsg: AutonomousMessage = {
+          id: 'asst_' + Date.now().toString(36),
+          role: 'assistant',
+          content: chunk,
+          agentName: agentName || 'Aster',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        return { conversationMessages: [...msgs, newMsg] };
+      }),
+
+      dispatchAgentEvent: (event: AgentStreamEvent) => {
+        set((state) => applySingleEvent(state, event));
+      },
+
+      dispatchAgentEventsBatch: (events: AgentStreamEvent[]) => {
+        set((state) => {
+          let nextState = state;
+          for (const ev of events) {
+            nextState = applySingleEvent(nextState, ev);
+          }
+          return nextState;
+        });
+      },
+
+      initDemoSession: (prompt: string, selectedAgent = 'coder') => {
+        const sId = 'sess_' + Date.now().toString(36);
+        set({
+          sessionId: sId,
+          agentId: selectedAgent,
+          agentStatus: 'reasoning',
+          hqAgentState: 'thinking',
+          reasoningNodes: {
+            'r-1': {
+              id: 'r-1',
+              timestamp: new Date().toISOString(),
+              thought: `Menganalisis instruksi: "${prompt}".\nMenentukan ruang lingkup arsitektur, dependensi yang dibutuhkan, dan menyusun tahapan eksekusi otonom...`,
+              isStreaming: false
+            }
+          },
+          reasoningOrder: ['r-1'],
+          activeReasoningId: null,
+          todos: [],
+          toolExecutions: {},
+          toolOrder: [],
+          deliverable: null,
+          terminalBuffer: ['[Lyra Agent Engine] Initialized workspace session for ' + selectedAgent]
+        });
+      },
+
+      resetSession: () => set({
+        sessionId: null,
+        agentStatus: 'idle',
+        reasoningNodes: {},
+        reasoningOrder: [],
+        activeReasoningId: null,
+        todos: [],
+        toolExecutions: {},
+        toolOrder: [],
+        deliverable: null,
+        terminalBuffer: [],
+        hqAgentState: 'idle',
+        conversationMessages: [],
+      }),
+    }),
+    {
+      name: 'lyra_work_session_v1',
+      partialize: (state) => ({
+        sessionId: state.sessionId,
+        agentId: state.agentId,
+        agentStatus: state.agentStatus,
+        reasoningNodes: state.reasoningNodes,
+        reasoningOrder: state.reasoningOrder,
+        activeReasoningId: state.activeReasoningId,
+        todos: state.todos,
+        toolExecutions: state.toolExecutions,
+        toolOrder: state.toolOrder,
+        deliverable: state.deliverable,
+        conversationMessages: state.conversationMessages
+      })
+    }
+  )
+);
 
 function applySingleEvent(state: WorkSessionState, event: AgentStreamEvent): WorkSessionState {
   switch (event.type) {
