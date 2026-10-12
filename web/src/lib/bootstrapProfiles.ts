@@ -97,10 +97,16 @@ export async function ensureSpecialistProfiles(): Promise<void> {
   isBootstrapping = true;
 
   try {
+    const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
     const env = getHermesEnv();
     const hermesHome = env.HERMES_HOME;
     const profilesDir = path.join(hermesHome, 'profiles');
     const kanbanDb = path.join(hermesHome, 'kanban.db');
+
+    // On Serverless (e.g. Vercel), Hermes CLI is not present. Do not attempt CLI / disk provisioning.
+    if (isServerless) {
+      return;
+    }
 
     // 1. Ensure kanban.db is initialized
     if (!fs.existsSync(kanbanDb)) {

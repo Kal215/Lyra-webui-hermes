@@ -11,7 +11,12 @@ import fs from 'fs';
  * present when running CLI commands across any profile.
  */
 export const getHermesEnv = (): NodeJS.ProcessEnv & { HERMES_HOME: string } => {
-  const HERMES_HOME = path.join(process.cwd(), '.hermes-backend');
+  // If running in Vercel / AWS Lambda / Read-Only container, use writable /tmp
+  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  const HERMES_HOME = isServerless 
+    ? path.join('/tmp', '.hermes-backend')
+    : path.join(process.cwd(), '.hermes-backend');
+    
   const envMap: NodeJS.ProcessEnv = { ...process.env };
 
   const dotEnvPath = path.join(HERMES_HOME, '.env');
