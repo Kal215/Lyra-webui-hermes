@@ -43,9 +43,10 @@ export async function POST(req: NextRequest) {
 
   const aiConfig = getAiConfig();
   const effectiveBaseUrl = (clientConfig?.baseUrl || aiConfig.baseUrl)?.replace(/\/$/, '') || 'https://api.openai.com/v1';
-  const effectiveModel = (model && model !== 'default' && model !== 'Hermes Agent') 
+  const isHermesAlias = !model || model === 'default' || model === 'hermes-agent' || model === 'Hermes Agent';
+  const effectiveModel = !isHermesAlias
     ? model 
-    : (clientConfig?.model || aiConfig.model || 'gpt-4o-mini');
+    : (clientConfig?.model || aiConfig.model || 'anthropic/claude-3.5-sonnet');
   const apiKey = clientConfig?.apiKey || aiConfig.apiKey;
 
   const isEnglish = language === 'en';

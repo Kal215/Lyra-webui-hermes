@@ -259,6 +259,10 @@ export default function SettingsPage() {
         apiKey: (aiApiKey || ''),
         providerId: providerType
       }));
+      if (aiModel) {
+        localStorage.setItem('lyra_chat_model', aiModel);
+        localStorage.setItem('lyra_work_model', aiModel);
+      }
     } catch (e) {}
 
     try {

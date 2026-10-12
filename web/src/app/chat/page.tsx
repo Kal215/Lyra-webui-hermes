@@ -430,20 +430,18 @@ function NativeChatContent() {
 
   // Model & Reasoning Effort states (Matching Image 3 & Image 4)
   const DEFAULT_MODELS = [
-    { id: 'hermes-agent', name: 'Hermes Agent', badge: 'Med' },
     { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', badge: 'High' },
     { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', badge: 'Ultra' },
     { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3', badge: 'Med' },
     { id: 'openai/gpt-4o', name: 'GPT-4o', badge: 'High' },
+    { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', badge: 'Low' },
     { id: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash', badge: 'Low' },
     { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', badge: 'Med' },
     { id: 'qwen/qwen-2.5-coder-32b-instruct', name: 'Qwen 2.5 Coder', badge: 'Med' },
-    { id: 'kat-coder-pro', name: 'Kat Coder Pro V2.5:Free', badge: 'Med' },
-    { id: 'minimax-m2.7', name: 'Minimax M2.7', badge: 'Med' },
-    { id: 'glm-5.2', name: 'Glm 5.2', badge: 'Med' },
+    { id: 'minimax/minimax-01', name: 'MiniMax-01', badge: 'Med' },
   ];
   const [modelsList, setModelsList] = useState(DEFAULT_MODELS);
-  const [selectedModel, setSelectedModel] = useState('Hermes Agent');
+  const [selectedModel, setSelectedModel] = useState('Claude 3.5 Sonnet');
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const [isEffortMenuOpen, setIsEffortMenuOpen] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState('');
@@ -513,8 +511,37 @@ function NativeChatContent() {
   // Restore preferences on initial mount
   useEffect(() => {
     try {
-      const savedModel = localStorage.getItem('lyra_chat_model');
-      if (savedModel) setSelectedModel(savedModel);
+      // 1. Sync with Settings configured model from lyra_ai_config
+      const aiConfigStr = localStorage.getItem('lyra_ai_config');
+      let configuredModelId = '';
+      if (aiConfigStr) {
+        try {
+          const cfg = JSON.parse(aiConfigStr);
+          if (cfg.model) configuredModelId = cfg.model;
+        } catch (e) {}
+      }
+
+      const savedChatModel = localStorage.getItem('lyra_chat_model');
+
+      if (configuredModelId) {
+        setModelsList(prev => {
+          const exists = prev.some(m => m.id === configuredModelId || m.name === configuredModelId);
+          if (!exists) {
+            return [{ id: configuredModelId, name: configuredModelId, badge: 'Active' }, ...prev];
+          }
+          return prev;
+        });
+      }
+
+      // Determine model to select:
+      // Prefer saved user selection unless it was 'hermes-agent' or 'Hermes Agent'
+      let target = savedChatModel || configuredModelId || 'Claude 3.5 Sonnet';
+      if (target === 'hermes-agent' || target === 'Hermes Agent' || target === 'default') {
+        target = configuredModelId || 'Claude 3.5 Sonnet';
+      }
+
+      const matched = DEFAULT_MODELS.find(m => m.id === target || m.name === target);
+      setSelectedModel(matched ? matched.name : target);
 
       const savedReasoning = localStorage.getItem('lyra_chat_reasoning');
       if (savedReasoning !== null) setIsReasoningEnabled(savedReasoning === 'true');
@@ -2645,6 +2672,7 @@ function NativeChatContent() {
                                   onClick={() => {
                                     setSelectedModel(m.name);
                                     setIsModelMenuOpen(false);
+                                    try { localStorage.setItem('lyra_chat_model', m.name); } catch(e) {}
                                   }}
                                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors text-left cursor-pointer ${
                                     selectedModel === m.name
