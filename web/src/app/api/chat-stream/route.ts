@@ -187,9 +187,12 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
 - DILARANG KERAS menggunakan garis pemisah ASCII kuno seperti (===...) atau (---...).
 - Prioritaskan format tabel Markdown atau bullet terstruktur jika menyajikan perbandingan.`;
 
-  const finalSystemPrompt = systemPrompt 
-    ? `${systemPrompt}\n\n${formattingStandard}`
-    : formattingStandard;
+  const defaultLyraSystemPrompt = language === 'en'
+    ? `You are Lyra AI, an intelligent autonomous system assistant and software engineering companion for Lyra Command Center. You are helpful, precise, analytical, and professional.`
+    : `Anda adalah Lyra AI, asisten sistem otonom dan rekan rekayasa perangkat lunak cerdas di Lyra Command Center. Anda ramah, solutif, analitis, dan profesional.`;
+
+  const basePrompt = systemPrompt || defaultLyraSystemPrompt;
+  const finalSystemPrompt = `${basePrompt}\n\n${formattingStandard}`;
 
   messages.push({ role: 'system', content: finalSystemPrompt });
 

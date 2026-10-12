@@ -482,15 +482,8 @@ Guidelines:
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
 
-    // Immediately trigger visible live-coding block so user sees immediate feedback
-    const agentInfo = getAgentInfo(selectedAgent);
-    useWorkspaceStore.getState().setLiveTyping({
-      active: true,
-      agentName: agentInfo.name,
-      agentRole: agentInfo.role,
-      filePath: 'workspace/main_task.ts',
-      diffOrContent: `// @${agentInfo.name} (${agentInfo.role}) memulai pengerjaan otonom...\n// Tugas: ${taskTitle}\n\n// Menyiapkan lingkungan pengerjaan & modul kode...`
-    });
+    // Reset previous live typing state until real code is generated
+    useWorkspaceStore.getState().setLiveTyping(null);
 
     try {
       // 2. Dispatch real task to Hermes backend kanban
@@ -682,16 +675,6 @@ Guidelines:
                         filePath: 'workspace/generated_code.ts',
                         diffOrContent: codeMatch[1]
                       });
-                    } else if (data.text && !accumulatedAssistantText.includes('```')) {
-                      // Even before full code block, start live typing with assistant streaming text
-                      const agentInfo = getAgentInfo(selectedAgent);
-                      useWorkspaceStore.getState().setLiveTyping({
-                        active: true,
-                        agentName: agentInfo.name,
-                        agentRole: agentInfo.role,
-                        filePath: 'workspace/agent_plan.md',
-                        diffOrContent: accumulatedAssistantText
-                      });
                     }
                   } else {
                     useWorkspaceStore.getState().setLiveTyping(null);
@@ -715,14 +698,21 @@ Guidelines:
         );
       }
 
-      // Trigger deliverables & complete state only if NOT a warning/error
+      // Clear live typing viewport when stream ends if no code was generated
+      if (!accumulatedAssistantText.includes('```')) {
+        useWorkspaceStore.getState().setLiveTyping(null);
+      }
+
+      // Trigger deliverables only if NOT a warning/error AND actual code or project files were generated
       const hasWarning = 
         accumulatedAssistantText.includes('API Key Required') || 
         accumulatedAssistantText.includes('API Key Belum Dikonfigurasi') || 
         accumulatedAssistantText.includes('BYOK Mode') ||
         accumulatedAssistantText.includes('Mode BYOK');
 
-      if (!hasWarning) {
+      const hasGeneratedCode = accumulatedAssistantText.includes('```');
+
+      if (!hasWarning && hasGeneratedCode) {
         // If real todos were parsed during execution, mark them all completed at finish
         const currentTodos = useWorkSessionStore.getState().todos;
         if (currentTodos && currentTodos.length > 0) {
@@ -742,8 +732,7 @@ Guidelines:
               ? `The autonomous agent squad has completed your instructions. Review deliverables and files in the workspace.`
               : `Swarm Agen telah menuntaskan instruksi secara otonom. Hasil pengerjaan dan percakapan dapat ditinjau di feed dan file terkait siap diinspeksi.`,
             changedFiles: [
-              { path: 'package.json', action: 'modified' },
-              { path: 'README.md', action: 'modified' }
+              { path: 'workspace/generated_code.ts', action: 'created' }
             ],
             nextActionableSteps: language === 'en'
               ? [
