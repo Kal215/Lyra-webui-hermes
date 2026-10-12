@@ -14,10 +14,17 @@ export async function GET() {
     const memoryFile = path.join(memoriesPath, 'MEMORY.md');
     const userFile = path.join(memoriesPath, 'USER.md');
 
+    const isHermesDetected = fs.existsSync(memoriesPath);
+
     if (fs.existsSync(memoryFile)) memoryMd = fs.readFileSync(memoryFile, 'utf8');
     if (fs.existsSync(userFile)) userMd = fs.readFileSync(userFile, 'utf8');
 
-    return NextResponse.json({ success: true, memory: memoryMd, user: userMd });
+    return NextResponse.json({ 
+      success: true, 
+      memory: memoryMd, 
+      user: userMd,
+      hermes_detected: isHermesDetected 
+    });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

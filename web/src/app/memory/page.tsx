@@ -6,6 +6,7 @@ import { NeoButton } from '@/components/NeoButton';
 import { Brain, User, Save, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useTactileSound } from '@/hooks/use-tactile-sound';
 import { useI18nStore } from '@/i18n';
+import { HermesInstallBanner } from '@/components/common/HermesInstallBanner';
 
 export default function MemoryPage() {
   const { language } = useI18nStore();
@@ -14,6 +15,7 @@ export default function MemoryPage() {
   const [userMd, setUserMd] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isHermesDetected, setIsHermesDetected] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<'memory' | 'user'>('memory');
 
   const fetchMemories = () => {
@@ -24,6 +26,9 @@ export default function MemoryPage() {
         if (data.success) {
           setMemoryMd(data.memory);
           setUserMd(data.user);
+          if (typeof data.hermes_detected === 'boolean') {
+            setIsHermesDetected(data.hermes_detected);
+          }
         }
       })
       .finally(() => setLoading(false));
@@ -80,6 +85,11 @@ export default function MemoryPage() {
           </NeoButton>
         </div>
       </div>
+
+      {/* Hermes Engine Installation Guidance Banner if not detected */}
+      {isHermesDetected === false && (
+        <HermesInstallBanner featureName={language === 'id' ? 'Penyimpanan Memori Inti' : 'Core Memory Persistence'} />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-4 border-b border-lyra-border/50 shrink-0">
