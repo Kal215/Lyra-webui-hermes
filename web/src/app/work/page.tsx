@@ -998,11 +998,12 @@ export default function WorkPage() {
       const changedFilesList: Array<{ path: string; action: 'created' | 'modified' }> = [];
 
       if (isPptxTask) {
-        finalFile = 'workspace/presentation.md';
+        finalFile = 'workspace/presentation.html';
+        changedFilesList.push({ path: 'workspace/presentation.html', action: 'created' });
         changedFilesList.push({ path: 'workspace/presentation.pptx', action: 'created' });
         changedFilesList.push({ path: 'workspace/presentation.md', action: 'created' });
 
-        // Auto-compile physical .pptx file
+        // Auto-compile physical .pptx file and web-native slide deck
         fetch('/api/workspace/export-doc', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

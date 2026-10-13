@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { compilePresentation, parseMarkdownToSlides } from '@/lib/utils/pptxCompiler';
 import { compileMarkdownToDocx } from '@/lib/utils/docxCompiler';
+import { generateHtmlSlideDeck } from '@/lib/utils/slideDeckGenerator';
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
 
     let finalFileName = fileName;
     let outputPath = '';
+    let htmlDeckFileName = '';
 
     if (type === 'pptx') {
       finalFileName = finalFileName || `${cleanTitle.replace(/\s+/g, '_')}.pptx`;
@@ -37,6 +39,16 @@ export async function POST(req: NextRequest) {
       }
 
       await compilePresentation(spec, outputPath);
+
+      // Also generate the Web-Native Interactive HTML Slide Deck (Frontier grade)
+      try {
+        const htmlDeck = generateHtmlSlideDeck(spec);
+        htmlDeckFileName = finalFileName.replace(/\.pptx$/i, '.html');
+        const htmlPath = path.join(workspaceDir, htmlDeckFileName);
+        await fs.writeFile(htmlPath, htmlDeck, 'utf-8');
+      } catch (htmlErr) {
+        console.warn('Failed to generate companion HTML slide deck:', htmlErr);
+      }
     } else if (type === 'docx') {
       finalFileName = finalFileName || `${cleanTitle.replace(/\s+/g, '_')}.docx`;
       outputPath = path.join(workspaceDir, finalFileName);
@@ -52,6 +64,7 @@ export async function POST(req: NextRequest) {
       success: true,
       path: outputPath,
       fileName: finalFileName,
+      htmlFileName: htmlDeckFileName || undefined,
       size: stat.size,
       workspaceRelPath: path.relative(process.cwd(), outputPath).replace(/\\/g, '/')
     });
