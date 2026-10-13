@@ -18,6 +18,31 @@ export async function GET(req: Request) {
     if (stat.isDirectory()) {
       return NextResponse.json({ error: 'Path is a directory' }, { status: 400 });
     }
+    const ext = path.extname(fullPath).toLowerCase();
+    const isBinary = ['.pptx', '.docx', '.pdf', '.xlsx', '.zip', '.png', '.jpg', '.jpeg', '.webp'].includes(ext);
+    const forceDownload = searchParams.get('download') === 'true';
+
+    if (isBinary || forceDownload) {
+      const buffer = fs.readFileSync(fullPath);
+      const mimeTypes: Record<string, string> = {
+        '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.pdf': 'application/pdf',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.webp': 'image/webp',
+        '.zip': 'application/zip'
+      };
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      return new NextResponse(buffer, {
+        headers: {
+          'Content-Type': contentType,
+          'Content-Disposition': `attachment; filename="${path.basename(fullPath)}"`
+        }
+      });
+    }
+
     const content = fs.readFileSync(fullPath, 'utf-8');
     return NextResponse.json({ content });
   } catch (error) {

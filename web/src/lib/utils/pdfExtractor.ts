@@ -12,6 +12,30 @@ import os from 'os';
 
 const execFileAsync = promisify(execFile);
 
+function getPythonCandidates(): string[] {
+  if (process.env.PYTHON_PATH) return [process.env.PYTHON_PATH];
+  const isWin = process.platform === 'win32';
+  const candidates: string[] = isWin 
+    ? ['python', 'python3', 'py'] 
+    : ['python3', 'python'];
+
+  // On Windows, dynamically search standard AppData Python installs without hardcoding usernames
+  if (isWin && process.env.LOCALAPPDATA) {
+    const pyBase = path.join(process.env.LOCALAPPDATA, 'Programs', 'Python');
+    if (fs.existsSync(pyBase)) {
+      try {
+        const dirs = fs.readdirSync(pyBase).sort().reverse();
+        for (const d of dirs) {
+          const exe = path.join(pyBase, d, 'python.exe');
+          if (fs.existsSync(exe)) candidates.unshift(exe);
+        }
+      } catch (e) {}
+    }
+  }
+
+  return candidates;
+}
+
 export async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
   // 1. Try Node.js pdf-parse
   try {
@@ -28,26 +52,28 @@ export async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> 
     console.warn('[pdfExtractor] Node pdf-parse failed, falling back to Python pypdf:', err?.message || err);
   }
 
-  // 2. High-reliability fallback: Local Python pypdf
-  try {
-    const tempFile = path.join(os.tmpdir(), `temp_pdf_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.pdf`);
-    fs.writeFileSync(tempFile, buffer);
+  // 2. High-reliability cross-platform fallback: Dynamic Python pypdf
+  const pythonBinaries = getPythonCandidates();
+  for (const pythonExe of pythonBinaries) {
+    try {
+      const tempFile = path.join(os.tmpdir(), `temp_pdf_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.pdf`);
+      fs.writeFileSync(tempFile, buffer);
 
-    const pyScript = `import pypdf, sys; reader = pypdf.PdfReader(sys.argv[1]); print('\\n'.join([p.extract_text() or '' for p in reader.pages]))`;
-    const pythonExe = 'C:/Users/riska/AppData/Local/Programs/Python/Python313/python.exe';
+      const pyScript = `import pypdf, sys; reader = pypdf.PdfReader(sys.argv[1]); print('\\n'.join([p.extract_text() or '' for p in reader.pages]))`;
 
-    const { stdout } = await execFileAsync(pythonExe, ['-c', pyScript, tempFile], {
-      maxBuffer: 10 * 1024 * 1024,
-      encoding: 'utf-8'
-    });
+      const { stdout } = await execFileAsync(pythonExe, ['-c', pyScript, tempFile], {
+        maxBuffer: 10 * 1024 * 1024,
+        encoding: 'utf-8'
+      });
 
-    try { fs.unlinkSync(tempFile); } catch (e) {}
+      try { fs.unlinkSync(tempFile); } catch (e) {}
 
-    if (stdout && stdout.trim().length > 0) {
-      return stdout.trim();
+      if (stdout && stdout.trim().length > 0) {
+        return stdout.trim();
+      }
+    } catch (pyErr: any) {
+      // Continue to next candidate
     }
-  } catch (pyErr: any) {
-    console.error('[pdfExtractor] Python pypdf fallback failed:', pyErr?.message || pyErr);
   }
 
   return '';

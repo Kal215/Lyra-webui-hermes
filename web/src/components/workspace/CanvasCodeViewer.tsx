@@ -5,6 +5,7 @@ import {
   Edit3, 
   HelpCircle, 
   FileCode, 
+  FileText,
   Check, 
   X, 
   CornerDownLeft, 
@@ -729,6 +730,80 @@ export function CanvasCodeViewer({
                 >
                   <Printer size={13} className="text-blue-400" />
                   <span>{language === 'id' ? 'Cetak ke PDF' : 'Print to PDF'}</span>
+                </button>
+
+                <div className="my-1 border-t border-zinc-800" />
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsExportMenuOpen(false);
+                    setSaveStatus(language === 'id' ? '⏳ Mengompilasi PowerPoint...' : '⏳ Compiling PowerPoint...');
+                    try {
+                      const res = await fetch('/api/workspace/export-doc', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          type: 'pptx',
+                          title: fileName.replace(/\.[^/.]+$/, ''),
+                          content: displayedContent
+                        })
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        const link = document.createElement('a');
+                        link.href = `/api/workspace/file?path=${encodeURIComponent('workspace/' + data.fileName)}&download=true`;
+                        link.download = data.fileName;
+                        link.click();
+                        setSaveStatus(language === 'id' ? `✓ Berhasil: ${data.fileName}` : `✓ Exported: ${data.fileName}`);
+                      } else {
+                        setSaveStatus(language === 'id' ? '✗ Gagal ekspor PPTX' : '✗ PPTX export failed');
+                      }
+                    } catch (e) {
+                      setSaveStatus(language === 'id' ? '✗ Gagal ekspor PPTX' : '✗ PPTX export failed');
+                    }
+                    setTimeout(() => setSaveStatus(null), 3000);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-zinc-800 hover:text-white text-left cursor-pointer transition-colors"
+                >
+                  <FileText size={13} className="text-amber-400" />
+                  <span>{language === 'id' ? 'Ekspor ke PowerPoint (.pptx)' : 'Export as PowerPoint (.pptx)'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsExportMenuOpen(false);
+                    setSaveStatus(language === 'id' ? '⏳ Mengompilasi Word (.docx)...' : '⏳ Compiling Word (.docx)...');
+                    try {
+                      const res = await fetch('/api/workspace/export-doc', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          type: 'docx',
+                          title: fileName.replace(/\.[^/.]+$/, ''),
+                          content: displayedContent
+                        })
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        const link = document.createElement('a');
+                        link.href = `/api/workspace/file?path=${encodeURIComponent('workspace/' + data.fileName)}&download=true`;
+                        link.download = data.fileName;
+                        link.click();
+                        setSaveStatus(language === 'id' ? `✓ Berhasil: ${data.fileName}` : `✓ Exported: ${data.fileName}`);
+                      } else {
+                        setSaveStatus(language === 'id' ? '✗ Gagal ekspor DOCX' : '✗ DOCX export failed');
+                      }
+                    } catch (e) {
+                      setSaveStatus(language === 'id' ? '✗ Gagal ekspor DOCX' : '✗ DOCX export failed');
+                    }
+                    setTimeout(() => setSaveStatus(null), 3000);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-zinc-800 hover:text-white text-left cursor-pointer transition-colors"
+                >
+                  <FileText size={13} className="text-indigo-400" />
+                  <span>{language === 'id' ? 'Ekspor ke Word (.docx)' : 'Export as Word (.docx)'}</span>
                 </button>
               </div>
             )}

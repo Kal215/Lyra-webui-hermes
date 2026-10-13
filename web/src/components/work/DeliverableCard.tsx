@@ -35,26 +35,16 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     setTimeout(() => setCopiedPath(null), 2000);
   };
 
-  const handleDownload = async (e: React.MouseEvent, path: string) => {
+  const handleDownload = (e: React.MouseEvent, filePath: string) => {
     e.stopPropagation();
-    try {
-      const res = await fetch(`/api/workspace/file?path=${encodeURIComponent(path)}`);
-      const data = await res.json();
-      if (data.content !== undefined) {
-        const fileName = path.split(/[\/\\]/).pop() || 'download';
-        const blob = new Blob([data.content], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }
-    } catch (err) {
-      console.error('Download error:', err);
-    }
+    const downloadUrl = `/api/workspace/file?path=${encodeURIComponent(filePath)}&download=true`;
+    const fileName = filePath.split(/[\/\\]/).pop() || 'download';
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getFileBadge = (action: string) => {

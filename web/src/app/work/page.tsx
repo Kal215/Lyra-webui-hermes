@@ -984,16 +984,59 @@ export default function WorkPage() {
 
       // Persist the generated snippet to physical disk workspace so it can be previewed/opened
       const activeTyping = useWorkspaceStore.getState().liveTyping;
-      const finalCode = activeTyping?.diffOrContent;
-      let finalFile = activeTyping?.filePath || 'workspace/generated_code.ts';
-      const lowerP = targetPrompt.toLowerCase();
-      if (lowerP.includes('powerpoint') || lowerP.includes('power point') || lowerP.includes('ppt') || lowerP.includes('presentasi')) {
-        finalFile = 'workspace/presentation.md';
-      } else if (lowerP.includes('kasir') || lowerP.includes('pos')) {
-        finalFile = 'workspace/CashierApp.tsx';
+      let finalCode = activeTyping?.diffOrContent;
+      if (!finalCode || finalCode.length < 20) {
+        const snippetMatch = accumulatedAssistantText.match(/```(?:[a-z0-9_-]*)\s*([\s\S]+?)(?:```|$)/i);
+        finalCode = snippetMatch ? snippetMatch[1].trim() : accumulatedAssistantText.trim();
       }
 
-      if (finalCode && finalCode.length > 20) {
+      let finalFile = activeTyping?.filePath || 'workspace/generated_code.ts';
+      const lowerP = targetPrompt.toLowerCase();
+      const isPptxTask = lowerP.includes('powerpoint') || lowerP.includes('power point') || lowerP.includes('ppt') || lowerP.includes('presentasi') || lowerP.includes('slide');
+      const isDocxTask = lowerP.includes('docx') || lowerP.includes('word') || lowerP.includes('proposal') || lowerP.includes('laporan');
+
+      const changedFilesList: Array<{ path: string; action: 'created' | 'modified' }> = [];
+
+      if (isPptxTask) {
+        finalFile = 'workspace/presentation.md';
+        changedFilesList.push({ path: 'workspace/presentation.pptx', action: 'created' });
+        changedFilesList.push({ path: 'workspace/presentation.md', action: 'created' });
+
+        // Auto-compile physical .pptx file
+        fetch('/api/workspace/export-doc', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'pptx',
+            title: taskTitle,
+            content: finalCode || accumulatedAssistantText,
+            fileName: 'presentation.pptx'
+          })
+        }).catch(err => console.warn('PPTX auto-compilation failed:', err));
+      } else if (isDocxTask) {
+        finalFile = 'workspace/document.md';
+        changedFilesList.push({ path: 'workspace/document.docx', action: 'created' });
+        changedFilesList.push({ path: 'workspace/document.md', action: 'created' });
+
+        // Auto-compile physical .docx file
+        fetch('/api/workspace/export-doc', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'docx',
+            title: taskTitle,
+            content: finalCode || accumulatedAssistantText,
+            fileName: 'document.docx'
+          })
+        }).catch(err => console.warn('DOCX auto-compilation failed:', err));
+      } else {
+        if (lowerP.includes('kasir') || lowerP.includes('pos')) {
+          finalFile = 'workspace/CashierApp.tsx';
+        }
+        changedFilesList.push({ path: finalFile, action: 'created' });
+      }
+
+      if (finalCode && finalCode.length > 10) {
         fetch(`/api/workspace/file?path=${encodeURIComponent(finalFile)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1005,15 +1048,13 @@ export default function WorkPage() {
           payload: {
             title: `Hasil Eksekusi: ${taskTitle}`,
             summary: language === 'en'
-              ? 'Autonomous execution completed successfully with full source code delivered.'
-              : 'Eksekusi otonom telah selesai dilaksanakan dan materi/kode lengkap telah berhasil dibuat.',
+              ? 'Autonomous execution completed successfully with physical deliverable files created.'
+              : 'Eksekusi otonom telah selesai dilaksanakan dan berkas fisik artefak telah berhasil dibuat.',
             gitBranch: 'feature/autonomous-task',
-            changedFiles: [
-              { path: finalFile, action: 'created' }
-            ],
+            changedFiles: changedFilesList,
             nextActionableSteps: language === 'en'
-              ? ['Click the files above to preview or open them in Workspace IDE', 'Review output source code']
-              : ['Klik berkas di atas untuk melihat isi atau membukanya di Workspace IDE', 'Tinjau hasil implementasi']
+              ? ['Click the files above to preview or download them', 'Review output source code and generated documents']
+              : ['Klik berkas di atas untuk melihat isi atau mengunduhnya langsung', 'Tinjau hasil dokumen dan kode yang dibuat']
           }
         });
       }

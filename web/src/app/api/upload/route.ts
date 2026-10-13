@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import { chunkDocument, ChunkingResult } from '@/lib/utils/documentChunker';
 import { extractTextFromPdfBuffer } from '@/lib/utils/pdfExtractor';
+import { extractTextFromDocxBuffer, extractTextFromPptxBuffer } from '@/lib/utils/officeExtractor';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,6 +29,8 @@ export async function POST(req: NextRequest) {
     
     const isImage = file.type?.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(file.name);
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    const isDocx = /\.docx$/i.test(file.name);
+    const isPptx = /\.pptx$/i.test(file.name);
     let content: string | undefined = undefined;
     let base64: string | undefined = undefined;
     let chunkResult: ChunkingResult | null = null;
@@ -40,6 +43,20 @@ export async function POST(req: NextRequest) {
       if (pdfText) {
         chunkResult = chunkDocument(pdfText);
         content = pdfText.length > 50000 ? pdfText.slice(0, 50000) : pdfText;
+      }
+    } else if (isDocx) {
+      // Extract clean text from Word (.docx) document
+      const docxText = await extractTextFromDocxBuffer(buffer);
+      if (docxText) {
+        chunkResult = chunkDocument(docxText);
+        content = docxText.length > 50000 ? docxText.slice(0, 50000) : docxText;
+      }
+    } else if (isPptx) {
+      // Extract structured slide text from PowerPoint (.pptx) presentation
+      const pptxText = await extractTextFromPptxBuffer(buffer);
+      if (pptxText) {
+        chunkResult = chunkDocument(pptxText);
+        content = pptxText.length > 50000 ? pptxText.slice(0, 50000) : pptxText;
       }
     } else if (
       file.type?.startsWith('text/') ||

@@ -5,6 +5,7 @@ import os from 'os';
 import { activeChildProcesses } from '@/lib/activeProcesses';
 import { chunkDocument, buildChunkedContextPrompt } from '@/lib/utils/documentChunker';
 import { extractTextFromPdfBuffer } from '@/lib/utils/pdfExtractor';
+import { extractTextFromDocxBuffer, extractTextFromPptxBuffer } from '@/lib/utils/officeExtractor';
 
 export const dynamic = 'force-dynamic';
 
@@ -259,8 +260,14 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
             if (!stat.isDirectory()) {
               const fileBuf = fs.readFileSync(actualPath);
               const isPdfTarget = actualPath.toLowerCase().endsWith('.pdf') || (typeof file.name === 'string' && file.name.toLowerCase().endsWith('.pdf'));
+              const isDocxTarget = actualPath.toLowerCase().endsWith('.docx') || (typeof file.name === 'string' && file.name.toLowerCase().endsWith('.docx'));
+              const isPptxTarget = actualPath.toLowerCase().endsWith('.pptx') || (typeof file.name === 'string' && file.name.toLowerCase().endsWith('.pptx'));
               if (isPdfTarget) {
                 textContent = await extractTextFromPdfBuffer(fileBuf);
+              } else if (isDocxTarget) {
+                textContent = await extractTextFromDocxBuffer(fileBuf);
+              } else if (isPptxTarget) {
+                textContent = await extractTextFromPptxBuffer(fileBuf);
               } else {
                 textContent = fileBuf.toString('utf-8');
               }
