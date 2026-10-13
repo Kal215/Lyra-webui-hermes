@@ -35,7 +35,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useWorkspaceStore } from '@/store/workspace';
-import { useWorkSessionStore } from '@/lib/store/useWorkSessionStore';
+import { useWorkSessionStore, AutonomousMessage } from '@/lib/store/useWorkSessionStore';
 import { 
   getLocalWorkTasks, 
   saveLocalWorkTask, 
@@ -44,6 +44,7 @@ import {
   toggleLocalWorkTaskPin,
   getLocalWorkMessages,
   saveLocalWorkMessages,
+  getDeletedWorkTaskIds,
   LocalWorkTask
 } from '@/lib/store/useLocalWorkStorage';
 import { chunkDocument, DocumentChunk } from '@/lib/utils/documentChunker';
@@ -322,61 +323,76 @@ export default function WorkPage() {
 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
-  // Handle Work Session Click: Load conversation & task status in Studio without navigating away
+  // Handle Work Session Click: Load conversation & task status in Studio without mutating or shuffling the task
   const handleSelectWorkTask = async (task: any) => {
+    if (!task) return;
     setActiveTaskId(task.id);
-    initDemoSession(task.title || task.id, task.assignee || 'default');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lyra_active_task_id', task.id);
+    }
+    setSelectedAgent(task.assignee || 'default');
     
     // Check if there are saved historical messages for this task
     const savedMsgs = getLocalWorkMessages(task.id);
     if (savedMsgs && savedMsgs.length > 0) {
-      useWorkSessionStore.setState({ conversationMessages: savedMsgs });
+      useWorkSessionStore.setState({ 
+        sessionId: 'sess_' + task.id,
+        agentId: task.assignee || 'default',
+        agentStatus: task.status === 'done' ? 'idle' : 'executing',
+        hqAgentState: task.status === 'done' ? 'idle' : 'coding',
+        conversationMessages: savedMsgs 
+      });
     } else {
-      useWorkSessionStore.setState({ conversationMessages: [] });
       const createdTimeStr = task.created_at 
         ? new Date(task.created_at > 1e11 ? task.created_at : task.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
         : undefined;
-      addConversationMessage({
-        id: 'task_req_' + task.id,
-        role: 'user',
-        content: task.body || task.title || 'Instruksi pengerjaan otonom',
-        timestamp: createdTimeStr
-      });
-
-      const isDone = task.status === 'done';
-      const isRunning = task.status === 'running';
-
       const completedTimeStr = task.completed_at 
         ? new Date(task.completed_at > 1e11 ? task.completed_at : task.completed_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
         : undefined;
 
-      addConversationMessage({
-        id: 'task_resp_' + task.id,
-        role: 'assistant',
-        content: isDone 
-          ? (language === 'id'
-              ? `### Tugas Selesai Dikerjakan\n\nPekerjaan **"${task.title}"** telah diselesaikan oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** Selesai (${task.status})\n- **ID Tugas:** \`${task.id}\`\n${task.workspace_path ? `- **Direktori Hasil:** \`${task.workspace_path}\`` : ''}\n\nSemua perubahan telah terintegrasi dengan baik.`
-              : `### Task Completed\n\nThe task **"${task.title}"** has been completed by specialist \`@${task.assignee}\`.\n\n- **Status:** Completed (${task.status})\n- **Task ID:** \`${task.id}\`\n${task.workspace_path ? `- **Deliverable Path:** \`${task.workspace_path}\`` : ''}\n\nAll changes have been successfully integrated.`)
-          : (language === 'id'
-              ? `### Status Pekerjaan Sedang Berjalan\n\nTugas **"${task.title}"** sedang dalam penanganan aktif oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** ${task.status.toUpperCase()}\n- **ID Tugas:** \`${task.id}\`\n\nSedang memantau eksekusi proses background...`
-              : `### Work In Progress\n\nTask **"${task.title}"** is actively handled by specialist \`@${task.assignee}\`.\n\n- **Status:** ${task.status.toUpperCase()}\n- **Task ID:** \`${task.id}\`\n\nMonitoring background process execution...`),
-        agentName: getAgentInfo(task.assignee || 'default').name,
-        timestamp: completedTimeStr
+      const isDone = task.status === 'done';
+      const initialMsgs: AutonomousMessage[] = [
+        {
+          id: 'task_req_' + task.id,
+          role: 'user',
+          content: task.body || task.title || 'Instruksi pengerjaan otonom',
+          timestamp: createdTimeStr
+        },
+        {
+          id: 'task_resp_' + task.id,
+          role: 'assistant',
+          content: isDone 
+            ? (language === 'id'
+                ? `### Tugas Selesai Dikerjakan\n\nPekerjaan **"${task.title}"** telah diselesaikan oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** Selesai (${task.status})\n- **ID Tugas:** \`${task.id}\`\n${task.workspace_path ? `- **Direktori Hasil:** \`${task.workspace_path}\`` : ''}\n\nSemua perubahan telah terintegrasi dengan baik.`
+                : `### Task Completed\n\nThe task **"${task.title}"** has been completed by specialist \`@${task.assignee}\`.\n\n- **Status:** Completed (${task.status})\n- **Task ID:** \`${task.id}\`\n${task.workspace_path ? `- **Deliverable Path:** \`${task.workspace_path}\`` : ''}\n\nAll changes have been successfully integrated.`)
+            : (language === 'id'
+                ? `### Status Pekerjaan Sedang Berjalan\n\nTugas **"${task.title}"** sedang dalam penanganan aktif oleh spesialis \`@${task.assignee}\`.\n\n- **Status:** ${String(task.status).toUpperCase()}\n- **ID Tugas:** \`${task.id}\`\n\nSedang memantau eksekusi proses background...`
+                : `### Work In Progress\n\nTask **"${task.title}"** is actively handled by specialist \`@${task.assignee}\`.\n\n- **Status:** ${String(task.status).toUpperCase()}\n- **Task ID:** \`${task.id}\`\n\nMonitoring background process execution...`),
+          agentName: getAgentInfo(task.assignee || 'default').name,
+          timestamp: completedTimeStr
+        }
+      ];
+
+      useWorkSessionStore.setState({ 
+        sessionId: 'sess_' + task.id,
+        agentId: task.assignee || 'default',
+        agentStatus: isDone ? 'idle' : 'executing',
+        hqAgentState: isDone ? 'idle' : 'coding',
+        conversationMessages: initialMsgs 
       });
+      saveLocalWorkMessages(task.id, initialMsgs);
     }
 
     const isDone = task.status === 'done';
-    const isRunning = task.status === 'running';
 
-    // Populate deliverable card if done
+    // Populate deliverable card if done without mutating original title
     if (isDone) {
-      dispatchAgentEvent({
-        type: 'DELIVERABLE_READY',
-        payload: {
-          title: language === 'id' ? `Hasil Pekerjaan: ${task.title}` : `Deliverable: ${task.title}`,
-          summary: language === 'id' 
+      useWorkSessionStore.setState({
+        deliverable: {
+          title: task.title,
+          summary: task.body || (language === 'id' 
             ? `Tugas #${task.id} telah diselesaikan secara otonom oleh @${task.assignee}. Berkas hasil pekerjaan tersimpan di workspace.`
-            : `Task #${task.id} was completed autonomously by @${task.assignee}. Deliverable files are saved in workspace.`,
+            : `Task #${task.id} was completed autonomously by @${task.assignee}. Deliverable files are saved in workspace.`),
           changedFiles: [
             { path: task.workspace_path ? `${task.workspace_path}/app.tsx` : 'workspace/generated_code.ts', action: 'created' }
           ],
@@ -389,14 +405,29 @@ export default function WorkPage() {
           ]
         }
       });
+    } else {
+      useWorkSessionStore.setState({ deliverable: null });
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
     try {
+      // 1. Delete from local storage and record tombstone
       deleteLocalWorkTask(taskId);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`lyra_web_work_msgs_${taskId}`);
+        if (localStorage.getItem('lyra_active_task_id') === taskId) {
+          localStorage.removeItem('lyra_active_task_id');
+        }
+      }
+
+      // 2. Call backend delete API (if any)
       await fetch(`/api/work/${taskId}`, { method: 'DELETE' }).catch(() => {});
+
+      // 3. Immediately filter out from state
       setRecentTasks((prev) => prev.filter((t) => t.id !== taskId));
+
+      // 4. If active task was deleted, reset the active session
       if (activeTaskId === taskId) {
         resetSession();
         setActiveTaskId(null);
@@ -446,15 +477,18 @@ export default function WorkPage() {
         }
       }
 
-      // Smart Merge server tasks + local tasks
+      // Smart Merge server tasks + local tasks (filtering out deleted tasks)
+      const deletedSet = getDeletedWorkTaskIds();
       const taskMap = new Map<string, any>();
       // 1. Add server tasks
       for (const st of serverTasks) {
-        if (st && st.id) taskMap.set(st.id, st);
+        if (st && st.id && !deletedSet.has(st.id)) {
+          taskMap.set(st.id, st);
+        }
       }
       // 2. Add local tasks (preserves client-side created tasks on Vercel)
       for (const lt of localTasks) {
-        if (lt && lt.id) {
+        if (lt && lt.id && !deletedSet.has(lt.id)) {
           if (!taskMap.has(lt.id)) {
             taskMap.set(lt.id, lt);
           } else {
@@ -496,21 +530,32 @@ export default function WorkPage() {
       const savedTaskId = localStorage.getItem('lyra_active_task_id');
 
       if (savedTaskId) {
-        setActiveTaskId(savedTaskId);
-        // Poll background task status from Hermes backend
-        fetch(`/api/work/${savedTaskId}`)
-          .then(r => r.json())
-          .then(res => {
-            if (res?.success && res?.data) {
-              const task = res.data;
-              if (task.status === 'done' || task.status === 'completed') {
-                setIsSubmitting(false);
-                localStorage.removeItem('lyra_is_submitting_work');
-                localStorage.removeItem('lyra_active_execution_id');
+        const deletedSet = getDeletedWorkTaskIds();
+        const localTasks = getLocalWorkTasks();
+        const exists = !deletedSet.has(savedTaskId) && localTasks.some((t) => t.id === savedTaskId);
+
+        if (exists) {
+          setActiveTaskId(savedTaskId);
+          // Poll background task status from Hermes backend
+          fetch(`/api/work/${savedTaskId}`)
+            .then(r => r.json())
+            .then(res => {
+              if (res?.success && res?.data) {
+                const task = res.data;
+                if (task.status === 'done' || task.status === 'completed') {
+                  setIsSubmitting(false);
+                  localStorage.removeItem('lyra_is_submitting_work');
+                  localStorage.removeItem('lyra_active_execution_id');
+                }
               }
-            }
-          })
-          .catch(() => {});
+            })
+            .catch(() => {});
+        } else {
+          // Task was previously deleted or does not exist — clean up stale active id & session
+          localStorage.removeItem('lyra_active_task_id');
+          setActiveTaskId(null);
+          resetSession();
+        }
       }
 
       // If page was refreshed mid-stream, clear zombie submission after 2s if no active connection
@@ -527,22 +572,6 @@ export default function WorkPage() {
   useEffect(() => {
     feedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [reasoningOrder, toolOrder, todos, deliverable]);
-
-  // Automatically persist task status as 'done' when deliverable is generated
-  useEffect(() => {
-    if (deliverable && activeTaskId) {
-      saveLocalWorkTask({
-        id: activeTaskId,
-        title: deliverable.title,
-        body: currentMissionPrompt || deliverable.summary,
-        assignee: selectedAgent,
-        status: 'done',
-        created_at: Date.now(),
-        completed_at: Date.now()
-      });
-      loadData();
-    }
-  }, [deliverable, activeTaskId, currentMissionPrompt, selectedAgent]);
 
   const getAgentInfo = (id: string) => {
     const map: Record<string, { name: string; role: string; desc: string; color: string }> = {

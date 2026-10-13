@@ -83,40 +83,39 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    await ensureSpecialistProfiles();
-    const { stdout } = await execFileAsync(
-      'hermes',
-      ['kanban', 'list', '--json'],
-      { env: getHermesEnv() }
-    );
-
+    const env = getHermesEnv();
     let data: unknown = [];
 
     try {
-      data = JSON.parse(stdout);
+      const { stdout } = await execFileAsync(
+        'hermes',
+        ['kanban', 'list', '--json'],
+        { env }
+      );
+
+      if (stdout) {
+        const jsonStart = stdout.indexOf('[');
+        const jsonEnd = stdout.lastIndexOf(']');
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          data = JSON.parse(stdout.substring(jsonStart, jsonEnd + 1));
+        } else {
+          data = JSON.parse(stdout);
+        }
+      }
     } catch {
       data = [];
     }
 
     return NextResponse.json({
       success: true,
-      data,
+      data: Array.isArray(data) ? data : [],
     });
   } catch (error: unknown) {
-    console.error(
-      'Failed to fetch work:',
-      error,
-    );
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: errorMessage(error),
-      },
-      {
-        status: 500,
-      },
-    );
+    console.warn('Failed to fetch Hermes kanban list, returning empty array:', error);
+    return NextResponse.json({
+      success: true,
+      data: [],
+    });
   }
 }
 
