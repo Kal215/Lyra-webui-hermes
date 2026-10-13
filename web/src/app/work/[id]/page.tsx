@@ -139,9 +139,10 @@ export default function WorkDetailPage() {
   const runId = getRunId();
 
   return (
-    <div className="max-w-5xl mx-auto pb-12 px-4 md:px-0">
-      {/* Header */}
-      <div className="mb-6">
+    <div className="w-full h-full overflow-y-auto px-4 md:px-8 py-6">
+      <div className="max-w-5xl mx-auto pb-16">
+        {/* Header */}
+        <div className="mb-6">
         <button 
           onClick={() => router.push('/work')}
           className="flex items-center text-sm text-lyra-muted hover:text-lyra-text transition-colors mb-4"
@@ -209,6 +210,7 @@ export default function WorkDetailPage() {
         {activeTab === 'activity' && <ActivityTab runId={runId} messages={work.messages} language={language} />}
         {activeTab === 'output' && <OutputTab latestSummary={work.latest_summary} messages={work.messages} language={language} />}
         {activeTab === 'details' && <DetailsTab task={task} mappedStatus={mappedStatus} runId={runId} language={language} />}
+      </div>
       </div>
     </div>
   );
