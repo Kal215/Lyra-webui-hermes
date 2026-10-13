@@ -101,6 +101,26 @@ export default function WorkPage() {
   const [isPlanning, setIsPlanning] = useState(false);
   const [currentMissionPrompt, setCurrentMissionPrompt] = useState<string>('');
 
+  // Listen to smart action pill interactions from responses
+  useEffect(() => {
+    const handleSmartAction = (e: any) => {
+      const { actionType, payload, label } = e.detail || {};
+      if (actionType === 'prompt') {
+        setPromptInput(payload || label || '');
+      } else if (actionType === 'make_slides' || actionType === 'presentation') {
+        setPromptInput(language === 'id' 
+          ? 'Tolong buatkan slide presentasi 16:9 modern lengkap dari ringkasan materi di atas.' 
+          : 'Please create a modern 16:9 presentation slide deck from the summary above.');
+      } else if (actionType === 'export_docx' || actionType === 'document') {
+        setPromptInput(language === 'id'
+          ? 'Tolong ekspor materi di atas ke dalam format dokumen Word (.docx) resmi.'
+          : 'Please export the above content into a formal Word (.docx) document.');
+      }
+    };
+    window.addEventListener('lyra:smart-action', handleSmartAction);
+    return () => window.removeEventListener('lyra:smart-action', handleSmartAction);
+  }, [language]);
+
   // Recent Completed Tasks (From Hermes Backend)
   const [recentTasks, setRecentTasks] = useState<any[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);

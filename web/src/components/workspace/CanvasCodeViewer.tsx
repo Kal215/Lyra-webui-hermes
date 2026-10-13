@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { createExecutiveMarkdownComponents } from '@/components/markdown/MarkdownComponents';
 import { useI18nStore } from '@/i18n';
 
 function downloadTextFile(filename: string, content: string) {
@@ -1095,7 +1096,7 @@ export function CanvasCodeViewer({
             ) : (
               <div className="w-full h-full overflow-auto p-6 font-sans select-text text-zinc-200">
                 <div className="max-w-3xl mx-auto text-xs leading-relaxed">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={createExecutiveMarkdownComponents()}>
                     {displayedContent}
                   </ReactMarkdown>
                 </div>

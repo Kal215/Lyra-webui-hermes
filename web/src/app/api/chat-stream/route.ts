@@ -358,8 +358,69 @@ Official subtitle or tagline
 - **Concept Name 2**: Crisp, concise description
 The system will automatically compile these into modern presentation card grids and stats.`;
 
+  const executiveStandard = language === 'id' ? `[STANDAR EKSEKUTIF & KUALITAS JAWABAN (FRONTIER LEVEL)]:
+1. BOTTOM LINE UP FRONT (BLUF / TL;DR):
+   - Selalu mulai penjelasan atau analisis mendalam dengan kotak intisari:
+     > [!TL;DR]
+     > **Intisari Utama:** 1-2 kalimat kesimpulan paling krusial.
+2. VISUALISASI DATA & DIAGRAM OTOMATIS:
+   - Jika materi menjelaskan alur kerja, siklus, dependensi, arsitektur sistem, state machine, atau perbandingan alur:
+     WAJIB sertakan diagram \`\`\`mermaid (flowchart TD/LR, sequenceDiagram, atau mindmap).
+   - Jika materi menyajikan angka statistik, metrik perbandingan performa, atau proporsi:
+     Sertakan visual chart interaktif menggunakan format blok \`\`\`chart (tipe: "bar", "line", "donut", atau "kpi"):
+     Contoh bar chart:
+     \`\`\`chart
+     {
+       "type": "bar",
+       "title": "Perbandingan Akurasi Model",
+       "data": [
+         { "label": "Model A", "value": 89.4, "unit": "%" },
+         { "label": "Model B", "value": 94.1, "unit": "%" }
+       ]
+     }
+     \`\`\`
+3. ANALISIS KRITIS & TRADE-OFF:
+   - Setiap membandingkan metode/arsitektur, sertakan tabel evaluasi trade-off: Kelebihan vs Kompensasi (overhead/biaya), Kapan Harus Pakai vs Kapan Dihindari, serta Risiko/Bottleneck.
+4. ADMONITIONS BERBOBOT:
+   - Gunakan callout resmi:
+     > [!TIP] untuk rekomendasi praktis implementasi.
+     > [!WARNING] untuk jebakan umum (common pitfalls) atau batasan teknis.
+5. REKOMENDASI LANGKAH SELANJUTNYA (SMART ACTION PILLS):
+   - Di baris paling akhir jawaban, sajikan 2-3 tombol aksi relevan dengan format:
+     - [action:make_slides] Buat Slide Presentasi 16:9 dari Materi Ini
+     - [action:export_docx] Ekspor ke Laporan Dokumen Word (.docx)
+     - [action:prompt:Pertanyaan lanjutan spesifik...] Pertanyaan Lanjutan Spesifik` : `[EXECUTIVE RESPONSE STANDARD (FRONTIER LEVEL)]:
+1. BOTTOM LINE UP FRONT (BLUF / TL;DR):
+   - Always open deep analysis, research papers, or technical explanations with an executive callout:
+     > [!TL;DR]
+     > **Core Takeaway:** 1-2 sentences of the most crucial finding or bottom line.
+2. AUTOMATIC DATA VISUALIZATION & DIAGRAMS:
+   - When explaining workflows, architecture, state machines, or pipelines:
+     Include a \`\`\`mermaid diagram (flowchart TD/LR, sequenceDiagram, mindmap).
+   - When comparing numeric benchmarks, statistics, or performance metrics:
+     Include an interactive chart block \`\`\`chart (type: "bar", "line", "donut", or "kpi"):
+     \`\`\`chart
+     {
+       "type": "bar",
+       "title": "Model Performance Benchmark",
+       "data": [
+         { "label": "Baseline", "value": 78.5, "unit": "%" },
+         { "label": "Tuned", "value": 92.4, "unit": "%" }
+       ]
+     }
+     \`\`\`
+3. CRITICAL TRADE-OFF ANALYSIS:
+   - Always evaluate trade-offs: Advantages vs Overhead/Cost, When to Use vs When to Avoid, and Key Bottlenecks.
+4. RICH ADMONITIONS:
+   - Use > [!TIP] for practical advice and > [!WARNING] for common pitfalls or limitations.
+5. SMART ACTION PILLS:
+   - At the very end of your response, provide 2-3 clickable actions:
+     - [action:make_slides] Generate 16:9 Slide Deck from This Content
+     - [action:export_docx] Export to Word Document (.docx)
+     - [action:prompt:Follow up inquiry...] Specific Follow-Up Question`;
+
   const basePrompt = systemPrompt || defaultLyraSystemPrompt;
-  const finalSystemPrompt = `${basePrompt}\n\n${formattingStandard}${presentationRule}${attachmentRule}`;
+  const finalSystemPrompt = `${basePrompt}\n\n${formattingStandard}\n\n${executiveStandard}${presentationRule}${attachmentRule}`;
 
   messages.push({ role: 'system', content: finalSystemPrompt });
 

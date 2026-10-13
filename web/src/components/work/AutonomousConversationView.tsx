@@ -83,50 +83,9 @@ function InlineCodeBlock({ inline, className, children, ...props }: any) {
   );
 }
 
-const markdownComponents = {
-  code: InlineCodeBlock,
-  pre: ({ children }: any) => <>{children}</>,
-  a: ({ href, children, ...props }: any) => {
-    const isExternal = href?.startsWith('http') || href?.startsWith('//');
-    return (
-      <a
-        href={href}
-        target={isExternal ? '_blank' : undefined}
-        rel={isExternal ? 'noopener noreferrer' : undefined}
-        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold underline underline-offset-2 decoration-blue-500/50 hover:decoration-blue-500 transition-colors cursor-pointer inline-flex items-center gap-0.5"
-        {...props}
-      >
-        {children}
-      </a>
-    );
-  },
-  h1: ({ children }: any) => <h1 className="text-xl font-bold tracking-tight text-lyra-text mt-6 mb-3 border-b border-lyra-accent/15 pb-2">{children}</h1>,
-  h2: ({ children }: any) => <h2 className="text-lg font-bold tracking-tight text-lyra-text mt-5 mb-2.5">{children}</h2>,
-  h3: ({ children }: any) => <h3 className="text-base font-semibold text-lyra-text mt-4 mb-2">{children}</h3>,
-  hr: () => <hr className="my-6 border-lyra-accent/15" />,
-  strong: ({ children }: any) => <strong className="font-semibold text-lyra-text">{children}</strong>,
-  ul: ({ children }: any) => <ul className="list-disc list-outside ml-5 space-y-1.5 my-2.5">{children}</ul>,
-  ol: ({ children }: any) => <ol className="list-decimal list-outside ml-5 space-y-1.5 my-2.5">{children}</ol>,
-  li: ({ children }: any) => <li className="leading-relaxed pl-0.5">{children}</li>,
-  table: ({ children }: any) => (
-    <div className="overflow-x-auto my-4 rounded-xl border border-lyra-accent/20 bg-lyra-surface/40 shadow-sm">
-      <table className="w-full text-sm text-left border-collapse">{children}</table>
-    </div>
-  ),
-  thead: ({ children }: any) => <thead className="bg-lyra-accent/10 border-b border-lyra-accent/20 text-xs font-semibold uppercase text-lyra-text">{children}</thead>,
-  th: ({ children }: any) => <th className="px-4 py-3 font-semibold">{children}</th>,
-  td: ({ children }: any) => <td className="px-4 py-3 border-t border-lyra-accent/10">{children}</td>,
-  blockquote: ({ children }: any) => (
-    <blockquote className="border-l-4 border-lyra-accent/60 bg-lyra-accent/5 px-4 py-2.5 rounded-r-xl my-3 italic text-lyra-text-secondary">
-      {children}
-    </blockquote>
-  ),
-  p: ({ children }: any) => {
-    // In HTML, <p> cannot contain <div> or <pre>.
-    // Render as a <div> with typography styling to prevent hydration errors.
-    return <div className="leading-relaxed my-2">{children}</div>;
-  }
-};
+import { createExecutiveMarkdownComponents } from '@/components/markdown/MarkdownComponents';
+
+const markdownComponents = createExecutiveMarkdownComponents();
 
 export const AutonomousConversationView: React.FC<AutonomousConversationViewProps> = ({
   messages,
