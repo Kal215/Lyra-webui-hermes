@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useI18nStore } from '@/i18n';
+import { CanvasCodeViewer } from './CanvasCodeViewer';
 
 interface WorkspacePanelProps {
   isOpen: boolean;
@@ -610,21 +611,32 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
         </div>
       )}
 
-      {/* File Preview Modal */}
+      {/* File Preview Canvas Modal */}
       {previewContent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-lyra-surface border border-lyra-accent/25 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="p-3.5 border-b border-lyra-accent/15 flex items-center justify-between bg-lyra-bg/80">
-              <div className="flex items-center gap-2 min-w-0">
-                <Code size={16} className="text-lyra-accent shrink-0" />
-                <span className="font-mono text-xs text-lyra-text font-semibold truncate">{previewContent.name}</span>
-                <span className="text-[10px] text-lyra-text-secondary/60 truncate font-mono">({previewContent.path})</span>
-                {liveTyping && liveTyping.active && liveTyping.filePath === previewContent.path && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-mono animate-pulse">
-                    @{liveTyping.agentName} live writing
-                  </span>
-                )}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-5xl h-[88vh] flex flex-col shadow-2xl overflow-hidden ring-1 ring-white/10">
+            {/* Modal Header */}
+            <div className="p-3.5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/90 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-1.5 rounded-lg bg-zinc-800 border border-zinc-700/60 text-zinc-300">
+                  <Code size={14} className="text-zinc-200" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-zinc-100 font-semibold truncate">{previewContent.name}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400 border border-zinc-700/50">
+                      Canvas View
+                    </span>
+                    {liveTyping && liveTyping.active && liveTyping.filePath === previewContent.path && (
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] font-mono animate-pulse">
+                        @{liveTyping.agentName} writing
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-zinc-500 truncate font-mono">{previewContent.path}</span>
+                </div>
               </div>
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -632,37 +644,70 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                     openFileInWorkspace(previewContent.path);
                     window.location.href = `/workspace?activeAgent=coder`;
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-xs font-mono cursor-pointer flex items-center gap-1.5"
-                  title="Buka di Code Editor penuh"
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-mono cursor-pointer flex items-center gap-1.5 transition-colors"
+                  title={language === 'id' ? 'Buka di Code Editor penuh' : 'Open in full Code Editor'}
                 >
                   <ExternalLink size={12} />
-                  <span>Buka di Editor</span>
+                  <span>{language === 'id' ? 'Buka di Editor' : 'Open Editor'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(previewContent.content);
-                    alert('Konten disalin ke clipboard!');
+                    setCopiedPath(previewContent.path);
+                    setTimeout(() => setCopiedPath(null), 2000);
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-lyra-accent/15 hover:bg-lyra-accent/25 text-lyra-accent text-xs font-mono cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 text-xs font-mono cursor-pointer flex items-center gap-1.5 transition-colors"
                 >
-                  Salin Teks
+                  {copiedPath === previewContent.path ? (
+                    <>
+                      <Check size={12} className="text-emerald-400" />
+                      <span className="text-emerald-400">{language === 'id' ? 'Tersalin' : 'Copied'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={12} />
+                      <span>{language === 'id' ? 'Salin' : 'Copy'}</span>
+                    </>
+                  )}
                 </button>
+                <div className="w-[1px] h-4 bg-zinc-800 mx-1" />
                 <button
                   type="button"
                   onClick={() => {
                     setPreviewContent(null);
                     onClosePreview?.();
                   }}
-                  className="p-1 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 cursor-pointer"
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 cursor-pointer transition-colors"
                 >
                   <X size={16} />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-4 bg-black/40 font-mono text-xs text-lyra-text leading-relaxed select-text">
-              <pre className="whitespace-pre-wrap">{previewContent.content}</pre>
+            {/* In-Line Canvas Interactive Code Viewer */}
+            <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
+              <CanvasCodeViewer
+                filePath={previewContent.path}
+                fileName={previewContent.name}
+                content={previewContent.content}
+                onContentChange={(newContent) => {
+                  setPreviewContent(prev => prev ? { ...prev, content: newContent } : null);
+                }}
+                onSaveToFile={async (path, newContent) => {
+                  try {
+                    const res = await fetch(`/api/workspace/file?path=${encodeURIComponent(path)}`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ content: newContent })
+                    });
+                    return res.ok;
+                  } catch (e) {
+                    console.error('Failed to save file:', e);
+                    return false;
+                  }
+                }}
+              />
             </div>
           </div>
         </div>
