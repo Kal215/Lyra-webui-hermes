@@ -1636,6 +1636,25 @@ function NativeChatContent() {
                     return newMsgs;
                   });
                 }
+                else if (data.type === 'thinking' || data.type === 'reasoning') {
+                  const thinkText = data.text || '';
+                  setMessages(prev => {
+                    const newMsgs = [...prev];
+                    const lastMsg = { ...newMsgs[newMsgs.length - 1] };
+                    newMsgs[newMsgs.length - 1] = lastMsg;
+                    
+                    if (lastMsg.role === 'assistant') {
+                      if (!lastMsg.reasoning) {
+                        lastMsg.reasoning = { startTime: Date.now(), endTime: null, text: '' };
+                      }
+                      lastMsg.reasoning = {
+                        ...lastMsg.reasoning,
+                        text: (lastMsg.reasoning.text || '') + thinkText
+                      };
+                    }
+                    return newMsgs;
+                  });
+                }
                 else if (data.type === 'text') {
                   setMessages(prev => {
                     const newMsgs = [...prev];
@@ -1643,6 +1662,10 @@ function NativeChatContent() {
                     newMsgs[newMsgs.length - 1] = lastMsg;
                     
                     if (lastMsg.role === 'assistant') {
+                      // Finalize thinking timer if it was streaming
+                      if (lastMsg.reasoning && !lastMsg.reasoning.endTime) {
+                        lastMsg.reasoning = { ...lastMsg.reasoning, endTime: Date.now() };
+                      }
                       lastMsg.rawContent = (lastMsg.rawContent || '') + data.text;
                       const extracted = extractInlineThinking(lastMsg.rawContent, true);
                       

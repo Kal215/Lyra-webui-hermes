@@ -47,6 +47,7 @@ import {
   LocalWorkTask
 } from '@/lib/store/useLocalWorkStorage';
 import { chunkDocument, DocumentChunk } from '@/lib/utils/documentChunker';
+import { extractInlineThinking } from '@/lib/reasoning/extractor';
 import { InteractiveMissionPlanCard } from '@/components/work/InteractiveMissionPlanCard';
 import { ReasoningAccordion } from '@/components/work/ReasoningAccordion';
 import { ToolExecutionBlock } from '@/components/work/ToolExecutionBlock';
@@ -902,8 +903,43 @@ export default function WorkPage() {
                       }
                     });
                   }
+                } else if (data.type === 'thinking' || data.type === 'reasoning') {
+                  const thinkText = data.text || '';
+                  if (thinkText) {
+                    receivedAnyChunk = true;
+                    dispatchAgentEvent({
+                      type: 'REASONING_DELTA',
+                      payload: {
+                        nodeId: 'llm_reasoning_node',
+                        chunk: thinkText
+                      }
+                    });
+                  }
                 } else if (data.type === 'text' || data.type === 'chunk') {
-                  const chunkText = data.text || data.chunk || '';
+                  // Finalize streaming reasoning once text answer begins
+                  dispatchAgentEvent({
+                    type: 'REASONING_COMPLETED',
+                    payload: { nodeId: 'llm_reasoning_node' }
+                  });
+
+                  let chunkText = data.text || data.chunk || '';
+                  // Clean any rogue inline <think> tags to avoid chat bubble pollution
+                  if (chunkText.includes('<think>') || chunkText.includes('</think>')) {
+                    const extracted = extractInlineThinking(chunkText, false);
+                    if (extracted.reasoning) {
+                      dispatchAgentEvent({
+                        type: 'REASONING_DELTA',
+                        payload: {
+                          nodeId: 'llm_reasoning_node',
+                          chunk: extracted.reasoning
+                        }
+                      });
+                    }
+                    chunkText = extracted.content;
+                  }
+
+                  if (!chunkText) continue;
+
                   receivedAnyChunk = true;
                   accumulatedAssistantText += chunkText;
                   appendAssistantChunk(chunkText, getAgentInfo(selectedAgent).name);
@@ -959,7 +995,12 @@ export default function WorkPage() {
         }
       }
 
-      // Conclude any running tool logs
+      // Conclude any running tool logs and reasoning nodes
+      dispatchAgentEvent({
+        type: 'REASONING_COMPLETED',
+        payload: { nodeId: 'llm_reasoning_node' }
+      });
+
       const currentToolOrder = useWorkSessionStore.getState().toolOrder;
       const currentExecs = useWorkSessionStore.getState().toolExecutions;
       for (const tId of currentToolOrder) {

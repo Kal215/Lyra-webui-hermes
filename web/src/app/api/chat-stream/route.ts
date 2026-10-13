@@ -481,18 +481,18 @@ The system will automatically compile these into modern presentation card grids 
                 const parsed = JSON.parse(dataStr);
                 const delta = parsed.choices?.[0]?.delta;
                 
+                // Handle reasoning/thinking (clean chunk streaming without tag pollution)
+                if (delta?.reasoning_content || delta?.thinking) {
+                  const thinkText = delta.reasoning_content || delta.thinking;
+                  controller.enqueue(
+                    new TextEncoder().encode(`data: ${JSON.stringify({ type: 'thinking', text: thinkText })}\n\n`)
+                  );
+                }
+
                 // Handle text content
                 if (delta?.content) {
                   controller.enqueue(
                     new TextEncoder().encode(`data: ${JSON.stringify({ type: 'text', text: delta.content })}\n\n`)
-                  );
-                }
-                
-                // Handle reasoning/thinking
-                if (delta?.reasoning_content || delta?.thinking) {
-                  const thinkText = delta.reasoning_content || delta.thinking;
-                  controller.enqueue(
-                    new TextEncoder().encode(`data: ${JSON.stringify({ type: 'text', text: `<think>${thinkText}</think>` })}\n\n`)
                   );
                 }
               } catch (e) {
