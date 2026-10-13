@@ -16,11 +16,104 @@ import {
   GitCompare,
   ChevronLeft,
   ChevronRight,
-  Code2
+  Code2,
+  Eye,
+  Download,
+  Printer,
+  ChevronDown,
+  Monitor,
+  Smartphone,
+  RefreshCw
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useI18nStore } from '@/i18n';
+
+function downloadTextFile(filename: string, content: string) {
+  try {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('Download error:', e);
+  }
+}
+
+function printContentToPdf(title: string, content: string) {
+  try {
+    const printWindow = window.open('', '_blank', 'width=850,height=900');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>${title}</title>
+          <style>
+            @page { size: auto; margin: 15mm; }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; 
+              margin: 0; 
+              padding: 24px; 
+              color: #09090b; 
+              background: #ffffff; 
+              line-height: 1.6; 
+            }
+            .header { 
+              border-bottom: 2px solid #e4e4e7; 
+              padding-bottom: 12px; 
+              margin-bottom: 20px; 
+              display: flex;
+              justify-content: space-between;
+              align-items: baseline;
+            }
+            .title { font-size: 18px; font-weight: 700; font-family: monospace; }
+            .date { font-size: 11px; color: #71717a; }
+            pre { 
+              background: #f4f4f5; 
+              border: 1px solid #e4e4e7; 
+              border-radius: 8px; 
+              padding: 16px; 
+              font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
+              font-size: 11px; 
+              line-height: 1.5; 
+              white-space: pre-wrap; 
+              word-break: break-all; 
+            }
+            @media print {
+              body { padding: 0; }
+              pre { border: none; background: transparent; padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">${title}</div>
+            <div class="date">Lyra Autonomous Studio • ${new Date().toLocaleDateString()}</div>
+          </div>
+          <pre>${content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() { window.close(); }, 500);
+              }, 300);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  } catch (e) {
+    console.error('Print error:', e);
+  }
+}
 
 export interface FileSnapshot {
   id: string;
@@ -145,8 +238,32 @@ export function CanvasCodeViewer({
   const storageKey = useMemo(() => `lyra_canvas_snaps_${encodeURIComponent(filePath)}`, [filePath]);
   const [snapshots, setSnapshots] = useState<FileSnapshot[]>([]);
   const [activeVersionIndex, setActiveVersionIndex] = useState<number>(0);
-  const [viewMode, setViewMode] = useState<'code' | 'diff'>('code');
   const [diffCompareTarget, setDiffCompareTarget] = useState<'prev' | 'latest'>('prev');
+
+  // Preview & Export State (Phase 3)
+  const isHtml = fileName.endsWith('.html') || fileName.endsWith('.htm');
+  const isSvg = fileName.endsWith('.svg');
+  const isMarkdown = fileName.endsWith('.md') || fileName.endsWith('.markdown');
+  const isPreviewable = isHtml || isSvg || isMarkdown;
+
+  const [viewMode, setViewMode] = useState<'code' | 'diff' | 'preview'>('code');
+  const [previewDevice, setPreviewDevice] = useState<'full' | 'tablet' | 'mobile'>('full');
+  const [iframeKey, setIframeKey] = useState<number>(0);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close export menu on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    if (isExportMenuOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }
+  }, [isExportMenuOpen]);
 
   // Initialize or synchronize snapshot history for current file
   useEffect(() => {
@@ -515,9 +632,9 @@ export function CanvasCodeViewer({
           )}
         </div>
 
-        {/* Right: Mode Toggle (Code | Diff) & 1-Click Rollback */}
+        {/* Right: Mode Toggle (Code | Preview | Diff), Rollback & Export */}
         <div className="flex items-center gap-2">
-          {/* Mode Switch (Code vs Diff) */}
+          {/* Mode Switch (Code vs Preview vs Diff) */}
           <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-md p-0.5">
             <button
               type="button"
@@ -531,6 +648,20 @@ export function CanvasCodeViewer({
               <Code2 size={11} />
               <span>{language === 'id' ? 'Kode' : 'Code'}</span>
             </button>
+            {isPreviewable && (
+              <button
+                type="button"
+                onClick={() => setViewMode('preview')}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                  viewMode === 'preview' 
+                    ? 'bg-zinc-800 text-zinc-100 shadow-sm' 
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Eye size={11} />
+                <span>Preview</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setViewMode('diff')}
@@ -543,6 +674,64 @@ export function CanvasCodeViewer({
               <GitCompare size={11} />
               <span>{language === 'id' ? 'Diff' : 'Diff'}</span>
             </button>
+          </div>
+
+          {/* Quick Export Dropdown */}
+          <div ref={exportMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsExportMenuOpen((prev) => !prev)}
+              className="flex items-center gap-1 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-medium cursor-pointer transition-colors shadow-sm"
+              title={language === 'id' ? 'Menu Ekspor Berkas' : 'Export File Menu'}
+            >
+              <Download size={11} className="text-zinc-400" />
+              <span>{language === 'id' ? 'Ekspor' : 'Export'}</span>
+              <ChevronDown size={10} className="text-zinc-400 ml-0.5" />
+            </button>
+
+            {isExportMenuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-48 bg-zinc-900 border border-zinc-700 shadow-2xl rounded-xl py-1 z-50 animate-in fade-in zoom-in-95 font-sans text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(displayedContent);
+                    setSaveStatus(language === 'id' ? '✓ Teks disalin ke clipboard' : '✓ Copied to clipboard');
+                    setTimeout(() => setSaveStatus(null), 2500);
+                    setIsExportMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-zinc-800 hover:text-white text-left cursor-pointer transition-colors"
+                >
+                  <Copy size={13} className="text-zinc-400" />
+                  <span>{language === 'id' ? 'Salin Kode Teks' : 'Copy Raw Text'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    downloadTextFile(fileName, displayedContent);
+                    setSaveStatus(language === 'id' ? `✓ Mengunduh ${fileName}` : `✓ Downloading ${fileName}`);
+                    setTimeout(() => setSaveStatus(null), 2500);
+                    setIsExportMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-zinc-800 hover:text-white text-left cursor-pointer transition-colors"
+                >
+                  <Download size={13} className="text-emerald-400" />
+                  <span>{language === 'id' ? 'Unduh Berkas' : 'Download File'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    printContentToPdf(fileName, displayedContent);
+                    setIsExportMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-zinc-800 hover:text-white text-left cursor-pointer transition-colors"
+                >
+                  <Printer size={13} className="text-blue-400" />
+                  <span>{language === 'id' ? 'Cetak ke PDF' : 'Print to PDF'}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Rollback Button (Visible only when viewing older snapshot) */}
@@ -722,7 +911,7 @@ export function CanvasCodeViewer({
         </div>
       )}
 
-      {/* Body: Mode Kode vs Mode Diff */}
+      {/* Body: Mode Kode vs Mode Preview vs Mode Diff */}
       {viewMode === 'code' ? (
         <div 
           onMouseUp={handleMouseUp}
@@ -743,6 +932,100 @@ export function CanvasCodeViewer({
             >
               {displayedContent}
             </pre>
+          </div>
+        </div>
+      ) : viewMode === 'preview' ? (
+        /* Live Interactive Web Sandbox (Phase 3) */
+        <div className="flex-1 overflow-auto flex flex-col bg-zinc-950 select-text">
+          {/* Preview Controls Bar */}
+          <div className="px-3 py-1.5 border-b border-zinc-800/80 bg-zinc-900/60 flex items-center justify-between text-[11px] text-zinc-400 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider">
+                {isHtml ? 'HTML Sandbox' : isSvg ? 'SVG Canvas' : 'Markdown Doc'}
+              </span>
+              {isHtml && (
+                <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-md p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice('full')}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] cursor-pointer transition-colors ${
+                      previewDevice === 'full' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                    title={language === 'id' ? 'Tampilan Penuh (Desktop)' : 'Full Viewport'}
+                  >
+                    <Monitor size={10} />
+                    <span>100%</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice('tablet')}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] cursor-pointer transition-colors ${
+                      previewDevice === 'tablet' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                    title={language === 'id' ? 'Tampilan Tablet (768px)' : 'Tablet Width'}
+                  >
+                    <span>768px</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice('mobile')}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] cursor-pointer transition-colors ${
+                      previewDevice === 'mobile' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                    title={language === 'id' ? 'Tampilan Seluler (375px)' : 'Mobile Width'}
+                  >
+                    <Smartphone size={10} />
+                    <span>375px</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {isHtml && (
+              <button
+                type="button"
+                onClick={() => setIframeKey((k) => k + 1)}
+                className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                title={language === 'id' ? 'Muat Ulang Iframe' : 'Reload Iframe'}
+              >
+                <RefreshCw size={11} />
+                <span>{language === 'id' ? 'Muat Ulang' : 'Reload'}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Sandbox Render Container */}
+          <div className="flex-1 overflow-auto flex justify-center items-stretch p-3 bg-zinc-950">
+            {isHtml ? (
+              <div className={`h-full transition-all duration-200 overflow-hidden ${
+                previewDevice === 'tablet' ? 'w-[768px] border-x border-zinc-800 bg-white rounded-lg shadow-2xl' :
+                previewDevice === 'mobile' ? 'w-[375px] border-x border-zinc-800 bg-white rounded-lg shadow-2xl' :
+                'w-full bg-white rounded-lg shadow'
+              }`}>
+                <iframe
+                  key={iframeKey}
+                  title={fileName}
+                  srcDoc={displayedContent}
+                  sandbox="allow-scripts allow-modals allow-same-origin"
+                  className="w-full h-full border-0 rounded-lg"
+                />
+              </div>
+            ) : isSvg ? (
+              <div className="w-full h-full overflow-auto flex items-center justify-center p-6 bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:16px_16px]">
+                <div 
+                  className="max-w-full max-h-full p-4 rounded-xl border border-zinc-800 bg-zinc-900/70 shadow-2xl flex items-center justify-center overflow-auto"
+                  dangerouslySetInnerHTML={{ __html: displayedContent }}
+                />
+              </div>
+            ) : (
+              <div className="w-full h-full overflow-auto p-6 font-sans select-text text-zinc-200">
+                <div className="max-w-3xl mx-auto text-xs leading-relaxed">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {displayedContent}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : (

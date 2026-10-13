@@ -7,8 +7,9 @@ import {
   Copy, 
   Check, 
   ExternalLink, 
-  Eye,
-  CornerDownRight
+  Eye, 
+  CornerDownRight,
+  Download
 } from 'lucide-react';
 import { DeliverableArtifact } from '@/types/agent-studio';
 import { useI18nStore } from '@/i18n';
@@ -32,6 +33,28 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
     navigator.clipboard.writeText(path);
     setCopiedPath(path);
     setTimeout(() => setCopiedPath(null), 2000);
+  };
+
+  const handleDownload = async (e: React.MouseEvent, path: string) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/workspace/file?path=${encodeURIComponent(path)}`);
+      const data = await res.json();
+      if (data.content !== undefined) {
+        const fileName = path.split(/[\/\\]/).pop() || 'download';
+        const blob = new Blob([data.content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Download error:', err);
+    }
   };
 
   const getFileBadge = (action: string) => {
@@ -164,6 +187,17 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({
                             <span className="text-[10px]">{language === 'id' ? 'Salin' : 'Copy'}</span>
                           </>
                         )}
+                      </button>
+
+                      {/* Download File */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleDownload(e, file.path)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-mono cursor-pointer transition-colors"
+                        title={language === 'id' ? 'Unduh Berkas' : 'Download File'}
+                      >
+                        <Download className="h-3 w-3 text-zinc-400" />
+                        <span className="text-[10px] hidden sm:inline">{language === 'id' ? 'Unduh' : 'Download'}</span>
                       </button>
 
                       {/* Open in Full IDE */}
