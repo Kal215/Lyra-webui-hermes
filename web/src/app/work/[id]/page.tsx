@@ -4,10 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslation, useI18nStore } from '@/i18n';
 import { formatTimeAgo } from '@/utils/time';
-import { ArrowLeft, ExternalLink, Box, Terminal, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Box, Terminal, AlertCircle, CheckCircle2, Clock, MessageSquare } from 'lucide-react';
 import { NeoSegmentedControl } from '@/components/NeoSegmentedControl';
 import { NeoPanel } from '@/components/NeoPanel';
 import { NeoButton } from '@/components/NeoButton';
+import { getLocalWorkTasks, getLocalWorkMessages } from '@/lib/store/useLocalWorkStorage';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type Tab = 'overview' | 'activity' | 'output' | 'details';
 
@@ -25,10 +28,35 @@ export default function WorkDetailPage() {
 
   useEffect(() => {
     const fetchWork = async () => {
+      // 1. Check local storage first (for autonomous work studio sessions)
+      try {
+        const localTasks = getLocalWorkTasks();
+        const localTask = localTasks.find((t) => t.id === id);
+        if (localTask) {
+          const localMsgs = getLocalWorkMessages(id);
+          const firstUserMsg = localMsgs.find((m) => m.role === 'user');
+          const latestAsstMsg = [...localMsgs].reverse().find((m) => m.role === 'assistant');
+
+          setWork({
+            task: {
+              ...localTask,
+              body: localTask.body || firstUserMsg?.content || localTask.title
+            },
+            latest_summary: latestAsstMsg?.content || null,
+            messages: localMsgs
+          });
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.warn('Failed to load local work task:', e);
+      }
+
+      // 2. Fallback to native Hermes Kanban API
       try {
         const res = await fetch(`/api/work/${id}`);
         const json = await res.json();
-        if (json.success && json.data) {
+        if (json.success && json.data && json.data.task) {
           setWork(json.data);
         } else {
           setError(json.error || 'Failed to load');
@@ -127,7 +155,17 @@ export default function WorkDetailPage() {
             <h1 className="text-2xl font-semibold text-lyra-text leading-tight mb-1">{task.title}</h1>
             <p className="text-sm text-lyra-muted mb-3">{task.id}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <NeoButton 
+              onClick={() => {
+                localStorage.setItem('lyra_active_task_id', task.id);
+                router.push('/work');
+              }} 
+              className="px-4 py-2"
+            >
+              <MessageSquare className="w-4 h-4 mr-2 text-blue-400" />
+              {language === 'en' ? 'Open in Work Studio' : 'Buka di Studio Kerja'}
+            </NeoButton>
             <NeoButton onClick={() => router.push(`/workspace?activeAgent=${encodeURIComponent(task.assignee || 'default')}`)} className="px-4 py-2">
               <ExternalLink className="w-4 h-4 mr-2 text-emerald-400" />
               {language === 'en' ? 'Open in Workspace' : 'Buka di Workspace'}
@@ -149,7 +187,7 @@ export default function WorkDetailPage() {
         </div>
       </div>
 
-            {/* Tabs */}
+      {/* Tabs */}
       <div className="flex overflow-x-auto no-scrollbar space-x-2 mb-6 p-1 bg-lyra-bg/50 backdrop-blur-md rounded-xl border border-lyra-glass-border shadow-neo-inner-light">
         <NeoSegmentedControl
           value={activeTab}
@@ -168,8 +206,8 @@ export default function WorkDetailPage() {
         {activeTab === 'overview' && (
           <OverviewTab task={task} mappedStatus={mappedStatus} onViewActivity={() => setActiveTab('activity')} language={language} />
         )}
-        {activeTab === 'activity' && <ActivityTab runId={runId} language={language} />}
-        {activeTab === 'output' && <OutputTab latestSummary={work.latest_summary} language={language} />}
+        {activeTab === 'activity' && <ActivityTab runId={runId} messages={work.messages} language={language} />}
+        {activeTab === 'output' && <OutputTab latestSummary={work.latest_summary} messages={work.messages} language={language} />}
         {activeTab === 'details' && <DetailsTab task={task} mappedStatus={mappedStatus} runId={runId} language={language} />}
       </div>
     </div>
@@ -273,7 +311,7 @@ function OverviewTab({ task, mappedStatus, onViewActivity, language }: any) {
   );
 }
 
-function ActivityTab({ runId, language }: any) {
+function ActivityTab({ runId, messages, language }: any) {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -284,7 +322,6 @@ function ActivityTab({ runId, language }: any) {
         const json = await res.json();
         if (json.activities) {
           // Filter by runId or session_id (approximate mapping or all recent)
-          // If we have a specific runId, filter it:
           let filtered = json.activities;
           if (runId) {
             filtered = json.activities.filter((a: any) => a.runId === runId || a.runId === 'hermes-native');
@@ -304,7 +341,9 @@ function ActivityTab({ runId, language }: any) {
     return <div className="p-8 text-center text-sm text-lyra-muted">{language === 'en' ? 'Loading activity...' : 'Memuat aktivitas...'}</div>;
   }
 
-  if (activities.length === 0) {
+  const hasMessages = Array.isArray(messages) && messages.length > 0;
+
+  if (activities.length === 0 && !hasMessages) {
     return (
       <NeoPanel className="p-8 text-center border border-dashed border-lyra-border/20">
         <Terminal className="w-8 h-8 mx-auto text-lyra-muted mb-3 opacity-50" />
@@ -320,6 +359,31 @@ function ActivityTab({ runId, language }: any) {
 
   return (
     <div className="space-y-4">
+      {/* Riwayat Pesan & Eksekusi Agen jika ada */}
+      {hasMessages && (
+        <div className="space-y-3 mb-6">
+          <h4 className="text-xs font-semibold text-lyra-muted uppercase tracking-wider font-mono">
+            {language === 'id' ? 'Catatan Eksekusi & Dialog Sesi' : 'Session Dialog & Execution Logs'}
+          </h4>
+          {messages.map((m: any, idx: number) => (
+            <div key={idx} className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-950/60 text-xs">
+              <div className="flex items-center justify-between mb-2 font-mono text-[11px]">
+                <span className={m.role === 'user' ? 'text-blue-400 font-semibold' : 'text-emerald-400 font-semibold'}>
+                  {m.role === 'user' ? (language === 'id' ? '👤 Pengguna' : '👤 User') : `⚡ ${m.agentName || 'Lyra Specialist'}`}
+                </span>
+                {m.timestamp && <span className="text-zinc-500">{m.timestamp}</span>}
+              </div>
+              <div className="text-zinc-300 leading-relaxed font-sans select-text overflow-x-auto">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {m.content}
+                </ReactMarkdown>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Observasi Sistem */}
       {activities.map((act) => (
         <NeoPanel key={act.id} className="p-4 flex gap-4">
           <div className="flex-1">
@@ -339,8 +403,10 @@ function ActivityTab({ runId, language }: any) {
   );
 }
 
-function OutputTab({ latestSummary, language }: any) {
-  if (!latestSummary) {
+function OutputTab({ latestSummary, messages, language }: any) {
+  const finalSummary = latestSummary || (messages && [...messages].reverse().find((m: any) => m.role === 'assistant')?.content);
+
+  if (!finalSummary) {
     return (
       <NeoPanel className="p-12 text-center border border-dashed border-lyra-border/20">
         <Box className="w-10 h-10 mx-auto text-lyra-muted mb-4 opacity-50" />
@@ -359,8 +425,10 @@ function OutputTab({ latestSummary, language }: any) {
       <h3 className="text-sm font-medium text-lyra-text mb-4">
         {language === 'en' ? 'Deliverable Output' : 'Hasil Pekerjaan'}
       </h3>
-      <div className="bg-lyra-surface-inset shadow-neo-inset p-4 rounded-lg text-sm text-lyra-text font-mono whitespace-pre-wrap">
-        {latestSummary}
+      <div className="bg-zinc-950/80 border border-zinc-800/80 p-5 rounded-xl text-xs text-zinc-200 leading-relaxed overflow-x-auto select-text font-sans">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {finalSummary}
+        </ReactMarkdown>
       </div>
     </NeoPanel>
   );

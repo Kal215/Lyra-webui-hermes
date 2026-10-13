@@ -17,8 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
-    console.error(`Failed to fetch work:`, error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Task not found in Hermes Kanban CLI' }, { status: 404 });
   }
 }
 
