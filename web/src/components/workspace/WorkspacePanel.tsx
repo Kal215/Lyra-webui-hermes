@@ -31,9 +31,10 @@ interface WorkspacePanelProps {
   onToggle: () => void;
   onMentionFile?: (path: string) => void;
   targetPreviewPath?: string | null;
+  onClosePreview?: () => void;
 }
 
-export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewPath }: WorkspacePanelProps) {
+export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewPath, onClosePreview }: WorkspacePanelProps) {
   const { language } = useI18nStore();
   const { currentWorkspace, setCurrentWorkspace, activeFilePath, liveTyping, openFileInWorkspace } = useWorkspaceStore();
   const [workspaceFiles, setWorkspaceFiles] = useState<any[]>([]);
@@ -213,15 +214,36 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
     if (f.isDirectory) return;
     setLoadingPreview(true);
     try {
+      // 1. Cek terlebih dahulu jika berkas ini sedang/baru saja dibuat oleh liveTyping di memori
+      if (liveTyping && liveTyping.filePath === f.path && liveTyping.diffOrContent) {
+        setPreviewContent({ path: f.path, name: f.name, content: liveTyping.diffOrContent });
+        return;
+      }
+
       const res = await fetch(`/api/workspace/file?path=${encodeURIComponent(f.path)}`);
       if (res.ok) {
         const data = await res.json();
         setPreviewContent({ path: f.path, name: f.name, content: data.content ?? data.error ?? '' });
       } else {
-        setPreviewContent({ path: f.path, name: f.name, content: '// Tidak dapat membaca berkas biner atau izin ditolak.' });
+        const errorData = await res.json().catch(() => null);
+        const errMsg = errorData?.error || 'Tidak dapat membaca berkas atau berkas belum dibuat di disk.';
+        // Fallback: Jika ada konten di liveTyping yang cocok namanya
+        if (liveTyping && liveTyping.diffOrContent) {
+          setPreviewContent({ path: f.path, name: f.name, content: liveTyping.diffOrContent });
+        } else {
+          setPreviewContent({ 
+            path: f.path, 
+            name: f.name, 
+            content: `// ${errMsg}\n// Periksa apakah berkas ada di path yang valid atau telah disimpan ke sistem berkas.` 
+          });
+        }
       }
     } catch (e: any) {
-      setPreviewContent({ path: f.path, name: f.name, content: `Error: ${e.message}` });
+      if (liveTyping && liveTyping.diffOrContent) {
+        setPreviewContent({ path: f.path, name: f.name, content: liveTyping.diffOrContent });
+      } else {
+        setPreviewContent({ path: f.path, name: f.name, content: `Error: ${e.message}` });
+      }
     } finally {
       setLoadingPreview(false);
     }
@@ -628,7 +650,10 @@ export function WorkspacePanel({ isOpen, onToggle, onMentionFile, targetPreviewP
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPreviewContent(null)}
+                  onClick={() => {
+                    setPreviewContent(null);
+                    onClosePreview?.();
+                  }}
                   className="p-1 rounded-lg text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/10 cursor-pointer"
                 >
                   <X size={16} />

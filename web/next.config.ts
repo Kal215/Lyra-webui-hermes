@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
   // External server packages that should not be bundled by Turbopack/Webpack
   serverExternalPackages: [],
 
+  // Exclude local backend cache and dynamic workspace from static asset tracing
+  outputFileTracingExcludes: {
+    '*': ['.hermes-backend/**', 'workspace/**'],
+  },
+
   // Compiler optimizations
   compiler: {
     // Strip debug logs in production bundles while retaining errors and warnings

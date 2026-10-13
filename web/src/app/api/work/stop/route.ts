@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { activeChildProcesses } from '@/app/api/chat-stream/route';
+import { activeChildProcesses } from '@/lib/activeProcesses';
 
 export async function POST(req: NextRequest) {
   try {

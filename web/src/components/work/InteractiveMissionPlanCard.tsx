@@ -51,7 +51,7 @@ export const InteractiveMissionPlanCard: React.FC<InteractiveMissionPlanCardProp
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newTodoLabel, setNewTodoLabel] = useState('');
 
-  const completedCount = todos.filter((t) => t.state === 'completed').length;
+  const completedCount = todos.filter((t) => t.state === 'completed' || (t as any).status === 'completed').length;
   const progressPercent = todos.length > 0 ? Math.round((completedCount / todos.length) * 100) : 0;
 
   const handleStartEdit = (t: AgentTodoItem) => {
@@ -106,7 +106,7 @@ export const InteractiveMissionPlanCard: React.FC<InteractiveMissionPlanCardProp
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold tracking-tight text-lyra-text">
-                {language === 'id' ? 'Rencana Aksi Otonom (Action Plan)' : 'Autonomous Action Plan'}
+                {language === 'id' ? 'Rencana Aksi Otonom' : 'Autonomous Action Plan'}
               </h3>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-medium uppercase tracking-wider ${
                 planStatus === 'completed'
@@ -173,8 +173,8 @@ export const InteractiveMissionPlanCard: React.FC<InteractiveMissionPlanCardProp
       <div className="mt-4 space-y-2">
         <AnimatePresence>
           {todos.map((todo, idx) => {
-            const isCompleted = todo.state === 'completed';
-            const isInProgress = todo.state === 'in_progress';
+            const isCompleted = todo.state === 'completed' || (todo as any).status === 'completed';
+            const isInProgress = todo.state === 'in_progress' || (todo as any).status === 'in_progress';
             const isFailed = todo.state === 'failed';
             const isEditing = editingId === todo.id;
 
@@ -195,7 +195,15 @@ export const InteractiveMissionPlanCard: React.FC<InteractiveMissionPlanCardProp
                 }`}
               >
                 {/* State Checkmark / Icon */}
-                <div className="pt-0.5 shrink-0">
+                <div 
+                  className="pt-0.5 shrink-0 cursor-pointer"
+                  onClick={() => {
+                    if (isExecuting) return;
+                    const nextState = isCompleted ? 'pending' : 'completed';
+                    onUpdateTodo(todo.id, { state: nextState });
+                  }}
+                  title={isCompleted ? 'Tandai belum selesai' : 'Tandai selesai'}
+                >
                   {isCompleted ? (
                     <div className="w-5 h-5 rounded-lg bg-emerald-500/15 text-emerald-500 flex items-center justify-center border border-emerald-500/30">
                       <CheckCircle2 size={13} />
@@ -209,7 +217,7 @@ export const InteractiveMissionPlanCard: React.FC<InteractiveMissionPlanCardProp
                       <AlertCircle size={13} />
                     </div>
                   ) : (
-                    <div className="w-5 h-5 rounded-lg bg-lyra-accent/10 text-lyra-text-secondary/60 flex items-center justify-center border border-lyra-accent/15">
+                    <div className="w-5 h-5 rounded-lg bg-lyra-accent/10 text-lyra-text-secondary/60 flex items-center justify-center border border-lyra-accent/15 hover:border-lyra-accent/40 transition-colors">
                       <Circle size={12} />
                     </div>
                   )}

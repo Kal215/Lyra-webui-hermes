@@ -1,11 +1,9 @@
 import { NextRequest } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { activeChildProcesses } from '@/lib/activeProcesses';
 
 export const dynamic = 'force-dynamic';
-
-// Global map tracking active child CLI processes across server requests (kept for backward-compatibility with /api/work/stop)
-export const activeChildProcesses = new Map<string, any>();
 
 const CONFIG_DIR = path.join(process.cwd(), '.hermes-backend');
 const AI_CONFIG_PATH = path.join(CONFIG_DIR, 'ai-config.json');
@@ -110,11 +108,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // 9Router custom gateway mapping (handles model routing safely)
+  const isNineRouter = effectiveBaseUrl.includes('20128') || effectiveBaseUrl.includes('100.127.180.57');
+  if (isNineRouter) {
+    if (!effectiveModel || isHermesAlias || effectiveModel.includes('claude') || effectiveModel.includes('anthropic') || effectiveModel.includes('deepseek')) {
+      effectiveModel = 'gh/gpt-4o';
+    } else if (effectiveModel.includes('gpt-4o-mini')) {
+      effectiveModel = 'gh/gpt-4o-mini';
+    } else if (effectiveModel.includes('gpt-4o') || effectiveModel.includes('gpt-4')) {
+      effectiveModel = 'gh/gpt-4o';
+    } else if (effectiveModel.includes('gemini')) {
+      effectiveModel = 'ag/gemini-3-flash';
+    } else if (!effectiveModel.startsWith('gh/') && !effectiveModel.startsWith('ag/') && !effectiveModel.startsWith('nvidia/')) {
+      effectiveModel = 'gh/gpt-4o';
+    }
+  }
+
   if (!effectiveModel || isHermesAlias) {
     if (effectiveBaseUrl.includes('groq.com')) {
       effectiveModel = 'openai/gpt-oss-120b';
     } else if (effectiveBaseUrl.includes('openai.com')) {
       effectiveModel = 'gpt-4o';
+    } else if (isNineRouter) {
+      effectiveModel = 'gh/gpt-4o';
     } else {
       effectiveModel = 'anthropic/claude-3.5-sonnet';
     }
@@ -163,22 +179,105 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
     );
   }
 
-  // Prepend file context references to the prompt message
+  // Process and ingest attachments (Documents, Source Code, Images, URLs)
+  const imagePayloads: Array<{ type: 'image_url'; image_url: { url: string } }> = [];
+  let fileContextPrefix = '';
+
   if (attachments && Array.isArray(attachments)) {
-    let contextPrefix = '';
     for (const file of attachments) {
+      if (!file) continue;
+
       if (file.isUrl) {
-        contextPrefix += `[Attached URL Context: ${file.url || file.path}]\n`;
-      } else if (file.type && !file.type.startsWith('image/')) {
-        contextPrefix += `[Attached Document/File: ${file.path}]\n`;
+        fileContextPrefix += `[Attached URL Context: ${file.url || file.path}]\n`;
+        continue;
+      }
+
+      // Check if image
+      const isImg = file.type?.startsWith('image/') ||
+        (typeof file.name === 'string' && /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name)) ||
+        (typeof file.path === 'string' && /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.path));
+
+      if (isImg) {
+        let base64Str = file.base64;
+        let mime = file.type?.startsWith('image/') ? file.type : 'image/png';
+        if (!base64Str && file.path) {
+          let resolved = file.path;
+          if (!fs.existsSync(resolved)) {
+            const inWs = path.join(process.cwd(), 'workspace', file.path);
+            if (fs.existsSync(inWs)) resolved = inWs;
+            else {
+              const inCwd = path.join(process.cwd(), file.path);
+              if (fs.existsSync(inCwd)) resolved = inCwd;
+            }
+          }
+          if (fs.existsSync(resolved)) {
+            try {
+              const buf = fs.readFileSync(resolved);
+              base64Str = buf.toString('base64');
+              const ext = path.extname(resolved).toLowerCase();
+              if (ext === '.jpg' || ext === '.jpeg') mime = 'image/jpeg';
+              else if (ext === '.webp') mime = 'image/webp';
+              else if (ext === '.gif') mime = 'image/gif';
+            } catch (err) {}
+          }
+        }
+
+        if (base64Str) {
+          imagePayloads.push({
+            type: 'image_url',
+            image_url: { url: `data:${mime};base64,${base64Str}` }
+          });
+        }
+        continue;
+      }
+
+      // Text / Document / Code files: read full file contents into prompt
+      let textContent = file.content;
+      let resolved = file.path;
+
+      if (!textContent && resolved) {
+        if (!fs.existsSync(resolved)) {
+          const inWs = path.join(process.cwd(), 'workspace', resolved);
+          if (fs.existsSync(inWs)) resolved = inWs;
+          else {
+            const inCwd = path.join(process.cwd(), resolved);
+            if (fs.existsSync(inCwd)) resolved = inCwd;
+          }
+        }
+        if (fs.existsSync(resolved)) {
+          try {
+            const stat = fs.statSync(resolved);
+            if (!stat.isDirectory()) {
+              textContent = fs.readFileSync(resolved, 'utf-8');
+            }
+          } catch (err) {}
+        }
+      }
+
+      const fileName = file.name || (resolved ? path.basename(resolved) : 'attached_file');
+      if (textContent) {
+        const ext = path.extname(fileName).replace('.', '') || 'txt';
+        // Truncate to safe budget (80k chars) to avoid exceeding model context
+        const safeText = textContent.length > 80000
+          ? textContent.slice(0, 80000) + '\n... [TRUNCATED DUE TO FILE SIZE]'
+          : textContent;
+        fileContextPrefix += `\n[ATTACHED FILE CONTENT: "${fileName}"]\n\`\`\`${ext}\n${safeText}\n\`\`\`\n[END OF ATTACHED FILE "${fileName}"]\n`;
+      } else if (file.path) {
+        fileContextPrefix += `[Attached File: ${fileName} (${file.path})]\n`;
       }
     }
-    if (contextPrefix) {
-      message = `${contextPrefix}\n${message}`;
+
+    if (fileContextPrefix) {
+      message = `${fileContextPrefix.trim()}\n\n${message}`;
     }
   }
 
-  const messages: Array<{ role: string; content: string }> = [];
+  // If image attachments exist and communicating with 9Router, route to ag/gemini-3.8-flash (vision-capable)
+  if (imagePayloads.length > 0 && isNineRouter) {
+    effectiveModel = 'ag/gemini-3.8-flash';
+  }
+
+  const messages: Array<{ role: string; content: any }> = [];
 
   const formattingStandard = `[FORMATTING RULES]:
 - Gunakan struktur GitHub-Flavored Markdown yang rapi, elegan, dan profesional.
@@ -188,8 +287,12 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
 - Prioritaskan format tabel Markdown atau bullet terstruktur jika menyajikan perbandingan.`;
 
   const defaultLyraSystemPrompt = language === 'en'
-    ? `You are Lyra AI, an intelligent autonomous system assistant and software engineering companion. Be concise, direct, and actionable. Do not repeat greeting introductions or recite your identity in every turn.`
-    : `Anda adalah Lyra AI, asisten rekayasa perangkat lunak cerdas. Jawab langsung ke inti, ringkas, dan solutif. Dilarang mengulang salam perkenalan diri ("Halo saya...") di setiap giliran pesan.`;
+    ? `You are Lyra AI, an intelligent autonomous system assistant and software engineering companion. Be concise, direct, and actionable. Do not repeat greeting introductions or recite your identity in every turn.
+
+CRITICAL: You are running inside Lyra Studio (/work). You MUST NEVER refuse to generate code, edit files, or create deliverables. When the user asks you to edit, create, or modify ANY file (.ts, .tsx, .py, .md, .json, .txt, .pptx), you MUST immediately output the complete file content inside a markdown code block with the file path clearly labeled above it. Do NOT say you "cannot access files" or "are just a text model" — you are an autonomous coding agent and your job is to deliver working code.`
+    : `Anda adalah Lyra AI, asisten rekayasa perangkat lunak cerdas. Jawab langsung ke inti, ringkas, dan solutif. Dilarang mengulang salam perkenalan diri ("Halo saya...") di setiap giliran pesan.
+
+PENTING: Anda berjalan di Lyra Studio (/work). Anda WAJIB TIDAK PERNAH menolak untuk membuat, mengedit, atau memodifikasi file (.ts, .tsx, .py, .md, .json, .txt, .pptx). Saat pengguna meminta Anda untuk mengedit atau membuat file, Anda HARUS langsung mengeluarkan isi file lengkap di dalam blok kode markdown dengan path file yang jelas di atasnya. JANGAN PERNAH bilang bahwa Anda "tidak dapat mengakses file" atau "hanya model teks" — Anda adalah coding agent otonom dan tugas Anda adalah mengirimkan hasil kerja yang siap pakai.`;
 
   const basePrompt = systemPrompt || defaultLyraSystemPrompt;
   const finalSystemPrompt = `${basePrompt}\n\n${formattingStandard}`;
@@ -208,7 +311,17 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
     }
   }
 
-  messages.push({ role: 'user', content: message });
+  if (imagePayloads.length > 0) {
+    messages.push({
+      role: 'user',
+      content: [
+        { type: 'text', text: message },
+        ...imagePayloads
+      ]
+    });
+  } else {
+    messages.push({ role: 'user', content: message });
+  }
 
   try {
     const headers: Record<string, string> = {

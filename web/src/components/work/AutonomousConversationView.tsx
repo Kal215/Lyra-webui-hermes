@@ -12,6 +12,7 @@ interface AutonomousMessage {
   content: string;
   timestamp?: string;
   agentName?: string;
+  attachments?: any[];
 }
 
 interface AutonomousConversationViewProps {
@@ -119,16 +120,9 @@ const markdownComponents = {
     </blockquote>
   ),
   p: ({ children }: any) => {
-    const hasBlock = React.Children.toArray(children).some((child: any) => {
-      return (
-        React.isValidElement(child) &&
-        (child.type === InlineCodeBlock || (child.props as any)?.className?.includes('language-'))
-      );
-    });
-    if (hasBlock) {
-      return <div className="leading-relaxed my-2">{children}</div>;
-    }
-    return <p className="leading-relaxed my-2">{children}</p>;
+    // In HTML, <p> cannot contain <div> or <pre>.
+    // Render as a <div> with typography styling to prevent hydration errors.
+    return <div className="leading-relaxed my-2">{children}</div>;
   }
 };
 
@@ -179,6 +173,19 @@ export const AutonomousConversationView: React.FC<AutonomousConversationViewProp
                 {msg.content}
               </ReactMarkdown>
             </div>
+
+            {msg.attachments && msg.attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {msg.attachments.map((att: any, idx: number) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-lyra-accent/15 border border-lyra-accent/25 text-lyra-text font-mono"
+                  >
+                    {att.type?.startsWith('image/') ? '🖼️' : '📄'} {att.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ))}

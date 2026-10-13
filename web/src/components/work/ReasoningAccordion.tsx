@@ -29,7 +29,7 @@ export const ReasoningAccordion: React.FC<ReasoningAccordionProps> = ({
         <div className="flex items-center gap-2">
           <BrainCircuit className="h-3.5 w-3.5 text-lyra-accent shrink-0" />
           <span className="font-semibold text-lyra-text">
-            {language === 'id' ? 'Proses Penalaran (Thought Process)' : 'Thought Process'}
+            {language === 'id' ? 'Proses Penalaran' : 'Thought Process'}
           </span>
           {isStreaming && (
             <span className="inline-flex items-center gap-1 font-mono text-[11px] text-lyra-accent">

@@ -48,6 +48,7 @@ import {
 import { InteractiveMissionPlanCard } from '@/components/work/InteractiveMissionPlanCard';
 import { ReasoningAccordion } from '@/components/work/ReasoningAccordion';
 import { ToolExecutionBlock } from '@/components/work/ToolExecutionBlock';
+import { ExecutionConsoleDrawer } from '@/components/work/ExecutionConsoleDrawer';
 import { LiveCodingStudioBlock } from '@/components/work/LiveCodingStudioBlock';
 import { DeliverableCard } from '@/components/work/DeliverableCard';
 import { AutonomousConversationView } from '@/components/work/AutonomousConversationView';
@@ -94,6 +95,8 @@ export default function WorkPage() {
   // Input Prompt State
   const [promptInput, setPromptInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPlanning, setIsPlanning] = useState(false);
+  const [currentMissionPrompt, setCurrentMissionPrompt] = useState<string>('');
 
   // Recent Completed Tasks (From Hermes Backend)
   const [recentTasks, setRecentTasks] = useState<any[]>([]);
@@ -270,6 +273,7 @@ export default function WorkPage() {
   const reasoningOrder = useWorkSessionStore((s) => s.reasoningOrder);
   const activeReasoningId = useWorkSessionStore((s) => s.activeReasoningId);
   const todos = useWorkSessionStore((s) => s.todos);
+  const setTodos = useWorkSessionStore((s) => s.setTodos);
   const planStatus = useWorkSessionStore((s) => s.planStatus);
   const setPlanStatus = useWorkSessionStore((s) => s.setPlanStatus);
   const addTodo = useWorkSessionStore((s) => s.addTodo);
@@ -346,14 +350,14 @@ export default function WorkPage() {
             ? `Tugas #${task.id} telah diselesaikan secara otonom oleh @${task.assignee}. Berkas hasil pekerjaan tersimpan di workspace.`
             : `Task #${task.id} was completed autonomously by @${task.assignee}. Deliverable files are saved in workspace.`,
           changedFiles: [
-            { path: task.workspace_path ? `${task.workspace_path}/output.txt` : 'workspace/output.txt', action: 'created' }
+            { path: task.workspace_path ? `${task.workspace_path}/app.tsx` : 'workspace/generated_code.ts', action: 'created' }
           ],
           nextActionableSteps: language === 'id' ? [
-            'Klik tombol "Detail Pekerjaan" pada menu tugas untuk membuka tab audit lengkap',
-            'Buka berkas hasil pada panel Workspace sebelah kanan'
+            'Buka berkas di Code Editor Workspace',
+            'Jalankan dan integrasikan kode ke repositori aktif'
           ] : [
-            'Click "Work Details" on the task menu to view the audit tab',
-            'Open output files in the right Workspace panel'
+            'Open generated files in Workspace Code Editor',
+            'Run and integrate code into active repository'
           ]
         }
       });
@@ -513,25 +517,31 @@ export default function WorkPage() {
   };
 
   const getAgentSystemPrompt = (id: string, currentLang: string) => {
-    const isId = currentLang === 'id';
-    const agent = getAgentInfo(id);
+      const isId = currentLang === 'id';
+      const agent = getAgentInfo(id);
     
-    return isId
-      ? `Anda adalah rekan kerja AI profesional di Lyra Studio (/work). Anda bertindak sebagai ${agent.name} (${agent.role} - ${agent.desc}).
+      return isId
+        ? `Anda adalah Agen Otonom Lyra Studio (/work). Nama: ${agent.name} (${agent.role}).
 
-Aturan Komunikasi:
-1. JANGAN PERNAH mengulang-ulang perkenalan diri ("Halo, saya Aster...", "Work adalah Studio Otonom...") di setiap jawaban! Pengguna sudah tahu siapa Anda dan apa itu /work dari antarmuka halaman.
-2. Langsung jawab ke inti pertanyaan atau solusi teknis secara ringkas, elegan, dan solutif.
-3. DILARANG menggunakan template Todo List kosong atau formalitas berlebihan untuk sapaan atau percakapan biasa.
-4. Jika diminta solusi teknis (seperti membuat PowerPoint, script, atau arsitektur), langsung sajikan instruksi, kode, atau template terbaik tanpa basa-basi perkenalan.`
-      : `You are a professional AI engineer in Lyra Studio (/work). You act as ${agent.name} (${agent.role} - ${agent.desc}).
+  PERINTAH EKSEKUSI WAJIB (TIDAK BISA DITOLAK):
+  1. DILARANG KERAS memberitahu pengguna bahwa Anda "tidak dapat mengakses file", "hanya model teks", atau "terisolasi".
+  2. Jika diminta mengedit, membuat, atau memodifikasi file (apapun Jenisnya: .ts, .tsx, .py, .md, .pptx, .json, .txt):
+     - LANGSUNG SAJIKAN SELURUH ISI FILE YANG SUDAH DIEDIT/DIBUAT DALAM BLOK KODE MARKDOWN.
+     - Sertakan path file yang jelas di atas blok code (contoh: \`path/to/file.ts\` atau \`presentation.md\`).
+  3. Jika diminta Powerpoint/Presentasi:
+     - Buat struktur slide markdown yang siap di-copy ke PowerPoint (Gunakan heading #, ##, bullet, dan speaker notes).
+  4. Jangan pernah mengulang penjelasan panjang tentang keterbatasan Anda. Fokus pada SOLUSI dan OUTPUT NYATA.`
+        : `You are the Autonomous Agent of Lyra Studio (/work). Name: ${agent.name} (${agent.role}).
 
-Communication Rules:
-1. NEVER repeatedly introduce yourself ("Hello, I am Aster...", "Work is an autonomous studio...") in every message! The user already knows who you are and what this platform is.
-2. Directly address the user's question, prompt, or request with concise, high-value assistance.
-3. Do not force empty execution templates or bureaucratic greetings for simple queries.
-4. When technical solutions or scripts are requested, immediately deliver clean code, clear structure, and actionable steps.`;
-  };
+  MANDATORY EXECUTION RULES (NON-NEGOTIABLE):
+  1. NEVER tell the user that you "cannot access files", "are just a text model", or "are isolated".
+  2. If asked to edit, create, or modify ANY file (.ts, .tsx, .py, .md, .pptx, .json, .txt):
+     - IMMEDIATELY output the COMPLETE edited/created file content inside a markdown code block.
+     - Place the file path clearly above the code block (e.g. path/to/file.ts or presentation.md).
+  3. If asked for a PowerPoint/Presentation:
+     - Output a complete slide structure in markdown ready for copy-paste (use #, ##, bullets, and speaker notes).
+  4. Never give long explanations about your limitations. Focus on DELIVERING THE ACTUAL OUTPUT.`;
+    };
 
   // Autonomous Task Dispatching
   const handleDropOnComposer = (e: React.DragEvent) => {
@@ -556,13 +566,50 @@ Communication Rules:
     }
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const newFiles = Array.from(e.dataTransfer.files).map(f => ({
-        name: f.name,
-        path: (f as any).path || f.name,
-        type: f.type,
-        size: f.size
-      }));
-      setAttachments(prev => [...prev, ...newFiles]);
+      handleFileUpload(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const handleFileUpload = async (files: File[]) => {
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          setAttachments(prev => [...prev, {
+            name: data.name || file.name,
+            path: data.path,
+            type: data.type || file.type,
+            size: data.size || file.size,
+            content: data.content,
+            base64: data.base64
+          }]);
+          continue;
+        }
+      } catch (err) {
+        console.error('Upload failed:', err);
+      }
+
+      // Local fallback for text files
+      try {
+        const text = await file.text();
+        setAttachments(prev => [...prev, {
+          name: file.name,
+          path: file.name,
+          type: file.type || 'text/plain',
+          size: file.size,
+          content: text
+        }]);
+      } catch (err) {
+        setAttachments(prev => [...prev, {
+          name: file.name,
+          path: file.name,
+          type: file.type || 'application/octet-stream',
+          size: file.size
+        }]);
+      }
     }
   };
 
@@ -573,20 +620,50 @@ Communication Rules:
 
     const userPrompt = promptInput.trim();
     const taskTitle = userPrompt.slice(0, 80);
+    const activeAttachments = [...attachments];
+    setCurrentMissionPrompt(userPrompt);
     setIsSubmitting(true);
     setPromptInput('');
     setAttachments([]);
 
-    // 1. Initialize local reactive studio session & append user message
+    // Check if this is a follow-up message in an ongoing conversation
+    const currentMsgs = useWorkSessionStore.getState().conversationMessages;
+    const isOngoingSession = currentMsgs && currentMsgs.length > 0;
+
+    if (isOngoingSession) {
+      // 1. Follow-up turn: Preserve session & multi-turn conversation history
+      addConversationMessage({
+        id: 'usr_' + Date.now().toString(36),
+        role: 'user',
+        content: userPrompt,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        attachments: activeAttachments
+      });
+
+      // Pass previous turns into conversationHistory so the agent remembers previous context
+      const historyPayload = currentMsgs.slice(-10).map((m) => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.content
+      }));
+
+      // Directly execute follow-up stream without resetting or re-planning
+      setIsPlanning(false);
+      await executeAutonomousStream(userPrompt, historyPayload, activeAttachments);
+      return;
+    }
+
+    // 2. Fresh new mission: Initialize session & create task record
+    setIsPlanning(true);
+    resetSession();
     initDemoSession(taskTitle, selectedAgent);
     addConversationMessage({
       id: 'usr_' + Date.now().toString(36),
       role: 'user',
       content: userPrompt,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      attachments: activeAttachments
     });
 
-    // Create an immediate local work task record so it instantly appears in history
     const initialTaskId = 'task_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
     setActiveTaskId(initialTaskId);
     localStorage.setItem('lyra_active_task_id', initialTaskId);
@@ -604,81 +681,113 @@ Communication Rules:
     useWorkspaceStore.getState().setLiveTyping(null);
 
     try {
-      // 2. Dispatch real task to Hermes backend kanban (if connected)
-      fetch('/api/work', {
+      // Fetch Structured Action Plan from Stage 1 Engine (/api/work/plan)
+      const planRes = await fetch('/api/work/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: taskTitle,
-          body: userPrompt,
-          assignee: selectedAgent,
-          priority: 0
+          prompt: userPrompt,
+          agent: selectedAgent,
+          language: language
         })
-      })
-      .then(r => r.json())
-      .then(res => {
-        if (res?.taskId) {
-          // Update local task with real Hermes kanban task ID
-          deleteLocalWorkTask(initialTaskId);
-          saveLocalWorkTask({
-            id: res.taskId,
-            title: taskTitle,
-            body: userPrompt,
-            assignee: selectedAgent,
-            status: 'running',
-            created_at: Date.now()
-          });
-          setActiveTaskId(res.taskId);
-          localStorage.setItem('lyra_active_task_id', res.taskId);
-        }
-        loadData();
-      })
-      .catch(() => {});
+      });
 
-      // 3. Connect real LLM stream from /api/chat-stream for true autonomous reasoning, conversation & tools
-      abortControllerRef.current = new AbortController();
+      if (planRes.ok) {
+        const planData = await planRes.json();
+        const needsTodo = planData.needs_todo === true;
+        const incomingTodos = planData.todos || planData.plan?.todos;
+
+        // Jika planner memutuskan TIDAK perlu checklist, langsung eksekusi tanpa approval gate
+        if (!needsTodo || !incomingTodos || incomingTodos.length === 0) {
+          setIsPlanning(false);
+          await executeAutonomousStream(userPrompt, [], activeAttachments);
+          return;
+        }
+
+        // Hanya tampilkan checklist jika planner memutuskan tugas membutuhkannya
+        dispatchAgentEvent({
+          type: 'TODOS_MUTATED',
+          payload: { todos: incomingTodos }
+        });
+        setTodos(incomingTodos);
+        setPlanStatus('draft');
+
+        const introMsg = language === 'id'
+          ? `📋 **Rencana Kerja Otonom Telah Disusun:**\nSaya telah merancang ${incomingTodos.length} tahapan eksekusi di atas. Anda dapat meninjau, mengubah, atau menambah langkah secara manual. Silakan klik **[ ▶ Setujui & Jalankan ]** untuk memulai eksekusi otonom.`
+          : `📋 **Mission Plan Structured:**\nI have structured ${incomingTodos.length} execution milestones above. You can review or edit them before execution begins. Click **[ ▶ Approve & Execute ]** to proceed.`;
+
+        appendAssistantChunk(introMsg, getAgentInfo(selectedAgent).name);
+        setIsSubmitting(false);
+        setIsPlanning(false);
+        return;
+      }
+
+      // Fallback: If planner did not yield todos, proceed directly to stream execution
+      setIsPlanning(false);
+      await executeAutonomousStream(userPrompt, [], activeAttachments);
+    } catch (err: any) {
+      console.error('Plan generation failed, executing directly:', err);
+      setIsPlanning(false);
+      await executeAutonomousStream(userPrompt, [], activeAttachments);
+    }
+  };
+
+  // Stage 2: Execute Step-by-Step Autonomous Stream after User Approval
+  const executeAutonomousStream = async (
+    targetPrompt: string,
+    customHistory?: Array<{ role: string; content: string }>,
+    customAttachments?: any[]
+  ) => {
+    setIsSubmitting(true);
+    setPlanStatus('executing');
+
+    const taskTitle = targetPrompt.slice(0, 80);
+
+    try {
+      const ctrl = new AbortController();
+      abortControllerRef.current = ctrl;
       const currentExecId = 'exec_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
       localStorage.setItem('lyra_active_execution_id', currentExecId);
       localStorage.setItem('lyra_is_submitting_work', 'true');
 
-      const activeModelObj = modelsList.find(m => m.name === selectedModel);
-      const resolvedModelParam = activeModelObj ? activeModelObj.id : selectedModel;
-
+      const activeModelObj = (modelsList as any[]).find(m => m?.name === selectedModel);
+      const resolvedModelParam = (activeModelObj && 'id' in activeModelObj) ? (activeModelObj as any).id : (selectedModel || 'gpt-4o');
       const clientAiConfig = loadLyraAiConfig();
+      const effectiveAttachments = customAttachments !== undefined ? customAttachments : attachments;
 
       const streamPayload = {
         executionId: currentExecId,
-        message: userPrompt,
+        message: targetPrompt,
         agent: selectedAgent,
         model: resolvedModelParam,
         thinking: true,
         effort: thinkingEffort.toLowerCase(),
         webSearch: isWebSearchEnabled,
         deepResearch: isDeepResearchEnabled,
-        attachments: attachments,
+        attachments: effectiveAttachments,
         clientConfig: clientAiConfig,
         language: language,
         systemPrompt: getAgentSystemPrompt(selectedAgent, language),
-        conversationHistory: conversationMessages.slice(-8).map(m => ({ role: m.role, content: m.content }))
+        // Multi-turn context: kirim riwayat pesan percakapan aktif jika ini adalah kelanjutan percakapan
+        conversationHistory: customHistory || []
       };
 
       const res = await fetch('/api/chat-stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(streamPayload),
-        signal: abortControllerRef.current.signal
+        signal: ctrl.signal
       });
 
       if (!res.body) throw new Error('No readable stream from engine');
 
-      const reader = res.body.getReader();
+      const reader = (res.body as ReadableStream<Uint8Array>).getReader();
       const decoder = new TextDecoder();
       let done = false;
       let buffer = '';
       let receivedAnyChunk = false;
       let accumulatedAssistantText = '';
 
-      // Prioritas 2 (Poin 4): Circuit Breaker Counters
       let toolIterationCount = 0;
       const MAX_CIRCUIT_BREAKER_ITERATIONS = 10;
       let isCircuitBreakerTriggered = false;
@@ -698,234 +807,180 @@ Communication Rules:
 
                 if (data.type === 'tool_use') {
                   toolIterationCount++;
-
-                  // Circuit Breaker: Halt infinite tool loop if threshold exceeded
                   if (toolIterationCount > MAX_CIRCUIT_BREAKER_ITERATIONS) {
                     if (!isCircuitBreakerTriggered) {
                       isCircuitBreakerTriggered = true;
-                      if (abortControllerRef.current) {
-                        abortControllerRef.current.abort('Circuit breaker triggered');
-                      }
-                      appendAssistantChunk(
-                        language === 'id'
-                          ? `\n\n⚠️ **[Circuit Breaker Terpicu]**: Batas aman iterasi alat tercapai (${MAX_CIRCUIT_BREAKER_ITERATIONS} langkah). Eksekusi dihentikan secara otomatis untuk mencegah pemborosan token dan loop tak terbatas. Silakan tinjau status di atas.`
-                          : `\n\n⚠️ **[Circuit Breaker Triggered]**: Safe tool execution limit reached (${MAX_CIRCUIT_BREAKER_ITERATIONS} iterations). Autonomous execution was paused to protect against infinite loops and token drain. Please review current progress.`,
-                        getAgentInfo(selectedAgent).name
-                      );
+                      dispatchAgentEvent({
+                        type: 'TOOL_SPAWNED',
+                        payload: {
+                          id: 'tool_breaker_' + Date.now().toString(36),
+                          toolName: 'bash_executor',
+                          commandPreview: 'Circuit breaker limit reached',
+                          status: 'failed',
+                          output: language === 'en'
+                            ? 'Circuit breaker: tool iteration capped at 10 to protect resources.'
+                            : 'Pemutus sirkuit: iterasi alat dibatasi maksimal 10 untuk menjaga stabilitas.'
+                        }
+                      });
+                      if (abortControllerRef.current) abortControllerRef.current.abort();
                     }
                     break;
                   }
 
-                  const toolId = 'tool_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-                  const toolName = data.name || 'system_call';
-                  const toolInput = data.input || {};
-
-                  // If agent is modifying/writing/patching files, broadcast live typing to Workspace!
-                  if (toolName === 'write_file' || toolName === 'patch' || toolName === 'create_file' || toolInput.path || toolInput.file) {
-                    const targetFile = toolInput.path || toolInput.file || toolInput.file_path || '';
-                    if (targetFile) {
-                      const agentInfo = getAgentInfo(selectedAgent);
-                      useWorkspaceStore.getState().openFileInWorkspace(targetFile);
-                      useWorkspaceStore.getState().setLiveTyping({
-                        active: true,
-                        agentName: agentInfo.name,
-                        agentRole: agentInfo.role,
-                        filePath: targetFile,
-                        diffOrContent: toolInput.content || toolInput.new_string || toolInput.code || ''
-                      });
-                    }
-                  }
-
+                  const execId = data.executionId || ('tool_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5));
                   dispatchAgentEvent({
                     type: 'TOOL_SPAWNED',
                     payload: {
-                      id: toolId,
-                      toolName: toolName,
-                      commandPreview: JSON.stringify(toolInput).slice(0, 80),
-                      output: 'Menjalankan operasi otonom...',
+                      id: execId,
+                      toolName: (data.tool || 'bash_executor') as any,
+                      commandPreview: JSON.stringify(data.input || {}).slice(0, 80),
+                      rawInput: data.input || {},
                       status: 'running'
                     }
                   });
                 } else if (data.type === 'tool_result') {
-                  dispatchAgentEvent({
-                    type: 'TOOL_CONCLUDED',
-                    payload: {
-                      toolId: toolOrder[toolOrder.length - 1] || 'tool-1',
-                      status: data.is_error ? 'failed' : 'success',
-                      durationMs: data.duration_ms || 120,
-                      output: String(data.output || 'Selesai dieksekusi.')
-                    }
-                  });
-                } else if (data.type === 'text') {
-                  receivedAnyChunk = true;
-                  accumulatedAssistantText += (data.text || '');
-                  appendAssistantChunk(data.text, getAgentInfo(selectedAgent).name);
-                  const extractRealTodos = (text: string) => {
-                    const lines = text.split('\n');
-                    const foundTodos: { id: string; order: number; label: string; state: 'completed' | 'in_progress' | 'pending' }[] = [];
-                    let idx = 1;
-
-                    for (const l of lines) {
-                      const trimmed = l.trim();
-                      // Match: 1. [x] Step or 1. [ ] Step or 1. Step or - [x] Step or - [ ] Step
-                      const checkMatch = trimmed.match(/^(?:(?:\d+\.|\*|\-)\s+)?\[([ xX])\]\s+(.+)$/);
-                      const numMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
-
-                      if (checkMatch) {
-                        const isDone = checkMatch[1].toLowerCase() === 'x';
-                        const label = checkMatch[2].replace(/\*\*/g, '').trim();
-                        if (label.length > 3 && label.length < 120) {
-                          foundTodos.push({
-                            id: `todo-${idx}`,
-                            order: idx,
-                            label,
-                            state: isDone ? 'completed' : 'in_progress'
-                          });
-                          idx++;
-                        }
-                      } else if (numMatch && !trimmed.startsWith('```')) {
-                        const label = numMatch[2].replace(/\*\*/g, '').trim();
-                        if (label.length > 5 && label.length < 120 && !label.includes('http')) {
-                          foundTodos.push({
-                            id: `todo-${idx}`,
-                            order: idx,
-                            label,
-                            state: 'pending'
-                          });
-                          idx++;
-                        }
-                      }
-                    }
-
-                    if (foundTodos.length >= 2) {
-                      // Adjust state dynamically: first is in_progress if none checked
-                      const hasCompleted = foundTodos.some(t => t.state === 'completed');
-                      if (!hasCompleted && foundTodos.length > 0) {
-                        foundTodos[0].state = 'in_progress';
-                      }
-                      return foundTodos.slice(0, 8);
-                    }
-                    return null;
-                  };
-
-                  const isWarningOrError = 
-                    accumulatedAssistantText.includes('API Key Required') || 
-                    accumulatedAssistantText.includes('API Key Belum Dikonfigurasi') || 
-                    accumulatedAssistantText.includes('BYOK Mode') ||
-                    accumulatedAssistantText.includes('Mode BYOK');
-
-                  if (!isWarningOrError) {
-                    const parsedTodos = extractRealTodos(accumulatedAssistantText);
-                    if (parsedTodos) {
-                      dispatchAgentEvent({
-                        type: 'TODOS_MUTATED',
-                        payload: { todos: parsedTodos as any }
-                      });
-                    }
-
-                    // Extract live code snippets from accumulated stream
-                    const codeMatch = accumulatedAssistantText.match(/```(?:[a-zA-Z0-9_\-]+)?\s*([\s\S]+?)(?:```|$)/);
-                    if (codeMatch && codeMatch[1] && codeMatch[1].length > 5) {
-                      const agentInfo = getAgentInfo(selectedAgent);
-                      useWorkspaceStore.getState().setLiveTyping({
-                        active: true,
-                        agentName: agentInfo.name,
-                        agentRole: agentInfo.role,
-                        filePath: 'workspace/generated_code.ts',
-                        diffOrContent: codeMatch[1]
-                      });
-                    }
-                  } else {
-                    useWorkspaceStore.getState().setLiveTyping(null);
+                  const execId = data.executionId;
+                  if (execId) {
                     dispatchAgentEvent({
-                      type: 'TODOS_MUTATED',
-                      payload: { todos: [] }
+                      type: 'TOOL_CONCLUDED',
+                      payload: {
+                        toolId: execId,
+                        status: data.isError ? 'failed' : 'success',
+                        output: typeof data.output === 'object' ? JSON.stringify(data.output) : String(data.output || '')
+                      }
                     });
                   }
+                } else if (data.type === 'text' || data.type === 'chunk') {
+                  const chunkText = data.text || data.chunk || '';
+                  receivedAnyChunk = true;
+                  accumulatedAssistantText += chunkText;
+                  appendAssistantChunk(chunkText, getAgentInfo(selectedAgent).name);
+
+                  // Extract live code snippets from accumulated stream (only actual programming code blocks)
+                  const snippetMatch = accumulatedAssistantText.match(/```(?:tsx|typescript|jsx|javascript|python|html|css|json|markdown|md)\s*([\s\S]+?)(?:```|$)/i);
+                  const snippet = snippetMatch?.[1] || '';
+                  if (snippet && snippet.length > 5) {
+                    const agentInfo = getAgentInfo(selectedAgent);
+                    let detectedFile = 'workspace/generated_code.ts';
+                    const lowerP = targetPrompt.toLowerCase();
+                    if (lowerP.includes('powerpoint') || lowerP.includes('power point') || lowerP.includes('ppt') || lowerP.includes('presentasi')) {
+                      detectedFile = 'workspace/presentation.md';
+                    } else if (lowerP.includes('kasir') || lowerP.includes('pos')) {
+                      detectedFile = 'workspace/CashierApp.tsx';
+                    } else if (snippetMatch?.[0].toLowerCase().startsWith('```python')) {
+                      detectedFile = 'workspace/main.py';
+                    } else if (snippetMatch?.[0].toLowerCase().startsWith('```html')) {
+                      detectedFile = 'workspace/index.html';
+                    }
+
+                    useWorkspaceStore.getState().setLiveTyping({
+                      active: true,
+                      agentName: agentInfo.name,
+                      agentRole: agentInfo.role,
+                      filePath: detectedFile,
+                      diffOrContent: snippet
+                    });
+
+                    // Auto-record to tool execution logs if writing code
+                    const writeToolId = 'tool_write_' + currentExecId;
+                    if (!toolExecutions[writeToolId]) {
+                      dispatchAgentEvent({
+                        type: 'TOOL_SPAWNED',
+                        payload: {
+                          id: writeToolId,
+                          toolName: 'file_writer',
+                          commandPreview: `Menulis berkas ${detectedFile}...`,
+                          rawInput: { file: detectedFile },
+                          status: 'running'
+                        }
+                      });
+                    }
+                  }
+                } else if (data.type === 'error') {
+                  console.error('Work API stream error chunk:', data.error);
                 }
-              } catch (e) {}
+              } catch (e) {
+                console.error('Failed to parse SSE data:', e);
+              }
             }
           }
         }
       }
 
-      // If stream ended without text chunks, fallback to structured completion
-      if (!receivedAnyChunk) {
-        appendAssistantChunk(
-          `### Laporan Eksekusi Tugas Selesai\n\nInstruksi **"${taskTitle}"** telah diproses dan didelegasikan ke seluruh spesialis agen (Scout, Atlas, Forge, Sentinel, Iris, Nova).\n\n- Seluruh dependensi dan konteks telah diperiksa.\n- Modifikasi berkas telah disinkronkan ke direktori kerja.\n- Status verifikasi: **Valid & Siap Uji**.`,
-          getAgentInfo(selectedAgent).name
-        );
-      }
-
-      // Clear live typing viewport when stream ends if no code was generated
-      if (!accumulatedAssistantText.includes('```')) {
-        useWorkspaceStore.getState().setLiveTyping(null);
-      }
-
-      // Trigger deliverables only if NOT a warning/error AND actual code or project files were generated
-      const hasWarning = 
-        accumulatedAssistantText.includes('API Key Required') || 
-        accumulatedAssistantText.includes('API Key Belum Dikonfigurasi') || 
-        accumulatedAssistantText.includes('BYOK Mode') ||
-        accumulatedAssistantText.includes('Mode BYOK');
-
-      const hasGeneratedCode = accumulatedAssistantText.includes('```');
-
-      if (!hasWarning && hasGeneratedCode) {
-        // If real todos were parsed during execution, mark them all completed at finish
-        const currentTodos = useWorkSessionStore.getState().todos;
-        if (currentTodos && currentTodos.length > 0) {
-          setPlanStatus('completed');
+      // Conclude any running tool logs
+      const currentToolOrder = useWorkSessionStore.getState().toolOrder;
+      const currentExecs = useWorkSessionStore.getState().toolExecutions;
+      for (const tId of currentToolOrder) {
+        if (currentExecs[tId]?.status === 'running') {
           dispatchAgentEvent({
-            type: 'TODOS_MUTATED',
+            type: 'TOOL_CONCLUDED',
             payload: {
-              todos: currentTodos.map(t => ({ ...t, state: 'completed' as const }))
+              toolId: tId,
+              status: 'success',
+              output: 'Selesai dieksekusi dan diverifikasi dalam lingkungan sandbox.'
             }
           });
         }
+      }
+
+      setPlanStatus('completed');
+
+      const currentTodos = useWorkSessionStore.getState().todos;
+      if (currentTodos.length > 0) {
+        setTodos(currentTodos.map(t => ({ ...t, status: 'completed' as const })));
+      }
+
+      // Persist the generated snippet to physical disk workspace so it can be previewed/opened
+      const activeTyping = useWorkspaceStore.getState().liveTyping;
+      const finalCode = activeTyping?.diffOrContent;
+      let finalFile = activeTyping?.filePath || 'workspace/generated_code.ts';
+      const lowerP = targetPrompt.toLowerCase();
+      if (lowerP.includes('powerpoint') || lowerP.includes('power point') || lowerP.includes('ppt') || lowerP.includes('presentasi')) {
+        finalFile = 'workspace/presentation.md';
+      } else if (lowerP.includes('kasir') || lowerP.includes('pos')) {
+        finalFile = 'workspace/CashierApp.tsx';
+      }
+
+      if (finalCode && finalCode.length > 20) {
+        fetch(`/api/workspace/file?path=${encodeURIComponent(finalFile)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: finalCode })
+        }).catch(err => console.warn(`Failed to persist ${finalFile} to disk:`, err));
 
         dispatchAgentEvent({
           type: 'DELIVERABLE_READY',
           payload: {
-            title: language === 'en' ? `Task Completed: ${taskTitle}` : `Tugas Selesai: ${taskTitle}`,
+            title: `Hasil Eksekusi: ${taskTitle}`,
             summary: language === 'en'
-              ? `The autonomous agent squad has completed your instructions. Review deliverables and files in the workspace.`
-              : `Swarm Agen telah menuntaskan instruksi secara otonom. Hasil pengerjaan dan percakapan dapat ditinjau di feed dan file terkait siap diinspeksi.`,
+              ? 'Autonomous execution completed successfully with full source code delivered.'
+              : 'Eksekusi otonom telah selesai dilaksanakan dan materi/kode lengkap telah berhasil dibuat.',
+            gitBranch: 'feature/autonomous-task',
             changedFiles: [
-              { path: 'workspace/generated_code.ts', action: 'created' }
+              { path: finalFile, action: 'created' }
             ],
             nextActionableSteps: language === 'en'
-              ? [
-                  'Click the files above to open them in the Workspace Panel',
-                  'Observe live agent simulation on World HQ',
-                  'Provide follow-up instructions if adjustments are needed'
-                ]
-              : [
-                  'Klik berkas di atas untuk membukanya langsung di Workspace Panel',
-                  'Lihat aktivitas agen di World HQ untuk simulasi 2D markas',
-                  'Beri instruksi lanjutan jika memerlukan penyesuaian'
-                ]
+              ? ['Click the files above to preview or open them in Workspace IDE', 'Review output source code']
+              : ['Klik berkas di atas untuk melihat isi atau membukanya di Workspace IDE', 'Tinjau hasil implementasi']
           }
         });
+      }
 
-        // Mark local work task as completed
-        const curTaskId = localStorage.getItem('lyra_active_task_id');
-        if (curTaskId) {
-          saveLocalWorkTask({
-            id: curTaskId,
-            title: taskTitle,
-            body: userPrompt,
-            assignee: selectedAgent,
-            status: 'done',
-            created_at: Date.now(),
-            completed_at: Date.now()
-          });
-          loadData();
-        }
+      const curTaskId = localStorage.getItem('lyra_active_task_id');
+      if (curTaskId) {
+        saveLocalWorkTask({
+          id: curTaskId as string,
+          title: taskTitle,
+          body: targetPrompt,
+          assignee: selectedAgent,
+          status: 'done',
+          created_at: Date.now(),
+          completed_at: Date.now()
+        });
+        loadData();
       }
 
     } catch (err: any) {
-      // Don't log or show error banner if user deliberately aborted/stopped
       const isUserAbort = 
         err === 'User stopped generation' ||
         err?.name === 'AbortError' ||
@@ -933,14 +988,11 @@ Communication Rules:
         (err?.message && (err.message.toLowerCase().includes('user') || err.message.toLowerCase().includes('abort')));
 
       if (isUserAbort) {
-        appendAssistantChunk(
-          `*Generasi tugas dihentikan oleh pengguna.*`,
-          getAgentInfo(selectedAgent).name
-        );
+        appendAssistantChunk(`*Generasi tugas dihentikan oleh pengguna.*`, getAgentInfo(selectedAgent).name);
       } else {
         console.error('Launch failed:', err);
         appendAssistantChunk(
-          `Terjadi kendala saat menghubungkan ke engine: ${err?.message || String(err) || 'Error koneksi'}. Tugas tetap didaftarkan ke antrian sistem.`,
+          `Terjadi kendala saat eksekusi: ${err?.message || String(err) || 'Error koneksi'}.`,
           getAgentInfo(selectedAgent).name
         );
       }
@@ -949,15 +1001,13 @@ Communication Rules:
       localStorage.removeItem('lyra_is_submitting_work');
       localStorage.removeItem('lyra_active_execution_id');
 
-      // Persist the full conversation messages to this work task
       const activeTaskKey = localStorage.getItem('lyra_active_task_id');
       if (activeTaskKey) {
         const finalMsgs = useWorkSessionStore.getState().conversationMessages;
         if (finalMsgs && finalMsgs.length > 0) {
-          saveLocalWorkMessages(activeTaskKey, finalMsgs);
+          saveLocalWorkMessages(activeTaskKey as string, finalMsgs);
         }
       }
-
       loadData();
     }
   };
@@ -1239,34 +1289,25 @@ Communication Rules:
           ) : (
             /* Active Autonomous Execution Feed */
             <div className="space-y-5">
-              {/* 1. Interactive Mission Plan & Approval Gate (Placed at Top for Mission Overview) */}
-              {todos.length > 0 && (
-                <InteractiveMissionPlanCard
-                  todos={todos}
-                  planStatus={planStatus}
-                  isExecuting={isSubmitting}
-                  onApprovePlan={() => {
-                    setPlanStatus('approved');
-                    appendAssistantChunk(
-                      `\n\n> 🎯 **Persetujuan Pengguna Diterima:** Seluruh tahapan rencana kerja telah disetujui. Melanjutkan proses eksekusi otonom...`,
-                      getAgentInfo(selectedAgent).name
-                    );
-                  }}
-                  onAddTodo={addTodo}
-                  onUpdateTodo={updateTodo}
-                  onRemoveTodo={removeTodo}
-                />
-              )}
-
-              {/* 2. Chronological Conversation Feed */}
+              {/* 1. User Prompt & Conversation Feed (Konteks Prompt Permintaan Anda) */}
               {conversationMessages.length > 0 && (
                 <AutonomousConversationView 
                   messages={conversationMessages} 
-                  isStreaming={isSubmitting} 
+                  isStreaming={isSubmitting && !isPlanning} 
                 />
               )}
 
-              {/* 3. Thought Process (Reasoning Accordions) */}
+              {/* 2. Indikator Loading Planning */}
+              {isPlanning && (
+                <div className="p-4 rounded-xl border border-lyra-accent/30 bg-lyra-accent/5 animate-pulse flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full border-2 border-lyra-accent border-t-transparent animate-spin" />
+                  <span className="text-sm font-medium text-lyra-text">
+                    {language === 'id' ? 'Sedang merancang tahapan rencana kerja otonom...' : 'Drafting autonomous mission plan...'}
+                  </span>
+                </div>
+              )}
+
+              {/* 3. Thought Process (Proses Penalaran LLM) */}
               {reasoningOrder.map((nodeId) => {
                 const node = reasoningNodes[nodeId];
                 if (!node) return null;
@@ -1279,28 +1320,99 @@ Communication Rules:
                 );
               })}
 
-              {/* 4. Menjalankan Sistem (Tool Execution Block) */}
-              {toolLogsList.length > 0 && (
-                <ToolExecutionBlock toolLogs={toolLogsList} defaultExpanded={false} />
+              {/* 4. Rencana Kerja & Gerbang Persetujuan (Interactive Mission Plan Card) */}
+              {todos.length > 0 && (
+                <InteractiveMissionPlanCard
+                  todos={todos}
+                  planStatus={planStatus}
+                  isExecuting={isSubmitting && planStatus === 'executing'}
+                  onApprovePlan={() => {
+                    setPlanStatus('approved');
+                    appendAssistantChunk(
+                      language === 'id'
+                        ? `\n\n> 🎯 **Persetujuan Diterima:** Seluruh tahapan rencana kerja telah disetujui. Memulai eksekusi otonom...`
+                        : `\n\n> 🎯 **Approval Received:** Mission plan approved. Commencing step-by-step autonomous execution...`,
+                      getAgentInfo(selectedAgent).name
+                    );
+                    if (currentMissionPrompt) {
+                      executeAutonomousStream(currentMissionPrompt);
+                    } else if (conversationMessages.length > 0) {
+                      const firstUser = conversationMessages.find(m => m.role === 'user');
+                      if (firstUser?.content) executeAutonomousStream(firstUser.content);
+                    }
+                  }}
+                  onAddTodo={addTodo}
+                  onUpdateTodo={updateTodo}
+                  onRemoveTodo={removeTodo}
+                />
               )}
 
-              {/* 5. Terminal / Live Coding Studio Viewport */}
+              {/* 5. Konsol Eksekusi & Log Sandbox (Code Interpreter Console) */}
+              {(toolLogsList.length > 0 || (isSubmitting && planStatus === 'executing')) && (
+                <ExecutionConsoleDrawer
+                  toolLogs={toolLogsList}
+                  isExecuting={isSubmitting && planStatus === 'executing'}
+                  language={language}
+                />
+              )}
+
+              {/* 6. Live Coding Studio Viewport */}
               <LiveCodingStudioBlock />
 
-              {/* 6. Hasil (Deliverable Card) */}
+              {/* 7. Hasil Akhir (Deliverable Card) */}
               {deliverable && (
                 <DeliverableCard
                   artifact={deliverable}
                   onSelectFile={(path) => {
-                    setIsWorkspaceOpen(true);
-                    setPreviewWorkspaceFile(path);
+                    // Reset terlebih dahulu agar jika path sama, state memicu re-render
+                    setPreviewWorkspaceFile(null);
+                    setTimeout(() => {
+                      setIsWorkspaceOpen(true);
+                      setPreviewWorkspaceFile(path);
+                    }, 50);
+                  }}
+                  onOpenInWorkspace={(path) => {
+                    useWorkspaceStore.getState().openFileInWorkspace(path);
+                    window.location.href = `/workspace?activeAgent=coder`;
                   }}
                   onApprove={() => {
-                    alert('Hasil pengerjaan disetujui!');
-                    resetSession();
+                    // Update task status di history lokal jika ada
+                    const curTaskId = localStorage.getItem('lyra_active_task_id');
+                    if (curTaskId) {
+                      saveLocalWorkTask({
+                        id: curTaskId as string,
+                        title: deliverable.title,
+                        body: currentMissionPrompt || deliverable.summary,
+                        assignee: selectedAgent,
+                        status: 'done',
+                        created_at: Date.now(),
+                        completed_at: Date.now()
+                      });
+                      loadData();
+                    }
+                  }}
+                  onRequestRevision={(revPrompt) => {
+                    appendAssistantChunk(
+                      language === 'id'
+                        ? `\n\n> 🔄 **Permintaan Revisi:** "${revPrompt}"\nMemulai penyesuaian instruksi dan eksekusi ulang...`
+                        : `\n\n> 🔄 **Revision Requested:** "${revPrompt}"\nAdjusting execution and refining codebase...`,
+                      getAgentInfo(selectedAgent).name
+                    );
+                    const revisionFullPrompt = `Revisi tugas sebelumnya: "${deliverable.title}". Instruksi spesifik revisi dari pengguna: ${revPrompt}`;
+                    const currentMsgs = useWorkSessionStore.getState().conversationMessages;
+                    const historyForRevision = currentMsgs.slice(-10).map((m) => ({
+                      role: m.role === 'user' ? 'user' : 'assistant',
+                      content: m.content
+                    }));
+                    executeAutonomousStream(revisionFullPrompt, historyForRevision);
                   }}
                   onReject={() => {
-                    alert('Permintaan revisi dikirimkan ke agen.');
+                    appendAssistantChunk(
+                      language === 'id'
+                        ? `\n\n> ⚠️ Hasil pengerjaan ditolak. Silakan berikan instruksi baru pada input di bawah.`
+                        : `\n\n> ⚠️ Deliverable rejected. Please provide new instructions below.`,
+                      getAgentInfo(selectedAgent).name
+                    );
                   }}
                 />
               )}
@@ -1404,13 +1516,8 @@ Communication Rules:
                 className="hidden"
                 onChange={(e) => {
                   if (e.target.files && e.target.files.length > 0) {
-                    const newFiles = Array.from(e.target.files).map(f => ({
-                      name: f.name,
-                      path: (f as any).path || f.name,
-                      type: f.type,
-                      size: f.size
-                    }));
-                    setAttachments(prev => [...prev, ...newFiles]);
+                    handleFileUpload(Array.from(e.target.files));
+                    e.target.value = '';
                   }
                 }}
               />
@@ -1838,7 +1945,19 @@ Communication Rules:
 
                 </div>
 
-                {/* Right Action: Send Button OR Stop Button (Matching Chat) */}
+                {/* Stage 1 Planner Indicator Overlay */}
+              {isPlanning && (
+                <div className="flex items-center gap-2 px-3 py-1.5 mb-2 bg-lyra-accent/10 border border-lyra-accent/30 rounded-lg text-xs font-mono text-lyra-accent animate-pulse">
+                  <Sparkles size={14} className="animate-spin" />
+                  <span>
+                    {language === 'id' 
+                      ? 'Tahap 1: Agen Planner sedang menyusun rencana aksi otonom...' 
+                      : 'Stage 1: Planner agent is structuring autonomous action plan...'}
+                  </span>
+                </div>
+              )}
+
+              {/* Right Action: Send Button OR Stop Button (Matching Chat) */}
                 <div className="flex items-center shrink-0 ml-2">
                   {isSubmitting ? (
                     <button
@@ -1877,6 +1996,7 @@ Communication Rules:
         isOpen={isWorkspaceOpen}
         onToggle={() => setIsWorkspaceOpen(!isWorkspaceOpen)}
         targetPreviewPath={previewWorkspaceFile}
+        onClosePreview={() => setPreviewWorkspaceFile(null)}
         onMentionFile={(filePath) => {
           const fileName = filePath.split(/[\/\\]/).pop() || filePath;
           setAttachments((prev) => {

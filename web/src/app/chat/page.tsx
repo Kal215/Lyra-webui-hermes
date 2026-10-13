@@ -254,17 +254,10 @@ const markdownComponents = {
     </blockquote>
   ),
   p: ({ children }: any) => {
-    // If paragraph contains a block code element, render a div to prevent HTML hydration errors (div/pre inside p)
-    const hasBlock = React.Children.toArray(children).some((child: any) => {
-      return (
-        React.isValidElement(child) &&
-        (child.type === CodeBlock || (child.props as any)?.className?.includes('language-'))
-      );
-    });
-    if (hasBlock) {
-      return <div className="leading-relaxed my-2">{children}</div>;
-    }
-    return <p className="leading-relaxed my-2">{children}</p>;
+    // In HTML, <p> cannot contain <div> or <pre>.
+    // To prevent React hydration mismatches with block elements or complex formatting inside markdown,
+    // render as a <div> with typography styling.
+    return <div className="leading-relaxed my-2">{children}</div>;
   }
 };
 

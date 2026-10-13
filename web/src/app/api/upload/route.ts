@@ -24,7 +24,28 @@ export async function POST(req: NextRequest) {
     
     await writeFile(filePath, buffer);
     
-    return NextResponse.json({ path: filePath, name: file.name, type: file.type });
+    const isImage = file.type?.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(file.name);
+    let content: string | undefined = undefined;
+    let base64: string | undefined = undefined;
+
+    if (isImage) {
+      base64 = buffer.toString('base64');
+    } else if (
+      file.type?.startsWith('text/') ||
+      /\.(txt|md|json|js|ts|tsx|jsx|py|html|css|scss|yaml|yml|xml|sql|csv|sh|bat|env|prisma|rs|go|c|cpp|h|java|php|rb)$/i.test(file.name)
+    ) {
+      // Decode text files up to 200KB
+      content = buffer.subarray(0, 200000).toString('utf-8');
+    }
+
+    return NextResponse.json({
+      path: filePath,
+      name: file.name,
+      type: file.type || (isImage ? 'image/png' : 'text/plain'),
+      size: buffer.length,
+      content,
+      base64
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

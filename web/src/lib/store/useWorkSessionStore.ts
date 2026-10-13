@@ -18,6 +18,7 @@ export interface AutonomousMessage {
   content: string;
   timestamp?: string;
   agentName?: string;
+  attachments?: any[];
 }
 
 export interface WorkSessionState {
@@ -145,15 +146,8 @@ export const useWorkSessionStore = create<WorkSessionState>()(
           agentStatus: 'reasoning',
           planStatus: 'draft',
           hqAgentState: 'thinking',
-          reasoningNodes: {
-            'r-1': {
-              id: 'r-1',
-              timestamp: new Date().toISOString(),
-              thought: `Menganalisis instruksi: "${prompt}".\nMenentukan ruang lingkup arsitektur, dependensi yang dibutuhkan, dan menyusun tahapan eksekusi otonom...`,
-              isStreaming: false
-            }
-          },
-          reasoningOrder: ['r-1'],
+          reasoningNodes: {},
+          reasoningOrder: [],
           activeReasoningId: null,
           todos: [],
           toolExecutions: {},
@@ -274,8 +268,8 @@ function applySingleEvent(state: WorkSessionState, event: AgentStreamEvent): Wor
 
       return {
         ...state,
-        agentStatus: 'executing',
-        hqAgentState: 'coding',
+        agentStatus: tool.requiresApproval ? 'reasoning' : 'executing',
+        hqAgentState: tool.requiresApproval ? 'thinking' : 'coding',
         toolExecutions: {
           ...state.toolExecutions,
           [tool.id]: tool
@@ -317,6 +311,71 @@ function applySingleEvent(state: WorkSessionState, event: AgentStreamEvent): Wor
             status,
             durationMs: durationMs ?? existing.durationMs,
             output: output !== undefined ? output : existing.output
+          }
+        }
+      };
+    }
+
+    case 'TOOL_APPROVAL_REQUESTED': {
+      const { toolId, toolName, commandPreview, rawInput } = event.payload;
+      const existing = state.toolExecutions[toolId];
+      if (!existing) return state;
+
+      return {
+        ...state,
+        agentStatus: 'reasoning',
+        hqAgentState: 'thinking',
+        toolExecutions: {
+          ...state.toolExecutions,
+          [toolId]: {
+            ...existing,
+            requiresApproval: true,
+            approvalState: 'pending',
+            commandPreview,
+            rawInput
+          }
+        }
+      };
+    }
+
+    case 'TOOL_APPROVED': {
+      const { toolId, modifiedInput } = event.payload;
+      const existing = state.toolExecutions[toolId];
+      if (!existing) return state;
+
+      return {
+        ...state,
+        agentStatus: 'executing',
+        hqAgentState: 'coding',
+        toolExecutions: {
+          ...state.toolExecutions,
+          [toolId]: {
+            ...existing,
+            approvalState: 'approved',
+            modifiedInput: modifiedInput ?? existing.rawInput,
+            requiresApproval: false
+          }
+        }
+      };
+    }
+
+    case 'TOOL_REJECTED': {
+      const { toolId, reason } = event.payload;
+      const existing = state.toolExecutions[toolId];
+      if (!existing) return state;
+
+      return {
+        ...state,
+        agentStatus: 'reasoning',
+        hqAgentState: 'thinking',
+        toolExecutions: {
+          ...state.toolExecutions,
+          [toolId]: {
+            ...existing,
+            approvalState: 'rejected',
+            status: 'failed',
+            output: reason || 'Tool execution rejected by user',
+            requiresApproval: false
           }
         }
       };
