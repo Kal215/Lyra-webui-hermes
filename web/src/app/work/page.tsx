@@ -503,6 +503,22 @@ export default function WorkPage() {
     feedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [reasoningOrder, toolOrder, todos, deliverable]);
 
+  // Automatically persist task status as 'done' when deliverable is generated
+  useEffect(() => {
+    if (deliverable && activeTaskId) {
+      saveLocalWorkTask({
+        id: activeTaskId,
+        title: deliverable.title,
+        body: currentMissionPrompt || deliverable.summary,
+        assignee: selectedAgent,
+        status: 'done',
+        created_at: Date.now(),
+        completed_at: Date.now()
+      });
+      loadData();
+    }
+  }, [deliverable, activeTaskId, currentMissionPrompt, selectedAgent]);
+
   const getAgentInfo = (id: string) => {
     const map: Record<string, { name: string; role: string; desc: string; color: string }> = {
       default: { name: 'Aster', role: 'Coordinator', desc: 'Komando Sentral HQ', color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' },
@@ -1378,7 +1394,7 @@ export default function WorkPage() {
               {/* 6. Live Coding Studio Viewport */}
               <LiveCodingStudioBlock />
 
-              {/* 7. Hasil Akhir (Deliverable Card) */}
+              {/* 7. Hasil Akhir (Saved Artifacts Panel) */}
               {deliverable && (
                 <DeliverableCard
                   artifact={deliverable}
@@ -1393,45 +1409,6 @@ export default function WorkPage() {
                   onOpenInWorkspace={(path) => {
                     useWorkspaceStore.getState().openFileInWorkspace(path);
                     window.location.href = `/workspace?activeAgent=coder`;
-                  }}
-                  onApprove={() => {
-                    // Update task status di history lokal jika ada
-                    const curTaskId = localStorage.getItem('lyra_active_task_id');
-                    if (curTaskId) {
-                      saveLocalWorkTask({
-                        id: curTaskId as string,
-                        title: deliverable.title,
-                        body: currentMissionPrompt || deliverable.summary,
-                        assignee: selectedAgent,
-                        status: 'done',
-                        created_at: Date.now(),
-                        completed_at: Date.now()
-                      });
-                      loadData();
-                    }
-                  }}
-                  onRequestRevision={(revPrompt) => {
-                    appendAssistantChunk(
-                      language === 'id'
-                        ? `\n\n> 🔄 **Permintaan Revisi:** "${revPrompt}"\nMemulai penyesuaian instruksi dan eksekusi ulang...`
-                        : `\n\n> 🔄 **Revision Requested:** "${revPrompt}"\nAdjusting execution and refining codebase...`,
-                      getAgentInfo(selectedAgent).name
-                    );
-                    const revisionFullPrompt = `Revisi tugas sebelumnya: "${deliverable.title}". Instruksi spesifik revisi dari pengguna: ${revPrompt}`;
-                    const currentMsgs = useWorkSessionStore.getState().conversationMessages;
-                    const historyForRevision = currentMsgs.slice(-10).map((m) => ({
-                      role: m.role === 'user' ? 'user' : 'assistant',
-                      content: m.content
-                    }));
-                    executeAutonomousStream(revisionFullPrompt, historyForRevision);
-                  }}
-                  onReject={() => {
-                    appendAssistantChunk(
-                      language === 'id'
-                        ? `\n\n> ⚠️ Hasil pengerjaan ditolak. Silakan berikan instruksi baru pada input di bawah.`
-                        : `\n\n> ⚠️ Deliverable rejected. Please provide new instructions below.`,
-                      getAgentInfo(selectedAgent).name
-                    );
                   }}
                 />
               )}
