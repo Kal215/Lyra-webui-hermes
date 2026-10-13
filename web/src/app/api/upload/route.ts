@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { chunkDocument, ChunkingResult } from '@/lib/utils/documentChunker';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,15 +28,18 @@ export async function POST(req: NextRequest) {
     const isImage = file.type?.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(file.name);
     let content: string | undefined = undefined;
     let base64: string | undefined = undefined;
+    let chunkResult: ChunkingResult | null = null;
 
     if (isImage) {
       base64 = buffer.toString('base64');
     } else if (
       file.type?.startsWith('text/') ||
-      /\.(txt|md|json|js|ts|tsx|jsx|py|html|css|scss|yaml|yml|xml|sql|csv|sh|bat|env|prisma|rs|go|c|cpp|h|java|php|rb)$/i.test(file.name)
+      /\.(txt|md|json|js|ts|tsx|jsx|py|html|css|scss|yaml|yml|xml|sql|csv|sh|bat|env|prisma|rs|go|c|cpp|h|java|php|rb|log)$/i.test(file.name)
     ) {
-      // Decode text files up to 200KB
-      content = buffer.subarray(0, 200000).toString('utf-8');
+      // Decode full text file (safe up to 10MB) and compute smart sliding-window chunks
+      const fullText = buffer.subarray(0, 10 * 1024 * 1024).toString('utf-8');
+      chunkResult = chunkDocument(fullText);
+      content = fullText.length > 50000 ? fullText.slice(0, 50000) : fullText;
     }
 
     return NextResponse.json({
@@ -44,7 +48,12 @@ export async function POST(req: NextRequest) {
       type: file.type || (isImage ? 'image/png' : 'text/plain'),
       size: buffer.length,
       content,
-      base64
+      base64,
+      totalLines: chunkResult?.totalLines,
+      totalChunks: chunkResult?.chunks.length,
+      estimatedTokens: chunkResult?.estimatedTokens,
+      isChunked: chunkResult?.isChunked,
+      chunks: chunkResult?.chunks
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

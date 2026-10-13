@@ -46,6 +46,7 @@ import {
   saveLocalWorkMessages,
   LocalWorkTask
 } from '@/lib/store/useLocalWorkStorage';
+import { chunkDocument, DocumentChunk } from '@/lib/utils/documentChunker';
 import { InteractiveMissionPlanCard } from '@/components/work/InteractiveMissionPlanCard';
 import { ReasoningAccordion } from '@/components/work/ReasoningAccordion';
 import { ToolExecutionBlock } from '@/components/work/ToolExecutionBlock';
@@ -135,6 +136,8 @@ export default function WorkPage() {
   const [isDeepResearchEnabled, setIsDeepResearchEnabled] = useState(false);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [quotedSnippet, setQuotedSnippet] = useState<string | null>(null);
+  const [inspectingChunkFile, setInspectingChunkFile] = useState<any | null>(null);
+  const [expandedChunkId, setExpandedChunkId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [urlInput, setUrlInput] = useState('');
@@ -603,7 +606,12 @@ export default function WorkPage() {
             type: data.type || file.type,
             size: data.size || file.size,
             content: data.content,
-            base64: data.base64
+            base64: data.base64,
+            totalLines: data.totalLines,
+            totalChunks: data.totalChunks,
+            estimatedTokens: data.estimatedTokens,
+            isChunked: data.isChunked,
+            chunks: data.chunks
           }]);
           continue;
         }
@@ -614,12 +622,18 @@ export default function WorkPage() {
       // Local fallback for text files
       try {
         const text = await file.text();
+        const chunkRes = chunkDocument(text);
         setAttachments(prev => [...prev, {
           name: file.name,
           path: file.name,
           type: file.type || 'text/plain',
           size: file.size,
-          content: text
+          content: text.length > 50000 ? text.slice(0, 50000) : text,
+          totalLines: chunkRes.totalLines,
+          totalChunks: chunkRes.chunks.length,
+          estimatedTokens: chunkRes.estimatedTokens,
+          isChunked: chunkRes.isChunked,
+          chunks: chunkRes.chunks
         }]);
       } catch (err) {
         setAttachments(prev => [...prev, {
@@ -1559,6 +1573,20 @@ export default function WorkPage() {
                       <span className="truncate max-w-[150px]">
                         {file.isWorkspaceRef ? `@${file.name}` : file.name}
                       </span>
+
+                      {/* Smart Document Chunking Badge (Phase 4) */}
+                      {file.isChunked && file.totalChunks > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setInspectingChunkFile(file)}
+                          className="px-1.5 py-0.5 rounded text-[10px] font-sans font-medium bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition-colors cursor-pointer flex items-center gap-1"
+                          title={language === 'id' ? 'Klik untuk melihat topologi chunk dokumen' : 'Click to inspect document chunk topology'}
+                        >
+                          <span>📚 {file.totalChunks} Chunks</span>
+                          <span className="text-[9px] text-emerald-500/80">({file.totalLines}L)</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
@@ -2084,6 +2112,98 @@ export default function WorkPage() {
                 className="px-4 py-2 rounded-xl bg-lyra-accent hover:bg-lyra-accent/90 text-white font-medium disabled:opacity-50 cursor-pointer transition-colors shadow-md"
               >
                 {language === 'id' ? 'Tambahkan Tautan' : 'Add Link'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Smart Document Chunk Topology Inspector Modal (Phase 4) */}
+      {inspectingChunkFile && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 font-sans">
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/60">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <FileText size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-zinc-100 font-mono truncate max-w-xs sm:max-w-md">
+                    {inspectingChunkFile.name}
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    {language === 'id' 
+                      ? `${inspectingChunkFile.totalLines || 0} Baris • ${inspectingChunkFile.totalChunks || 0} Sliding Chunks • Est. ~${inspectingChunkFile.estimatedTokens || 0} Token`
+                      : `${inspectingChunkFile.totalLines || 0} Lines • ${inspectingChunkFile.totalChunks || 0} Sliding Chunks • Est. ~${inspectingChunkFile.estimatedTokens || 0} Tokens`
+                    }
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectingChunkFile(null)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Content: Chunks List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2.5 select-text text-xs">
+              <div className="px-3 py-2 rounded-xl bg-zinc-950/80 border border-zinc-800 text-[11px] text-zinc-400 leading-relaxed">
+                {language === 'id'
+                  ? '💡 Dokumen ini diproses menggunakan metode Sliding Window (overlap 20 baris). Model AI menerima struktur indeks berurutan sehingga dapat memahami seluruh konten tanpa batas token terlampaui.'
+                  : '💡 This document is processed using a Sliding Window algorithm (20 lines overlap). The AI model receives structured chunk indexes to safely understand deep context without overflowing token limits.'
+                }
+              </div>
+
+              {inspectingChunkFile.chunks?.map((chunk: DocumentChunk) => {
+                const isExpanded = expandedChunkId === chunk.id;
+                return (
+                  <div
+                    key={chunk.id}
+                    className="border border-zinc-800 hover:border-zinc-700 bg-zinc-950/40 rounded-xl overflow-hidden transition-all"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedChunkId(isExpanded ? null : chunk.id)}
+                      className="w-full px-4 py-2.5 flex items-center justify-between text-left cursor-pointer hover:bg-zinc-800/40"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-semibold text-emerald-400 text-xs">
+                          Chunk {chunk.chunkIndex}/{chunk.totalChunks}
+                        </span>
+                        <span className="text-zinc-500 text-[11px]">
+                          (Baris {chunk.startLine}–{chunk.endLine})
+                        </span>
+                        <span className="text-[10px] text-zinc-600 font-mono">
+                          ~{chunk.estimatedTokens} tok
+                        </span>
+                      </div>
+                      <ChevronRight 
+                        size={14} 
+                        className={`text-zinc-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
+                      />
+                    </button>
+
+                    {isExpanded && (
+                      <div className="px-4 py-3 border-t border-zinc-800/80 bg-zinc-950 text-zinc-300 font-mono text-[11px] overflow-x-auto max-h-56 leading-relaxed whitespace-pre">
+                        {chunk.content}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-3 border-t border-zinc-800 bg-zinc-950/60 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setInspectingChunkFile(null)}
+                className="px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium cursor-pointer transition-colors"
+              >
+                {language === 'id' ? 'Tutup' : 'Close'}
               </button>
             </div>
           </div>

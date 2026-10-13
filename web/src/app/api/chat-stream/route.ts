@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { activeChildProcesses } from '@/lib/activeProcesses';
+import { chunkDocument, buildChunkedContextPrompt } from '@/lib/utils/documentChunker';
 
 export const dynamic = 'force-dynamic';
 
@@ -255,13 +256,25 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
       }
 
       const fileName = file.name || (resolved ? path.basename(resolved) : 'attached_file');
-      if (textContent) {
-        const ext = path.extname(fileName).replace('.', '') || 'txt';
-        // Truncate to safe budget (80k chars) to avoid exceeding model context
-        const safeText = textContent.length > 80000
-          ? textContent.slice(0, 80000) + '\n... [TRUNCATED DUE TO FILE SIZE]'
-          : textContent;
-        fileContextPrefix += `\n[ATTACHED FILE CONTENT: "${fileName}"]\n\`\`\`${ext}\n${safeText}\n\`\`\`\n[END OF ATTACHED FILE "${fileName}"]\n`;
+      if (file.chunks && Array.isArray(file.chunks) && file.chunks.length > 1) {
+        // Use precomputed smart sliding-window chunks (Phase 4)
+        const chunkResult = {
+          totalLines: file.totalLines || 0,
+          totalChars: file.size || 0,
+          estimatedTokens: file.estimatedTokens || 0,
+          isChunked: true,
+          chunks: file.chunks
+        };
+        fileContextPrefix += buildChunkedContextPrompt(fileName, chunkResult);
+      } else if (textContent) {
+        // Dynamic smart chunking for deep file contexts
+        const chunkResult = chunkDocument(textContent);
+        if (chunkResult.isChunked) {
+          fileContextPrefix += buildChunkedContextPrompt(fileName, chunkResult);
+        } else {
+          const ext = path.extname(fileName).replace('.', '') || 'txt';
+          fileContextPrefix += `\n[ATTACHED FILE CONTENT: "${fileName}"]\n\`\`\`${ext}\n${textContent}\n\`\`\`\n[END OF ATTACHED FILE "${fileName}"]\n`;
+        }
       } else if (file.path) {
         fileContextPrefix += `[Attached File: ${fileName} (${file.path})]\n`;
       }
