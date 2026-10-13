@@ -145,6 +145,7 @@ export default function WorkPage() {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const pendingMissionAttachmentsRef = useRef<any[]>([]);
 
   // Sync with Settings configured provider & models
   useEffect(() => {
@@ -657,6 +658,7 @@ export default function WorkPage() {
     const userPrompt = promptInput.trim();
     const taskTitle = userPrompt.slice(0, 80);
     const activeAttachments = [...attachments];
+    pendingMissionAttachmentsRef.current = activeAttachments;
     setCurrentMissionPrompt(userPrompt);
     setIsSubmitting(true);
     setPromptInput('');
@@ -672,13 +674,20 @@ export default function WorkPage() {
     const isOngoingSession = currentMsgs && currentMsgs.length > 0;
 
     if (isOngoingSession) {
+      // Inherit previous attachments in session if this follow-up turn doesn't attach new ones
+      const effectiveTurnAttachments = (activeAttachments && activeAttachments.length > 0)
+        ? activeAttachments
+        : (currentMsgs.flatMap(m => m.attachments || []).filter(Boolean).length > 0
+            ? currentMsgs.flatMap(m => m.attachments || []).filter(Boolean)
+            : pendingMissionAttachmentsRef.current);
+
       // 1. Follow-up turn: Preserve session & multi-turn conversation history
       addConversationMessage({
         id: 'usr_' + Date.now().toString(36),
         role: 'user',
         content: userPrompt,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        attachments: activeAttachments,
+        attachments: effectiveTurnAttachments,
         quotedSnippet: activeQuote || undefined
       });
 
@@ -690,7 +699,7 @@ export default function WorkPage() {
 
       // Directly execute follow-up stream without resetting or re-planning
       setIsPlanning(false);
-      await executeAutonomousStream(streamPrompt, historyPayload, activeAttachments);
+      await executeAutonomousStream(streamPrompt, historyPayload, effectiveTurnAttachments);
       return;
     }
 
@@ -1383,11 +1392,15 @@ export default function WorkPage() {
                         : `\n\n> 🎯 **Approval Received:** Mission plan approved. Commencing step-by-step autonomous execution...`,
                       getAgentInfo(selectedAgent).name
                     );
+                    const targetAttachments = pendingMissionAttachmentsRef.current && pendingMissionAttachmentsRef.current.length > 0
+                      ? pendingMissionAttachmentsRef.current
+                      : (conversationMessages.flatMap(m => m.attachments || []).filter(Boolean));
+
                     if (currentMissionPrompt) {
-                      executeAutonomousStream(currentMissionPrompt);
+                      executeAutonomousStream(currentMissionPrompt, [], targetAttachments);
                     } else if (conversationMessages.length > 0) {
                       const firstUser = conversationMessages.find(m => m.role === 'user');
-                      if (firstUser?.content) executeAutonomousStream(firstUser.content);
+                      if (firstUser?.content) executeAutonomousStream(firstUser.content, [], targetAttachments);
                     }
                   }}
                   onAddTodo={addTodo}

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { activeChildProcesses } from '@/lib/activeProcesses';
 import { chunkDocument, buildChunkedContextPrompt } from '@/lib/utils/documentChunker';
 import { extractTextFromPdfBuffer } from '@/lib/utils/pdfExtractor';
@@ -238,20 +239,26 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
       let resolved = file.path;
 
       if (!textContent && resolved) {
-        if (!fs.existsSync(resolved)) {
-          const inWs = path.join(process.cwd(), 'workspace', resolved);
-          if (fs.existsSync(inWs)) resolved = inWs;
-          else {
-            const inCwd = path.join(process.cwd(), resolved);
-            if (fs.existsSync(inCwd)) resolved = inCwd;
+        let actualPath = resolved;
+        const candidates = [
+          resolved,
+          path.join(process.cwd(), 'workspace', resolved),
+          path.join(process.cwd(), resolved),
+          path.join(process.cwd(), 'workspace', path.basename(resolved)),
+          path.join(os.tmpdir(), 'lyra_uploads', path.basename(resolved))
+        ];
+        for (const cand of candidates) {
+          if (fs.existsSync(cand)) {
+            actualPath = cand;
+            break;
           }
         }
-        if (fs.existsSync(resolved)) {
+        if (fs.existsSync(actualPath)) {
           try {
-            const stat = fs.statSync(resolved);
+            const stat = fs.statSync(actualPath);
             if (!stat.isDirectory()) {
-              const fileBuf = fs.readFileSync(resolved);
-              const isPdfTarget = resolved.toLowerCase().endsWith('.pdf') || (typeof file.name === 'string' && file.name.toLowerCase().endsWith('.pdf'));
+              const fileBuf = fs.readFileSync(actualPath);
+              const isPdfTarget = actualPath.toLowerCase().endsWith('.pdf') || (typeof file.name === 'string' && file.name.toLowerCase().endsWith('.pdf'));
               if (isPdfTarget) {
                 textContent = await extractTextFromPdfBuffer(fileBuf);
               } else {
@@ -314,8 +321,14 @@ CRITICAL: You are running inside Lyra Studio (/work). You MUST NEVER refuse to g
 
 PENTING: Anda berjalan di Lyra Studio (/work). Anda WAJIB TIDAK PERNAH menolak untuk membuat, mengedit, atau memodifikasi file (.ts, .tsx, .py, .md, .json, .txt, .pptx). Saat pengguna meminta Anda untuk mengedit atau membuat file, Anda HARUS langsung mengeluarkan isi file lengkap di dalam blok kode markdown dengan path file yang jelas di atasnya. JANGAN PERNAH bilang bahwa Anda "tidak dapat mengakses file" atau "hanya model teks" — Anda adalah coding agent otonom dan tugas Anda adalah mengirimkan hasil kerja yang siap pakai.`;
 
+  const attachmentRule = fileContextPrefix ? (
+    language === 'id' 
+      ? `\n\n[INSTRUKSI DOKUMEN & LAMPIRAN]:\nPengguna telah melampirkan berkas di dalam pesan ([SMART CHUNKED DOCUMENT] atau [ATTACHED FILE CONTENT]). Seluruh teks dokumen tersebut sudah berhasil diekstrak dan disertakan langsung di dalam pesan pengguna. Anda WAJIB langsung membaca, menganalisis, dan menjawab permintaan pengguna berdasarkan isi dokumen tersebut. DILARANG KERAS menolak atau mengatakan "tidak dapat membaca file secara langsung" atau meminta pengguna menempelkan kembali teksnya.`
+      : `\n\n[DOCUMENT & ATTACHMENT INSTRUCTION]:\nThe user has provided an attached document ([SMART CHUNKED DOCUMENT] or [ATTACHED FILE CONTENT]). The full extracted document text is provided directly in the user prompt. You MUST directly read, analyze, and answer the user's request based on this content. NEVER say you "cannot read files directly" or ask the user to copy-paste.`
+  ) : '';
+
   const basePrompt = systemPrompt || defaultLyraSystemPrompt;
-  const finalSystemPrompt = `${basePrompt}\n\n${formattingStandard}`;
+  const finalSystemPrompt = `${basePrompt}\n\n${formattingStandard}${attachmentRule}`;
 
   messages.push({ role: 'system', content: finalSystemPrompt });
 
