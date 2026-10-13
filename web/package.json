@@ -21,7 +21,6 @@
     "lucide-react": "^1.47.0",
     "mammoth": "^1.13.0",
     "next": "16.3.5",
-    "pdf-parse": "^2.4.5",
     "pptxgenjs": "^4.0.1",
     "prismjs": "^1.30.0",
     "react": "19.2.8",
@@ -31,12 +30,12 @@
     "socket.io": "^4.8.4",
     "socket.io-client": "^4.8.4",
     "tailwind-merge": "^3.7.0",
+    "unpdf": "^1.8.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

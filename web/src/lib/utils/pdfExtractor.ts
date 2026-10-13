@@ -37,19 +37,16 @@ function getPythonCandidates(): string[] {
 }
 
 export async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
-  // 1. Try Node.js pdf-parse
+  // 1. Universal in-memory worker-less extraction via unpdf (pure JS, zero worker bloat)
   try {
-    const pdfModule = await import('pdf-parse');
-    const PDFParse = pdfModule.PDFParse || (pdfModule as any).default?.PDFParse || (pdfModule as any).default;
-    if (typeof PDFParse === 'function') {
-      const parser = new PDFParse({ data: buffer });
-      const res = await parser.getText();
-      if (res && res.text && res.text.trim().length > 0) {
-        return res.text.trim();
-      }
+    const { extractText } = await import('unpdf');
+    const res = await extractText(new Uint8Array(buffer));
+    const pagesText = Array.isArray(res.text) ? res.text.join('\n\n') : String(res.text || '');
+    if (pagesText && pagesText.trim().length > 0) {
+      return pagesText.trim();
     }
   } catch (err: any) {
-    console.warn('[pdfExtractor] Node pdf-parse failed, falling back to Python pypdf:', err?.message || err);
+    console.warn('[pdfExtractor] unpdf in-memory parser failed, falling back to Python pypdf:', err?.message || err);
   }
 
   // 2. High-reliability cross-platform fallback: Dynamic Python pypdf
