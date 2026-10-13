@@ -334,8 +334,32 @@ PENTING: Anda berjalan di Lyra Studio (/work). Anda WAJIB TIDAK PERNAH menolak u
       : `\n\n[DOCUMENT & ATTACHMENT INSTRUCTION]:\nThe user has provided an attached document ([SMART CHUNKED DOCUMENT] or [ATTACHED FILE CONTENT]). The full extracted document text is provided directly in the user prompt. You MUST directly read, analyze, and answer the user's request based on this content. NEVER say you "cannot read files directly" or ask the user to copy-paste.`
   ) : '';
 
+  const presentationRule = language === 'id' ? `\n\n[STANDAR PRESENTASI & DOKUMEN]:
+Ketika pengguna meminta presentasi (PowerPoint / slide / pitch deck):
+1. DILARANG KERAS menyertakan kalimat basa-basi perkenalan di awal ("Berikut adalah slide...", "Tentu saya buatkan...") atau penutup di akhir ("Materi ini sudah siap...", "Semoga membantu 😊").
+2. Format slide menggunakan pemisah horizontal (\`---\`).
+3. Slide 1 adalah Title Slide:
+# Judul Utama Presentasi
+Sub-judul atau tagline resmi
+---
+4. Slide berikutnya gunakan Heading Level 2 (\`## Judul Slide\`) dan poin berstruktur:
+- **Nama Konsep**: Penjelasan ringkas dan padat
+- **Nama Konsep 2**: Penjelasan ringkas dan padat
+Sistem akan otomatis mengompilasi poin berformat tersebut menjadi kartu-kartu presentasi modern (card grid / stats) yang rapi.` : `\n\n[PRESENTATION & SLIDE STANDARD]:
+When asked for a presentation (PowerPoint / pitch deck / slides):
+1. DO NOT include chatbot conversational filler at the beginning ("Here are the slides...") or at the end ("Hope this helps 😊").
+2. Format slides using horizontal dividers (\`---\`).
+3. Slide 1 is Title Slide:
+# Main Presentation Title
+Official subtitle or tagline
+---
+4. Subsequent slides use Level-2 Heading (\`## Slide Title\`) and structured bullets:
+- **Concept Name**: Crisp, concise description
+- **Concept Name 2**: Crisp, concise description
+The system will automatically compile these into modern presentation card grids and stats.`;
+
   const basePrompt = systemPrompt || defaultLyraSystemPrompt;
-  const finalSystemPrompt = `${basePrompt}\n\n${formattingStandard}${attachmentRule}`;
+  const finalSystemPrompt = `${basePrompt}\n\n${formattingStandard}${presentationRule}${attachmentRule}`;
 
   messages.push({ role: 'system', content: finalSystemPrompt });
 
