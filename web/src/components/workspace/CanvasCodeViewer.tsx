@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Edit3, 
   HelpCircle, 
@@ -11,12 +11,24 @@ import {
   Loader2, 
   Copy, 
   CheckCheck,
-  ChevronDown,
-  ChevronUp
+  History,
+  RotateCcw,
+  GitCompare,
+  ChevronLeft,
+  ChevronRight,
+  Code2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useI18nStore } from '@/i18n';
+
+export interface FileSnapshot {
+  id: string;
+  versionNumber: number;
+  content: string;
+  timestamp: number;
+  label?: string;
+}
 
 interface CanvasCodeViewerProps {
   filePath: string;
@@ -32,6 +44,92 @@ interface SelectionRange {
   left: number;
 }
 
+interface DiffLine {
+  type: 'unchanged' | 'added' | 'removed';
+  text: string;
+  oldLine?: number;
+  newLine?: number;
+}
+
+/**
+ * Fast prefix/suffix trimmed LCS line diff algorithm (zero external dependencies)
+ */
+function computeFastLineDiff(oldStr: string, newStr: string): DiffLine[] {
+  const oldLines = oldStr.split('\n');
+  const newLines = newStr.split('\n');
+
+  let start = 0;
+  while (start < oldLines.length && start < newLines.length && oldLines[start] === newLines[start]) {
+    start++;
+  }
+
+  let oldEnd = oldLines.length - 1;
+  let newEnd = newLines.length - 1;
+  while (oldEnd >= start && newEnd >= start && oldLines[oldEnd] === newLines[newEnd]) {
+    oldEnd--;
+    newEnd--;
+  }
+
+  const result: DiffLine[] = [];
+  for (let i = 0; i < start; i++) {
+    result.push({ type: 'unchanged', text: oldLines[i], oldLine: i + 1, newLine: i + 1 });
+  }
+
+  const midOld = oldLines.slice(start, oldEnd + 1);
+  const midNew = newLines.slice(start, newEnd + 1);
+
+  if (midOld.length > 0 || midNew.length > 0) {
+    const dp = Array(midOld.length + 1).fill(null).map(() => Array(midNew.length + 1).fill(0));
+    for (let i = 0; i < midOld.length; i++) {
+      for (let j = 0; j < midNew.length; j++) {
+        if (midOld[i] === midNew[j]) {
+          dp[i + 1][j + 1] = dp[i][j] + 1;
+        } else {
+          dp[i + 1][j + 1] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+        }
+      }
+    }
+
+    let i = midOld.length;
+    let j = midNew.length;
+    const midRes: DiffLine[] = [];
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && midOld[i - 1] === midNew[j - 1]) {
+        midRes.unshift({ type: 'unchanged', text: midOld[i - 1], oldLine: start + i, newLine: start + j });
+        i--;
+        j--;
+      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+        midRes.unshift({ type: 'added', text: midNew[j - 1], newLine: start + j });
+        j--;
+      } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
+        midRes.unshift({ type: 'removed', text: midOld[i - 1], oldLine: start + i });
+        i--;
+      }
+    }
+    result.push(...midRes);
+  }
+
+  for (let i = 0; i < (oldLines.length - 1 - oldEnd); i++) {
+    const oldIdx = oldEnd + 1 + i;
+    const newIdx = newEnd + 1 + i;
+    result.push({ type: 'unchanged', text: oldLines[oldIdx], oldLine: oldIdx + 1, newLine: newIdx + 1 });
+  }
+
+  return result;
+}
+
+function formatSnapshotTime(timestamp: number): string {
+  try {
+    const date = new Date(timestamp);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+  } catch (e) {
+    return '';
+  }
+}
+
 export function CanvasCodeViewer({
   filePath,
   fileName,
@@ -43,7 +141,68 @@ export function CanvasCodeViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const codePreRef = useRef<HTMLPreElement>(null);
 
-  // Selection & floating bar state
+  // Snapshot History (Time-Machine) State
+  const storageKey = useMemo(() => `lyra_canvas_snaps_${encodeURIComponent(filePath)}`, [filePath]);
+  const [snapshots, setSnapshots] = useState<FileSnapshot[]>([]);
+  const [activeVersionIndex, setActiveVersionIndex] = useState<number>(0);
+  const [viewMode, setViewMode] = useState<'code' | 'diff'>('code');
+  const [diffCompareTarget, setDiffCompareTarget] = useState<'prev' | 'latest'>('prev');
+
+  // Initialize or synchronize snapshot history for current file
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed: FileSnapshot[] = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const last = parsed[parsed.length - 1];
+          // If the disk/active content is different from the last snapshot, record a new snapshot
+          if (last.content !== content) {
+            const nextVer = last.versionNumber + 1;
+            const newSnap: FileSnapshot = {
+              id: `v${nextVer}`,
+              versionNumber: nextVer,
+              content,
+              timestamp: Date.now(),
+              label: language === 'id' ? 'Diperbarui' : 'Updated'
+            };
+            const updated = [...parsed, newSnap].slice(-25);
+            localStorage.setItem(storageKey, JSON.stringify(updated));
+            setSnapshots(updated);
+            setActiveVersionIndex(updated.length - 1);
+            return;
+          } else {
+            setSnapshots(parsed);
+            setActiveVersionIndex(parsed.length - 1);
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load canvas snapshots:', e);
+    }
+
+    // Default initial snapshot
+    const initialSnap: FileSnapshot = {
+      id: 'v1',
+      versionNumber: 1,
+      content,
+      timestamp: Date.now(),
+      label: language === 'id' ? 'Inisial' : 'Initial'
+    };
+    setSnapshots([initialSnap]);
+    setActiveVersionIndex(0);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify([initialSnap]));
+    } catch (e) {}
+  }, [filePath, storageKey]);
+
+  // Derived state for current snapshot
+  const currentSnapshot = snapshots[activeVersionIndex] || snapshots[snapshots.length - 1] || null;
+  const isLatestVersion = activeVersionIndex === snapshots.length - 1;
+  const displayedContent = currentSnapshot ? currentSnapshot.content : content;
+
+  // Selection & floating bar state (only operable on latest version to prevent conflicts)
   const [selection, setSelection] = useState<SelectionRange | null>(null);
   const [activeAction, setActiveAction] = useState<'none' | 'prompt' | 'diff' | 'explain'>('none');
   const [promptInput, setPromptInput] = useState('');
@@ -51,7 +210,7 @@ export function CanvasCodeViewer({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
-  // Diff & explanation results
+  // In-line Diff & explanation results
   const [diffResult, setDiffResult] = useState<{
     original: string;
     replacement: string;
@@ -60,11 +219,43 @@ export function CanvasCodeViewer({
   const [isCopied, setIsCopied] = useState(false);
 
   // Split lines for line numbers
-  const lines = content.split('\n');
+  const lines = displayedContent.split('\n');
 
-  // Handle selection on mouse up
+  // Compute visual diff between versions for Time-Machine Diff view
+  const computedVersionDiff = useMemo<DiffLine[]>(() => {
+    if (viewMode !== 'diff' || snapshots.length === 0) return [];
+
+    const activeSnap = snapshots[activeVersionIndex];
+    if (!activeSnap) return [];
+
+    let baseSnap: FileSnapshot | null = null;
+    if (diffCompareTarget === 'latest') {
+      baseSnap = snapshots[snapshots.length - 1];
+    } else {
+      // Compare with previous version if available, otherwise latest
+      if (activeVersionIndex > 0) {
+        baseSnap = snapshots[activeVersionIndex - 1];
+      } else {
+        baseSnap = snapshots[snapshots.length - 1];
+      }
+    }
+
+    if (!baseSnap || baseSnap.id === activeSnap.id) {
+      // If comparing with itself, return unchanged lines
+      return activeSnap.content.split('\n').map((line, idx) => ({
+        type: 'unchanged',
+        text: line,
+        oldLine: idx + 1,
+        newLine: idx + 1
+      }));
+    }
+
+    return computeFastLineDiff(baseSnap.content, activeSnap.content);
+  }, [viewMode, snapshots, activeVersionIndex, diffCompareTarget]);
+
+  // Handle selection on mouse up (active only on latest version)
   const handleMouseUp = () => {
-    // If modal/action is already open and busy, avoid interrupting
+    if (!isLatestVersion) return;
     if (activeAction !== 'none') return;
 
     const sel = window.getSelection();
@@ -85,7 +276,6 @@ export function CanvasCodeViewer({
       const containerRect = containerRef.current?.getBoundingClientRect();
 
       if (containerRect) {
-        // Calculate relative coordinates
         const top = Math.max(10, rect.top - containerRect.top - 44);
         const left = Math.max(10, Math.min(containerRect.width - 240, rect.left - containerRect.left));
 
@@ -164,32 +354,87 @@ export function CanvasCodeViewer({
     }
   };
 
-  // Apply diff replacement to file
+  // Apply surgical diff replacement to file & create new snapshot
   const handleApplyDiff = async () => {
     if (!diffResult) return;
 
     const { original, replacement } = diffResult;
-    // Perform exact replacement
     const newContent = content.replace(original, replacement);
+
+    // Save and create snapshot
+    const lastSnap = snapshots[snapshots.length - 1];
+    const nextVer = (lastSnap?.versionNumber || snapshots.length) + 1;
+    const newSnap: FileSnapshot = {
+      id: `v${nextVer}`,
+      versionNumber: nextVer,
+      content: newContent,
+      timestamp: Date.now(),
+      label: language === 'id' ? 'AI Surgical Patch' : 'AI Surgical Patch'
+    };
+
+    const updatedSnapshots = [...snapshots, newSnap].slice(-25);
+    setSnapshots(updatedSnapshots);
+    setActiveVersionIndex(updatedSnapshots.length - 1);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(updatedSnapshots));
+    } catch (e) {}
+
     onContentChange(newContent);
 
     // Persist to disk if save handler provided
     if (onSaveToFile) {
-      setSaveStatus(language === 'id' ? 'Menyimpan...' : 'Saving...');
+      setSaveStatus(language === 'id' ? 'Menyimpan berkas...' : 'Saving file...');
       const ok = await onSaveToFile(filePath, newContent);
       if (ok) {
-        setSaveStatus(language === 'id' ? '✓ Tersimpan ke berkas' : '✓ Saved to file');
+        setSaveStatus(language === 'id' ? '✓ Tersimpan (v' + nextVer + ')' : '✓ Saved (v' + nextVer + ')');
       } else {
         setSaveStatus(language === 'id' ? 'Gagal menyimpan' : 'Save failed');
       }
       setTimeout(() => setSaveStatus(null), 2500);
     }
 
-    // Reset state
+    // Reset selection and action state
     setDiffResult(null);
     setSelection(null);
     setActiveAction('none');
     setPromptInput('');
+  };
+
+  // Rollback to historic snapshot (Time-Machine 1-Click Restore)
+  const handleRollbackToActiveVersion = async () => {
+    if (isLatestVersion || !currentSnapshot) return;
+
+    const restoredContent = currentSnapshot.content;
+    const lastSnap = snapshots[snapshots.length - 1];
+    const nextVer = (lastSnap?.versionNumber || snapshots.length) + 1;
+    const newSnap: FileSnapshot = {
+      id: `v${nextVer}`,
+      versionNumber: nextVer,
+      content: restoredContent,
+      timestamp: Date.now(),
+      label: language === 'id' ? `Dipulihkan dari v${currentSnapshot.versionNumber}` : `Restored from v${currentSnapshot.versionNumber}`
+    };
+
+    const updatedSnapshots = [...snapshots, newSnap].slice(-25);
+    setSnapshots(updatedSnapshots);
+    setActiveVersionIndex(updatedSnapshots.length - 1);
+    setViewMode('code');
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(updatedSnapshots));
+    } catch (e) {}
+
+    onContentChange(restoredContent);
+
+    if (onSaveToFile) {
+      setSaveStatus(language === 'id' ? 'Memulihkan & menyimpan berkas...' : 'Restoring & saving file...');
+      const ok = await onSaveToFile(filePath, restoredContent);
+      if (ok) {
+        setSaveStatus(language === 'id' ? `✓ Dipulihkan ke v${currentSnapshot.versionNumber}` : `✓ Restored to v${currentSnapshot.versionNumber}`);
+      } else {
+        setSaveStatus(language === 'id' ? 'Gagal memulihkan' : 'Restore failed');
+      }
+      setTimeout(() => setSaveStatus(null), 2500);
+    }
   };
 
   // Discard diff or close explanation
@@ -211,8 +456,130 @@ export function CanvasCodeViewer({
         </div>
       )}
 
-      {/* Floating Canvas Action Bar */}
-      {selection && activeAction === 'none' && !isLoading && (
+      {/* Version History Slider & Time-Machine Header Bar */}
+      <div className="flex flex-wrap items-center justify-between px-3 py-1.5 bg-zinc-900/95 border-b border-zinc-800 text-[11px] gap-2 select-none shrink-0 backdrop-blur-md">
+        {/* Left: Time-Machine Version Stepper */}
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1 text-zinc-400 font-medium">
+            <History size={12} className="text-zinc-400" />
+            <span className="hidden sm:inline">{language === 'id' ? 'Riwayat' : 'Timeline'}:</span>
+          </span>
+
+          {/* Stepper Navigator */}
+          <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-md p-0.5 shadow-sm">
+            <button
+              type="button"
+              disabled={activeVersionIndex <= 0}
+              onClick={() => setActiveVersionIndex((prev) => Math.max(0, prev - 1))}
+              className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 disabled:opacity-25 disabled:hover:bg-transparent cursor-pointer transition-colors"
+              title={language === 'id' ? 'Versi Sebelumnya' : 'Previous version'}
+            >
+              <ChevronLeft size={12} />
+            </button>
+
+            <div className="flex items-center gap-1.5 px-2 font-mono text-[11px]">
+              <span className="text-zinc-100 font-semibold">
+                v{currentSnapshot?.versionNumber || 1}
+              </span>
+              {isLatestVersion ? (
+                <span className="px-1 py-0.2 text-[9px] rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 font-sans">
+                  {language === 'id' ? 'Terkini' : 'Latest'}
+                </span>
+              ) : (
+                <span className="px-1 py-0.2 text-[9px] rounded bg-amber-950/80 text-amber-400 border border-amber-800/60 font-sans">
+                  {language === 'id' ? 'Snapshot' : 'Snapshot'}
+                </span>
+              )}
+              <span className="text-zinc-600">/</span>
+              <span className="text-zinc-500 font-mono text-[10px]">
+                {snapshots.length}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              disabled={isLatestVersion}
+              onClick={() => setActiveVersionIndex((prev) => Math.min(snapshots.length - 1, prev + 1))}
+              className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 disabled:opacity-25 disabled:hover:bg-transparent cursor-pointer transition-colors"
+              title={language === 'id' ? 'Versi Selanjutnya' : 'Next version'}
+            >
+              <ChevronRight size={12} />
+            </button>
+          </div>
+
+          {/* Timestamp & Label */}
+          {currentSnapshot && (
+            <span className="text-zinc-500 text-[10px] hidden md:inline-block">
+              {formatSnapshotTime(currentSnapshot.timestamp)} • {currentSnapshot.label || 'Snapshot'}
+            </span>
+          )}
+        </div>
+
+        {/* Right: Mode Toggle (Code | Diff) & 1-Click Rollback */}
+        <div className="flex items-center gap-2">
+          {/* Mode Switch (Code vs Diff) */}
+          <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-md p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode('code')}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                viewMode === 'code' 
+                  ? 'bg-zinc-800 text-zinc-100 shadow-sm' 
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <Code2 size={11} />
+              <span>{language === 'id' ? 'Kode' : 'Code'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('diff')}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                viewMode === 'diff' 
+                  ? 'bg-zinc-800 text-zinc-100 shadow-sm' 
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <GitCompare size={11} />
+              <span>{language === 'id' ? 'Diff' : 'Diff'}</span>
+            </button>
+          </div>
+
+          {/* Rollback Button (Visible only when viewing older snapshot) */}
+          {!isLatestVersion && (
+            <button
+              type="button"
+              onClick={handleRollbackToActiveVersion}
+              className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-medium text-[11px] cursor-pointer shadow-sm transition-colors"
+              title={language === 'id' ? 'Pulihkan file ke versi ini' : 'Restore file to this version'}
+            >
+              <RotateCcw size={11} />
+              <span>{language === 'id' ? `Pulihkan v${currentSnapshot?.versionNumber}` : `Restore v${currentSnapshot?.versionNumber}`}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Historic Snapshot Banner (Read-Only Warning) */}
+      {!isLatestVersion && viewMode === 'code' && (
+        <div className="bg-amber-950/40 border-b border-amber-900/50 px-3 py-1 flex items-center justify-between text-[11px] text-amber-300 shrink-0">
+          <span>
+            {language === 'id' 
+              ? `⚠️ Menampilkan pratinjau snapshot riwayat (v${currentSnapshot?.versionNumber}). In-line editing dinonaktifkan.` 
+              : `⚠️ Viewing historic snapshot (v${currentSnapshot?.versionNumber}). In-line editing is disabled.`}
+          </span>
+          <button 
+            type="button" 
+            onClick={() => setActiveVersionIndex(snapshots.length - 1)}
+            className="underline hover:text-amber-200 cursor-pointer font-sans"
+          >
+            {language === 'id' ? 'Kembali ke Terkini' : 'Jump to Latest'}
+          </button>
+        </div>
+      )}
+
+      {/* Floating Canvas Action Bar (Active on selection in latest version) */}
+      {selection && activeAction === 'none' && !isLoading && isLatestVersion && (
         <div 
           style={{ top: `${selection.top}px`, left: `${selection.left}px` }}
           className="absolute z-30 flex items-center gap-1 bg-zinc-900/95 border border-zinc-700/80 shadow-2xl rounded-lg p-1 backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
@@ -252,7 +619,7 @@ export function CanvasCodeViewer({
       )}
 
       {/* In-Line Prompt Input Popover */}
-      {selection && activeAction === 'prompt' && (
+      {selection && activeAction === 'prompt' && isLatestVersion && (
         <div 
           style={{ top: `${selection.top}px`, left: `${selection.left}px` }}
           className="absolute z-30 w-80 bg-zinc-900 border border-zinc-700 shadow-2xl rounded-xl p-2.5 backdrop-blur-md animate-in fade-in zoom-in-95"
@@ -313,7 +680,7 @@ export function CanvasCodeViewer({
         </div>
       )}
 
-      {/* Visual Diff Review Bar */}
+      {/* Visual Diff Review Bar for in-line edits */}
       {diffResult && activeAction === 'diff' && (
         <div className="p-3 border-b border-zinc-800 bg-zinc-900/90 shrink-0 flex flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -355,28 +722,107 @@ export function CanvasCodeViewer({
         </div>
       )}
 
-      {/* Code Viewer with Line Numbers */}
-      <div 
-        onMouseUp={handleMouseUp}
-        className="flex-1 overflow-auto flex select-text bg-zinc-950"
-      >
-        {/* Line Numbers Gutter */}
-        <div className="select-none py-4 px-3 text-right bg-zinc-950/80 border-r border-zinc-800/80 text-zinc-600 text-[11px] leading-relaxed font-mono shrink-0 min-w-[40px]">
-          {lines.map((_, idx) => (
-            <div key={idx}>{idx + 1}</div>
-          ))}
-        </div>
+      {/* Body: Mode Kode vs Mode Diff */}
+      {viewMode === 'code' ? (
+        <div 
+          onMouseUp={handleMouseUp}
+          className="flex-1 overflow-auto flex select-text bg-zinc-950"
+        >
+          {/* Line Numbers Gutter */}
+          <div className="select-none py-4 px-3 text-right bg-zinc-950/80 border-r border-zinc-800/80 text-zinc-600 text-[11px] leading-relaxed font-mono shrink-0 min-w-[42px]">
+            {lines.map((_, idx) => (
+              <div key={idx}>{idx + 1}</div>
+            ))}
+          </div>
 
-        {/* Code Content Body */}
-        <div className="flex-1 p-4 overflow-x-auto">
-          <pre 
-            ref={codePreRef}
-            className="whitespace-pre font-mono text-xs text-zinc-200 leading-relaxed"
-          >
-            {content}
-          </pre>
+          {/* Code Content Body */}
+          <div className="flex-1 p-4 overflow-x-auto">
+            <pre 
+              ref={codePreRef}
+              className="whitespace-pre font-mono text-xs text-zinc-200 leading-relaxed"
+            >
+              {displayedContent}
+            </pre>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Visual Diff Mode (Time-Machine Comparison) */
+        <div className="flex-1 overflow-auto flex flex-col select-text bg-zinc-950">
+          {/* Diff sub-header selector */}
+          <div className="px-4 py-2 border-b border-zinc-800/80 bg-zinc-900/60 flex items-center justify-between text-[11px] text-zinc-400">
+            <span>
+              {language === 'id' ? 'Membandingkan: ' : 'Comparing: '}
+              <span className="text-zinc-200 font-semibold font-mono">v{currentSnapshot?.versionNumber}</span>
+              {' '}
+              {language === 'id' ? 'dengan' : 'against'}
+              {' '}
+              <span className="text-zinc-200 font-semibold font-mono">
+                {diffCompareTarget === 'prev' 
+                  ? (activeVersionIndex > 0 ? `v${snapshots[activeVersionIndex - 1]?.versionNumber}` : `v${snapshots[snapshots.length - 1]?.versionNumber} (Terkini)`)
+                  : `v${snapshots[snapshots.length - 1]?.versionNumber} (Terkini)`}
+              </span>
+            </span>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setDiffCompareTarget('prev')}
+                className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-colors ${
+                  diffCompareTarget === 'prev' ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                {language === 'id' ? 'vs Versi Sebelumnya' : 'vs Previous'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDiffCompareTarget('latest')}
+                className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-colors ${
+                  diffCompareTarget === 'latest' ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                {language === 'id' ? 'vs Versi Terkini' : 'vs Latest'}
+              </button>
+            </div>
+          </div>
+
+          {/* Diff Lines Table */}
+          <div className="flex-1 overflow-auto">
+            {computedVersionDiff.map((diffLine, idx) => {
+              if (diffLine.type === 'added') {
+                return (
+                  <div key={idx} className="flex bg-emerald-950/25 text-emerald-300 hover:bg-emerald-950/40 leading-relaxed font-mono text-xs">
+                    <span className="w-12 py-0.5 px-2 text-right text-zinc-600 bg-zinc-950/80 select-none border-r border-zinc-800 text-[11px] shrink-0">
+                      {diffLine.newLine}
+                    </span>
+                    <span className="w-6 py-0.5 text-center text-emerald-400 font-bold select-none shrink-0">+</span>
+                    <span className="py-0.5 px-2 whitespace-pre overflow-x-auto flex-1 font-mono text-xs">{diffLine.text}</span>
+                  </div>
+                );
+              }
+              if (diffLine.type === 'removed') {
+                return (
+                  <div key={idx} className="flex bg-rose-950/25 text-rose-300 hover:bg-rose-950/40 leading-relaxed font-mono text-xs">
+                    <span className="w-12 py-0.5 px-2 text-right text-zinc-600 bg-zinc-950/80 select-none border-r border-zinc-800 text-[11px] shrink-0">
+                      {diffLine.oldLine}
+                    </span>
+                    <span className="w-6 py-0.5 text-center text-rose-400 font-bold select-none shrink-0">-</span>
+                    <span className="py-0.5 px-2 whitespace-pre overflow-x-auto flex-1 font-mono text-xs">{diffLine.text}</span>
+                  </div>
+                );
+              }
+              return (
+                <div key={idx} className="flex text-zinc-300 hover:bg-zinc-900/40 leading-relaxed font-mono text-xs">
+                  <span className="w-12 py-0.5 px-2 text-right text-zinc-600 bg-zinc-950/80 select-none border-r border-zinc-800 text-[11px] shrink-0">
+                    {diffLine.newLine || diffLine.oldLine}
+                  </span>
+                  <span className="w-6 py-0.5 text-center text-zinc-600 select-none shrink-0"> </span>
+                  <span className="py-0.5 px-2 whitespace-pre overflow-x-auto flex-1 font-mono text-xs text-zinc-400">{diffLine.text}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Explanation Drawer */}
       {explanationResult && activeAction === 'explain' && (
