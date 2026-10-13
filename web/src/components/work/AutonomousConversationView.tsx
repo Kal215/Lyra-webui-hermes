@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Bot, User, Check, Clipboard, Quote } from 'lucide-react';
 import { useI18nStore } from '@/i18n';
+import { ReasoningAccordion } from './ReasoningAccordion';
 
 interface AutonomousMessage {
   id: string;
@@ -14,12 +15,16 @@ interface AutonomousMessage {
   agentName?: string;
   attachments?: any[];
   quotedSnippet?: string;
+  thought?: string;
 }
 
 interface AutonomousConversationViewProps {
   messages: AutonomousMessage[];
   isStreaming?: boolean;
   onQuoteSnippet?: (snippet: string) => void;
+  reasoningNodes?: Record<string, { id: string; thought: string; isStreaming?: boolean }>;
+  reasoningOrder?: string[];
+  activeReasoningId?: string | null;
 }
 
 function InlineCodeBlock({ inline, className, children, ...props }: any) {
@@ -90,7 +95,10 @@ const markdownComponents = createExecutiveMarkdownComponents();
 export const AutonomousConversationView: React.FC<AutonomousConversationViewProps> = ({
   messages,
   isStreaming,
-  onQuoteSnippet
+  onQuoteSnippet,
+  reasoningNodes = {},
+  reasoningOrder = [],
+  activeReasoningId = null
 }) => {
   const { language } = useI18nStore();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -99,6 +107,14 @@ export const AutonomousConversationView: React.FC<AutonomousConversationViewProp
     top: number;
     left: number;
   } | null>(null);
+
+  // Active thought text compiled from reasoning nodes
+  const activeThoughtText = reasoningOrder
+    .map((id) => reasoningNodes[id]?.thought)
+    .filter(Boolean)
+    .join('\n\n');
+
+  const hasPendingAssistantTurn = isStreaming && messages.length > 0 && messages[messages.length - 1].role === 'user';
 
   // Listen to mouseup inside assistant response messages to display quote toolbar
   const handleMouseUp = () => {
@@ -178,77 +194,151 @@ export const AutonomousConversationView: React.FC<AutonomousConversationViewProp
         </button>
       )}
 
-      {messages.map((msg) => (
+      {messages.map((msg, idx) => {
+        const isUser = msg.role === 'user';
+        const isAssistant = msg.role === 'assistant';
+        const isLatest = idx === messages.length - 1;
+        const isLatestAssistant = isAssistant && isLatest;
+
+        // Thought associated with this assistant message
+        const messageThought = (isLatestAssistant && activeThoughtText) 
+          ? activeThoughtText 
+          : (msg.thought || '');
+
+        return (
+          <div
+            key={msg.id || idx}
+            data-message-role={msg.role}
+            className={`flex gap-3 p-4 rounded-2xl border transition-all ${
+              isUser
+                ? 'bg-lyra-accent/10 border-lyra-accent/20 ml-6'
+                : 'bg-lyra-surface/70 border-lyra-accent/15 mr-2 shadow-sm'
+            }`}
+          >
+            <div className="shrink-0 mt-0.5">
+              {isUser ? (
+                <div className="w-7 h-7 rounded-lg bg-lyra-accent text-white flex items-center justify-center shadow-xs">
+                  <User size={15} />
+                </div>
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shadow-xs">
+                  <Bot size={15} />
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-semibold text-lyra-text">
+                  {isUser ? (language === 'id' ? 'Anda' : 'You') : (msg.agentName || 'Lyra Specialist')}
+                </span>
+                {msg.timestamp && (
+                  <span className="text-[10px] text-lyra-text-secondary/60 font-mono">
+                    {msg.timestamp}
+                  </span>
+                )}
+              </div>
+
+              {/* 1. Prompt dari user: Quoted Snippet Indicator */}
+              {isUser && msg.quotedSnippet && (
+                <div className="mb-2 px-3 py-1.5 rounded-lg border-l-2 border-lyra-accent bg-lyra-accent/10 text-lyra-text-secondary font-mono text-[11px] flex items-start gap-1.5">
+                  <Quote size={11} className="text-lyra-accent shrink-0 mt-0.5" />
+                  <span className="line-clamp-3 italic">"{msg.quotedSnippet}"</span>
+                </div>
+              )}
+
+              {/* Format Urutan untuk Asisten:
+                  1. prompt dari user (di bubble user sebelumnya)
+                  2. agen sedang menyusun respon & mengeksekusi...
+                  3. proses penalaran
+                  4. jawaban
+              */}
+              {isAssistant && isStreaming && isLatestAssistant && (
+                <div className="flex items-center gap-2 text-xs text-lyra-accent/80 font-mono pl-0.5 my-2 animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-lyra-accent shrink-0" />
+                  <span>
+                    {language === 'id' 
+                      ? 'Agen sedang menyusun respon & mengeksekusi...' 
+                      : 'Agent is compiling response & executing...'}
+                  </span>
+                </div>
+              )}
+
+              {/* 3. Proses Penalaran */}
+              {isAssistant && messageThought && (
+                <div className="my-2">
+                  <ReasoningAccordion
+                    thought={messageThought}
+                    isStreaming={isStreaming && isLatestAssistant && Boolean(activeReasoningId)}
+                  />
+                </div>
+              )}
+
+              {/* 4. Jawaban (Markdown Content) */}
+              {msg.content && (
+                <div className="text-xs text-lyra-text leading-relaxed select-text mt-1">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
+              )}
+
+              {msg.attachments && msg.attachments.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {msg.attachments.map((att: any, aIdx: number) => (
+                    <span
+                      key={aIdx}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-lyra-accent/15 border border-lyra-accent/25 text-lyra-text font-mono"
+                    >
+                      {att.type?.startsWith('image/') ? '🖼️' : '📄'} {att.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Ketika prompt user baru saja dikirim dan respon assistant masih dalam tahap inisiasi */}
+      {hasPendingAssistantTurn && (
         <div
-          key={msg.id}
-          data-message-role={msg.role}
-          className={`flex gap-3 p-4 rounded-2xl border transition-all ${
-            msg.role === 'user'
-              ? 'bg-lyra-accent/10 border-lyra-accent/20 ml-6'
-              : 'bg-lyra-surface/70 border-lyra-accent/15 mr-2 shadow-sm'
-          }`}
+          data-message-role="assistant"
+          className="flex gap-3 p-4 rounded-2xl border bg-lyra-surface/70 border-lyra-accent/15 mr-2 shadow-sm transition-all"
         >
           <div className="shrink-0 mt-0.5">
-            {msg.role === 'user' ? (
-              <div className="w-7 h-7 rounded-lg bg-lyra-accent text-white flex items-center justify-center shadow-xs">
-                <User size={15} />
-              </div>
-            ) : (
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shadow-xs">
-                <Bot size={15} />
-              </div>
-            )}
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shadow-xs">
+              <Bot size={15} />
+            </div>
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-semibold text-lyra-text">
-                {msg.role === 'user' ? (language === 'id' ? 'Anda' : 'You') : (msg.agentName || 'Lyra Specialist')}
+                Lyra Specialist
               </span>
-              {msg.timestamp && (
-                <span className="text-[10px] text-lyra-text-secondary/60 font-mono">
-                  {msg.timestamp}
-                </span>
-              )}
             </div>
 
-            {/* Quoted Snippet Indicator on User Message */}
-            {msg.role === 'user' && msg.quotedSnippet && (
-              <div className="mb-2 px-3 py-1.5 rounded-lg border-l-2 border-lyra-accent bg-lyra-accent/10 text-lyra-text-secondary font-mono text-[11px] flex items-start gap-1.5">
-                <Quote size={11} className="text-lyra-accent shrink-0 mt-0.5" />
-                <span className="line-clamp-3 italic">"{msg.quotedSnippet}"</span>
-              </div>
-            )}
-
-            <div className="text-xs text-lyra-text leading-relaxed select-text">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                {msg.content}
-              </ReactMarkdown>
+            {/* 2. Agen sedang menyusun respon & mengeksekusi... */}
+            <div className="flex items-center gap-2 text-xs text-lyra-accent/80 font-mono pl-0.5 my-2 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-lyra-accent shrink-0" />
+              <span>
+                {language === 'id' 
+                  ? 'Agen sedang menyusun respon & mengeksekusi...' 
+                  : 'Agent is compiling response & executing...'}
+              </span>
             </div>
 
-            {msg.attachments && msg.attachments.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {msg.attachments.map((att: any, idx: number) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-lyra-accent/15 border border-lyra-accent/25 text-lyra-text font-mono"
-                  >
-                    {att.type?.startsWith('image/') ? '🖼️' : '📄'} {att.name}
-                  </span>
-                ))}
+            {/* 3. Proses Penalaran */}
+            {activeThoughtText && (
+              <div className="my-2">
+                <ReasoningAccordion
+                  thought={activeThoughtText}
+                  isStreaming={true}
+                />
               </div>
             )}
           </div>
-        </div>
-      ))}
-      {isStreaming && (
-        <div className="flex items-center gap-2 text-xs text-lyra-accent/80 font-mono pl-3 animate-pulse">
-          <span className="w-2 h-2 rounded-full bg-lyra-accent" />
-          <span>
-            {language === 'id' 
-              ? 'Agen sedang menyusun respon & mengeksekusi...' 
-              : 'Agent is compiling response & executing...'}
-          </span>
         </div>
       )}
     </div>

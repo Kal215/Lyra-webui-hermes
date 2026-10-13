@@ -1444,11 +1444,14 @@ export default function WorkPage() {
           ) : (
             /* Active Autonomous Execution Feed */
             <div className="space-y-5">
-              {/* 1. User Prompt & Conversation Feed (Konteks Prompt Permintaan Anda) */}
+              {/* 1. User Prompt & Conversation Feed (Format: 1. Prompt -> 2. Status Agen -> 3. Penalaran -> 4. Jawaban) */}
               {conversationMessages.length > 0 && (
                 <AutonomousConversationView 
                   messages={conversationMessages} 
                   isStreaming={isSubmitting && !isPlanning}
+                  reasoningNodes={reasoningNodes}
+                  reasoningOrder={reasoningOrder}
+                  activeReasoningId={activeReasoningId}
                   onQuoteSnippet={(snippet) => {
                     setQuotedSnippet(snippet);
                     setTimeout(() => {
@@ -1468,20 +1471,7 @@ export default function WorkPage() {
                 </div>
               )}
 
-              {/* 3. Thought Process (Proses Penalaran LLM) */}
-              {reasoningOrder.map((nodeId) => {
-                const node = reasoningNodes[nodeId];
-                if (!node) return null;
-                return (
-                  <ReasoningAccordion
-                    key={node.id}
-                    thought={node.thought}
-                    isStreaming={node.id === activeReasoningId && node.isStreaming}
-                  />
-                );
-              })}
-
-              {/* 4. Rencana Kerja & Gerbang Persetujuan (Interactive Mission Plan Card) */}
+              {/* 3. Rencana Kerja & Gerbang Persetujuan (Interactive Mission Plan Card) */}
               {todos.length > 0 && (
                 <InteractiveMissionPlanCard
                   todos={todos}

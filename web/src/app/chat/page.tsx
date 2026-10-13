@@ -18,6 +18,7 @@ import {
 } from '@/lib/store/useLocalChatStorage';
 import { extractInlineThinking } from '@/lib/reasoning/extractor';
 import { createExecutiveMarkdownComponents } from '@/components/markdown/MarkdownComponents';
+import { ReasoningAccordion } from '@/components/work/ReasoningAccordion';
 import { useWorkspaceStore } from '@/store/workspace';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { loadLyraAiConfig, getModelsForProvider, PROVIDER_PRESETS } from '@/lib/ai-providers';
@@ -2177,19 +2178,41 @@ function NativeChatContent() {
                       )}
                     </div>
 
-                    {/* Reasoning & Tools Execution Pipeline */}
-                    <div className="mb-2">
-                      {m.tools?.map((tool: any, idx: number) => (
-                        <ToolCallCard key={idx} tool={tool} />
-                      ))}
-                      {m.reasoning && !m.reasoning.endTime && (
-                        <ReasoningCard reasoning={m.reasoning} />
-                      )}
-                    </div>
+                    {/* Format Terstruktur: 1. Prompt -> 2. Status Agen -> 3. Penalaran -> 4. Jawaban */}
+                    {/* 2. Agen sedang menyusun respon & mengeksekusi... */}
+                    {i === messages.length - 1 && isLoading && (
+                      <div className="flex items-center gap-2 text-xs text-lyra-accent/80 font-mono pl-0.5 my-2 animate-pulse">
+                        <span className="w-2 h-2 rounded-full bg-lyra-accent shrink-0" />
+                        <span>
+                          {language === 'id' 
+                            ? 'Agen sedang menyusun respon & mengeksekusi...' 
+                            : 'Agent is compiling response & executing...'}
+                        </span>
+                      </div>
+                    )}
 
-                    {/* Markdown Content with CodeBlock */}
+                    {/* 3. Proses Penalaran */}
+                    {m.reasoning?.text && (
+                      <div className="my-2">
+                        <ReasoningAccordion
+                          thought={m.reasoning.text}
+                          isStreaming={!m.reasoning.endTime && isLoading && i === messages.length - 1}
+                        />
+                      </div>
+                    )}
+
+                    {/* Tools Execution Pipeline (jika ada tool call) */}
+                    {m.tools && m.tools.length > 0 && (
+                      <div className="my-2 space-y-1.5">
+                        {m.tools.map((tool: any, idx: number) => (
+                          <ToolCallCard key={idx} tool={tool} />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 4. Jawaban (Markdown Content) */}
                     {m.content && (
-                      <div className="prose prose-p:leading-relaxed prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-none prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:font-semibold prose-a:underline prose-a:underline-offset-2 hover:prose-a:text-blue-700 dark:hover:prose-a:text-blue-300 prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none">
+                      <div className="prose prose-p:leading-relaxed prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-none prose-headings:text-lyra-text prose-p:text-lyra-text prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:font-semibold prose-a:underline prose-a:underline-offset-2 hover:prose-a:text-blue-700 dark:hover:prose-a:text-blue-300 prose-strong:text-lyra-text prose-code:text-lyra-accent prose-ul:text-lyra-text prose-ol:text-lyra-text prose-li:text-lyra-text prose-table:text-lyra-text max-w-none mt-2">
                         <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                           {m.content}
                         </ReactMarkdown>
