@@ -3,6 +3,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { chunkDocument, ChunkingResult } from '@/lib/utils/documentChunker';
+import { extractTextFromPdfBuffer } from '@/lib/utils/pdfExtractor';
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,12 +27,20 @@ export async function POST(req: NextRequest) {
     await writeFile(filePath, buffer);
     
     const isImage = file.type?.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(file.name);
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     let content: string | undefined = undefined;
     let base64: string | undefined = undefined;
     let chunkResult: ChunkingResult | null = null;
 
     if (isImage) {
       base64 = buffer.toString('base64');
+    } else if (isPdf) {
+      // Extract clean text from PDF document
+      const pdfText = await extractTextFromPdfBuffer(buffer);
+      if (pdfText) {
+        chunkResult = chunkDocument(pdfText);
+        content = pdfText.length > 50000 ? pdfText.slice(0, 50000) : pdfText;
+      }
     } else if (
       file.type?.startsWith('text/') ||
       /\.(txt|md|json|js|ts|tsx|jsx|py|html|css|scss|yaml|yml|xml|sql|csv|sh|bat|env|prisma|rs|go|c|cpp|h|java|php|rb|log)$/i.test(file.name)
@@ -45,7 +54,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       path: filePath,
       name: file.name,
-      type: file.type || (isImage ? 'image/png' : 'text/plain'),
+      type: file.type || (isImage ? 'image/png' : isPdf ? 'application/pdf' : 'text/plain'),
       size: buffer.length,
       content,
       base64,

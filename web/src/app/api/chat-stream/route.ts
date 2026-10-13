@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { activeChildProcesses } from '@/lib/activeProcesses';
 import { chunkDocument, buildChunkedContextPrompt } from '@/lib/utils/documentChunker';
+import { extractTextFromPdfBuffer } from '@/lib/utils/pdfExtractor';
 
 export const dynamic = 'force-dynamic';
 
@@ -249,7 +250,13 @@ Setelah disimpan, Anda dapat langsung mengobrol, menulis kode, dan mendelegasika
           try {
             const stat = fs.statSync(resolved);
             if (!stat.isDirectory()) {
-              textContent = fs.readFileSync(resolved, 'utf-8');
+              const fileBuf = fs.readFileSync(resolved);
+              const isPdfTarget = resolved.toLowerCase().endsWith('.pdf') || (typeof file.name === 'string' && file.name.toLowerCase().endsWith('.pdf'));
+              if (isPdfTarget) {
+                textContent = await extractTextFromPdfBuffer(fileBuf);
+              } else {
+                textContent = fileBuf.toString('utf-8');
+              }
             }
           } catch (err) {}
         }
