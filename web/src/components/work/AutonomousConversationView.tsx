@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Bot, User, Check, Clipboard } from 'lucide-react';
+import { Bot, User, Check, Clipboard, Quote } from 'lucide-react';
 import { useI18nStore } from '@/i18n';
 
 interface AutonomousMessage {
@@ -13,11 +13,13 @@ interface AutonomousMessage {
   timestamp?: string;
   agentName?: string;
   attachments?: any[];
+  quotedSnippet?: string;
 }
 
 interface AutonomousConversationViewProps {
   messages: AutonomousMessage[];
   isStreaming?: boolean;
+  onQuoteSnippet?: (snippet: string) => void;
 }
 
 function InlineCodeBlock({ inline, className, children, ...props }: any) {
@@ -128,16 +130,99 @@ const markdownComponents = {
 
 export const AutonomousConversationView: React.FC<AutonomousConversationViewProps> = ({
   messages,
-  isStreaming
+  isStreaming,
+  onQuoteSnippet
 }) => {
   const { language } = useI18nStore();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [selectionQuote, setSelectionQuote] = useState<{
+    text: string;
+    top: number;
+    left: number;
+  } | null>(null);
+
+  // Listen to mouseup inside assistant response messages to display quote toolbar
+  const handleMouseUp = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+      setSelectionQuote(null);
+      return;
+    }
+
+    const selectedText = sel.toString().trim();
+    if (selectedText.length < 3) {
+      setSelectionQuote(null);
+      return;
+    }
+
+    // Verify that selection is inside an assistant message
+    const anchorNode = sel.anchorNode;
+    const assistantEl = anchorNode?.parentElement?.closest('[data-message-role="assistant"]');
+    if (!assistantEl) {
+      setSelectionQuote(null);
+      return;
+    }
+
+    try {
+      const range = sel.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      const containerRect = containerRef.current?.getBoundingClientRect();
+
+      if (containerRect) {
+        const top = Math.max(10, rect.top - containerRect.top - 40);
+        const left = Math.max(10, Math.min(containerRect.width - 170, rect.left - containerRect.left));
+        setSelectionQuote({
+          text: selectedText,
+          top,
+          left
+        });
+      }
+    } catch (e) {
+      setSelectionQuote(null);
+    }
+  };
+
+  // Close floating quote bar on outside click
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setSelectionQuote(null);
+      }
+    };
+    document.addEventListener('mousedown', handleDocumentClick);
+    return () => document.removeEventListener('mousedown', handleDocumentClick);
+  }, []);
+
   if (!messages || messages.length === 0) return null;
 
   return (
-    <div className="space-y-4 my-4">
+    <div 
+      ref={containerRef}
+      onMouseUp={handleMouseUp}
+      className="relative space-y-4 my-4"
+    >
+      {/* Floating Quote Micro Toolbar */}
+      {selectionQuote && (
+        <button
+          type="button"
+          style={{ top: `${selectionQuote.top}px`, left: `${selectionQuote.left}px` }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onQuoteSnippet?.(selectionQuote.text);
+            setSelectionQuote(null);
+            window.getSelection()?.removeAllRanges();
+          }}
+          className="absolute z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 shadow-2xl text-zinc-100 hover:text-white hover:bg-zinc-800 transition-all cursor-pointer backdrop-blur-md animate-in fade-in zoom-in-95 text-xs font-medium"
+        >
+          <Quote size={12} className="text-blue-400" />
+          <span>{language === 'id' ? 'Kutip ke Pertanyaan' : 'Quote to Prompt'}</span>
+        </button>
+      )}
+
       {messages.map((msg) => (
         <div
           key={msg.id}
+          data-message-role={msg.role}
           className={`flex gap-3 p-4 rounded-2xl border transition-all ${
             msg.role === 'user'
               ? 'bg-lyra-accent/10 border-lyra-accent/20 ml-6'
@@ -167,6 +252,14 @@ export const AutonomousConversationView: React.FC<AutonomousConversationViewProp
                 </span>
               )}
             </div>
+
+            {/* Quoted Snippet Indicator on User Message */}
+            {msg.role === 'user' && msg.quotedSnippet && (
+              <div className="mb-2 px-3 py-1.5 rounded-lg border-l-2 border-lyra-accent bg-lyra-accent/10 text-lyra-text-secondary font-mono text-[11px] flex items-start gap-1.5">
+                <Quote size={11} className="text-lyra-accent shrink-0 mt-0.5" />
+                <span className="line-clamp-3 italic">"{msg.quotedSnippet}"</span>
+              </div>
+            )}
 
             <div className="text-xs text-lyra-text leading-relaxed select-text">
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>

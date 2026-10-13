@@ -27,9 +27,10 @@ import {
   MessageSquare,
   BrainCircuit,
   Globe,
-  X,
-  PlusCircle,
-  File as FileIcon
+  X, 
+  PlusCircle, 
+  File as FileIcon,
+  Quote
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -133,11 +134,13 @@ export default function WorkPage() {
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const [isDeepResearchEnabled, setIsDeepResearchEnabled] = useState(false);
   const [attachments, setAttachments] = useState<any[]>([]);
+  const [quotedSnippet, setQuotedSnippet] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Sync with Settings configured provider & models
@@ -618,6 +621,9 @@ export default function WorkPage() {
     if (e) e.preventDefault();
     if (!promptInput.trim() || isSubmitting) return;
 
+    const activeQuote = quotedSnippet;
+    setQuotedSnippet(null);
+
     const userPrompt = promptInput.trim();
     const taskTitle = userPrompt.slice(0, 80);
     const activeAttachments = [...attachments];
@@ -625,6 +631,11 @@ export default function WorkPage() {
     setIsSubmitting(true);
     setPromptInput('');
     setAttachments([]);
+
+    // Format prompt if quoting a specific snippet
+    const streamPrompt = activeQuote
+      ? `[Konteks Kutipan / Quoted Snippet]:\n"${activeQuote}"\n\n[Pertanyaan / Permintaan Pengguna]:\n${userPrompt}`
+      : userPrompt;
 
     // Check if this is a follow-up message in an ongoing conversation
     const currentMsgs = useWorkSessionStore.getState().conversationMessages;
@@ -637,7 +648,8 @@ export default function WorkPage() {
         role: 'user',
         content: userPrompt,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        attachments: activeAttachments
+        attachments: activeAttachments,
+        quotedSnippet: activeQuote || undefined
       });
 
       // Pass previous turns into conversationHistory so the agent remembers previous context
@@ -648,7 +660,7 @@ export default function WorkPage() {
 
       // Directly execute follow-up stream without resetting or re-planning
       setIsPlanning(false);
-      await executeAutonomousStream(userPrompt, historyPayload, activeAttachments);
+      await executeAutonomousStream(streamPrompt, historyPayload, activeAttachments);
       return;
     }
 
@@ -661,7 +673,8 @@ export default function WorkPage() {
       role: 'user',
       content: userPrompt,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      attachments: activeAttachments
+      attachments: activeAttachments,
+      quotedSnippet: activeQuote || undefined
     });
 
     const initialTaskId = 'task_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
@@ -686,7 +699,7 @@ export default function WorkPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: userPrompt,
+          prompt: streamPrompt,
           agent: selectedAgent,
           language: language
         })
@@ -700,7 +713,7 @@ export default function WorkPage() {
         // Jika planner memutuskan TIDAK perlu checklist, langsung eksekusi tanpa approval gate
         if (!needsTodo || !incomingTodos || incomingTodos.length === 0) {
           setIsPlanning(false);
-          await executeAutonomousStream(userPrompt, [], activeAttachments);
+          await executeAutonomousStream(streamPrompt, [], activeAttachments);
           return;
         }
 
@@ -1293,7 +1306,13 @@ export default function WorkPage() {
               {conversationMessages.length > 0 && (
                 <AutonomousConversationView 
                   messages={conversationMessages} 
-                  isStreaming={isSubmitting && !isPlanning} 
+                  isStreaming={isSubmitting && !isPlanning}
+                  onQuoteSnippet={(snippet) => {
+                    setQuotedSnippet(snippet);
+                    setTimeout(() => {
+                      composerTextareaRef.current?.focus();
+                    }, 50);
+                  }}
                 />
               )}
 
@@ -1575,8 +1594,36 @@ export default function WorkPage() {
                 </div>
               )}
 
+              {/* Quoted Snippet Context Indicator */}
+              {quotedSnippet && (
+                <div className="mx-3 mt-2.5 px-3 py-2 rounded-xl bg-lyra-accent/10 border border-lyra-accent/25 flex items-center justify-between text-xs text-lyra-text animate-in fade-in slide-in-from-bottom-2 duration-150 shadow-xs">
+                  <div className="flex items-start gap-2.5 min-w-0 pr-2">
+                    <div className="p-1 rounded-md bg-lyra-accent/20 text-lyra-accent shrink-0 mt-0.5">
+                      <Quote size={12} />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] font-semibold text-lyra-accent uppercase tracking-wider font-mono">
+                        {language === 'id' ? 'Kutipan Terpilih' : 'Quoted Context'}
+                      </span>
+                      <p className="line-clamp-2 italic text-lyra-text/90 font-mono text-[11px] select-text">
+                        "{quotedSnippet}"
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setQuotedSnippet(null)}
+                    className="p-1 rounded-md text-lyra-text-secondary hover:text-lyra-text hover:bg-lyra-accent/15 cursor-pointer shrink-0 transition-colors"
+                    title={language === 'id' ? 'Hapus kutipan' : 'Remove quote'}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+
               {/* Textarea */}
               <textarea
+                ref={composerTextareaRef}
                 value={promptInput}
                 onChange={(e) => setPromptInput(e.target.value)}
                 onKeyDown={(e) => {

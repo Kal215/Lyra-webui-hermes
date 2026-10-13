@@ -19,6 +19,7 @@ export interface AutonomousMessage {
   timestamp?: string;
   agentName?: string;
   attachments?: any[];
+  quotedSnippet?: string;
 }
 
 export interface WorkSessionState {
